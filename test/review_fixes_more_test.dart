@@ -29,11 +29,31 @@ void main() {
     await openKapitanskaya(tester, p);
     await startListening(tester);
     final st = reader(tester);
-    final shown = st.layout.pages[st.page];
-    final onScreen = ReadingPosition(shown.firstBlock, shown.firstOffset);
+    // Экран следует за голосом — на экране звучащее место; его и пишет «Закрыть» (FR-P8, FR-P3).
+    expect(st.following, isTrue);
+    final onScreen = st.soundingPosition!;
     await tester.tap(find.byKey(const Key('player-close')));
     await advance(tester, const Duration(seconds: 3));
     expect(p.narration.state, NarrationState.idle);
+    expect(p.library.positionOf('kapitanskaya'), onScreen);
+    final page = st.layout.pages[st.page];
+    expect(page.contains(onScreen.block, onScreen.offset), isTrue, reason: 'после пересчёта оно на экране');
+  });
+
+  testWidgets('№4: «Закрыть» после ручного листания — позиция — начало видимой страницы', (tester) async {
+    final p = await pumpPrototype(tester, demoAcceleration: 1);
+    await openKapitanskaya(tester, p);
+    await startListening(tester);
+    await tester.tap(find.byKey(const Key('play-pause')));
+    await advance(tester, const Duration(milliseconds: 300));
+    await tester.fling(find.byKey(const Key('page-area')), const Offset(-250, 0), 1200);
+    await advance(tester, const Duration(milliseconds: 800));
+    final st = reader(tester);
+    expect(st.following, isFalse);
+    final shown = st.layout.pages[st.page];
+    final onScreen = ReadingPosition(shown.firstBlock, shown.firstOffset);
+    await tester.tap(find.byKey(const Key('player-close')));
+    await advance(tester, const Duration(seconds: 1));
     expect(p.library.positionOf('kapitanskaya'), onScreen);
   });
 

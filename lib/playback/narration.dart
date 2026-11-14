@@ -21,6 +21,19 @@ class NarrationError {
   final String googleMessage;
 }
 
+/// Видимая страница: от [start] (включительно) до [end] (не включая) — блок и смещение.
+@immutable
+class PageRange {
+  const PageRange(this.start, this.end);
+
+  final ReadingPosition start;
+  final ReadingPosition end;
+
+  static bool _le(ReadingPosition a, ReadingPosition b) => a.block < b.block || (a.block == b.block && a.offset <= b.offset);
+
+  bool contains(ReadingPosition p) => _le(start, p) && !_le(end, p);
+}
+
 enum SleepKind { minutes, endOfChapter }
 
 /// Таймер сна принадлежит контроллеру, а не сеансу (А§6.6); минуты — по настенным часам с момента установки.
@@ -57,6 +70,10 @@ abstract class NarrationController extends ChangeNotifier {
   int? get block;
   double get blockProgress;
 
+  /// Начало звучащей единицы (отрезка; в прототипе — блока или его части от выбранного предложения). Это и есть
+  /// место прослушивания, которое контроллер сохраняет (А§4, А§5).
+  ReadingPosition? get unitStart;
+
   double get speed;
   SleepTimer? get sleepTimer;
   DateTime now();
@@ -64,9 +81,14 @@ abstract class NarrationController extends ChangeNotifier {
   /// «Активно» в смысле А§5: позицию пишет контроллер.
   bool get isActive => state != NarrationState.idle && state != NarrationState.stopped;
 
-  /// «Слушать» без сеанса: новый сеанс с места [from] — первого озвучиваемого места на экране, в том числе
-  /// хвоста абзаца, начатого на прошлой странице (FR-P3). Без ключа экран сюда не приходит (FR-P7).
-  void listen(Book book, ReadingPosition from);
+  /// «Слушать» без сеанса (`idle`), FR-P3. Экран только сообщает видимую страницу [page]; место выбирает
+  /// контроллер (замечание владельца 2026-11-14):
+  /// 1. сохранённое место прослушивания стоит на этой странице — с него;
+  /// 2. иначе — с первого предложения, которое начинается на странице (хвост предложения с прошлой страницы не
+  ///    читается);
+  /// 3. если на странице не начинается ни одно предложение — с начала того, внутри которого она лежит.
+  /// Без ключа экран сюда не приходит (FR-P7).
+  void listen(Book book, PageRange page);
 
   /// «Слушать» в панели плеера: из `paused` — с места паузы; из `stopped` — новый сеанс с актуальной сохранённой
   /// позиции (её мог переписать экран после явного перемещения, А§5).
@@ -86,8 +108,9 @@ abstract class NarrationController extends ChangeNotifier {
   void next();
   void previous();
 
-  /// «Закрыть» (FR-P8) или закрытие книги: сеанс завершается (`idle`), затем [screenPosition] — начало страницы
-  /// на экране — передаётся писателю позиции. С этого момента позицию пишет экран (А§5).
+  /// «Закрыть» (FR-P8) или закрытие книги: сеанс завершается (`idle`), затем [screenPosition] — место на экране —
+  /// передаётся писателю позиции чтения; с этого момента её пишет экран (А§5). Место прослушивания при этом не
+  /// забывается: с него продолжит следующее «Слушать», если оно на экране.
   void close({ReadingPosition? screenPosition});
 
   void setSpeed(double speed);

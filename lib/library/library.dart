@@ -83,9 +83,16 @@ abstract class Library extends ChangeNotifier {
 
   ImageProvider image(String bookId, String imageId);
 
+  /// Позиция чтения (А§5): начало первой строки на экране либо, пока озвучка активна, звучащее место.
   ReadingPosition? positionOf(String bookId);
 
   void savePosition(String bookId, ReadingPosition position, {double? fraction, String? chapterTitle});
+
+  /// Место прослушивания (А§4, `state.json`): начало последней звучавшей единицы. Хранится отдельно от позиции
+  /// чтения и не забывается при паузе, остановке и «Закрыть» — с него продолжает «Слушать» (FR-P3).
+  ReadingPosition? listeningPositionOf(String bookId);
+
+  void saveListeningPosition(String bookId, ReadingPosition position);
 
   void markOpened(String bookId);
 

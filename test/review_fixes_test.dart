@@ -3,6 +3,7 @@
 
 import 'package:audiobook_reader/library/library.dart';
 import 'package:audiobook_reader/playback/narration.dart';
+import 'package:audiobook_reader/tts/sentences.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -75,21 +76,35 @@ void main() {
     expect(p.sampler.state.name, 'loading', reason: 'проба после очистки озвучивается заново');
   });
 
-  testWidgets('№11: «Слушать» начинает с первого видимого блока, даже если это хвост абзаца', (tester) async {
+  // №11 заменён правилом A–E (замечание владельца 2026-11-14): хвост предложения с прошлой страницы не читается,
+  // старт — с первого предложения, которое начинается на странице; страница назад не уезжает.
+  testWidgets('№11 → FR-P3: «Слушать» начинает с первого предложения на странице, назад не листает', (tester) async {
     final p = await pumpPrototype(tester);
     await openKapitanskaya(tester, p);
     final st = reader(tester);
     final page = st.layout.pages[st.page];
     expect(page.firstOffset, greaterThan(0), reason: 'страница начинается хвостом абзаца');
-    final tail = ReadingPosition(page.firstBlock, page.firstOffset);
+    final book = st.widget.book;
+    // Ожидаемое место — первое начало предложения на странице (по правилу А§6.1, правило 2).
+    ReadingPosition? expected;
+    for (final f in page.fragments) {
+      if (f.isImage || !book.blocks[f.block].isSpoken) continue;
+      final s = sentenceStarts(book.blocks[f.block].text).where((s) => s >= f.start && s < f.end).firstOrNull;
+      if (s != null) {
+        expected = ReadingPosition(f.block, s);
+        break;
+      }
+    }
+    expect(expected, isNotNull);
+    expect(expected, isNot(ReadingPosition(page.firstBlock, page.firstOffset)),
+        reason: 'тест не вакуумный: страница начинается не с начала предложения');
     await tapCenter(tester);
     await tester.tap(find.byKey(const Key('listen')));
     await advance(tester, const Duration(milliseconds: 500));
-    expect(p.narration.block, tail.block);
+    expect(p.library.listeningPositionOf('kapitanskaya'), expected);
     final now = reader(tester).layout.pages[reader(tester).page];
-    final starts = now.firstBlock < tail.block || (now.firstBlock == tail.block && now.firstOffset <= tail.offset);
-    final ends = now.lastBlock > tail.block || (now.lastBlock == tail.block && now.lastEnd > tail.offset);
-    expect(starts && ends, isTrue, reason: 'страница не уехала назад, к началу абзаца');
+    expect(now.contains(expected!.block, expected.offset), isTrue, reason: 'страница не уехала назад');
+    expect(reader(tester).following, isTrue);
   });
 
   testWidgets('№12: при открытых панелях касание знака сноски открывает сноску', (tester) async {

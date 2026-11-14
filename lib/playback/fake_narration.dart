@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import '../audio/audio_store.dart';
 import '../book/model.dart';
 import '../library/library.dart';
+import '../tts/sentences.dart';
 import '../tts/voices.dart';
 import 'chapter_download.dart';
 import 'narration.dart';
@@ -12,7 +13,7 @@ import 'voice_sample.dart';
 /// Подставная озвучка прототипа: звука нет, таймер двигает «звучащий» блок по книге.
 ///
 /// Единица — блок, а не отрезок А§6.1: деления длинных абзацев и склейки коротких реплик в прототипе нет. Старт
-/// с середины блока (хвост абзаца с прошлой страницы) — доля пройденного блока, как старт с части отрезка.
+/// с предложения внутри блока — доля пройденного блока; в настоящем приложении это стартовый отрезок А§6.1.
 /// Длительность блока — знаки × 0,069 с ÷ скорость ÷ [demoAcceleration], чтобы следование за голосом было видно
 /// за минуту, а не за десять.
 class FakeNarrationController extends NarrationController {
@@ -50,6 +51,9 @@ class FakeNarrationController extends NarrationController {
   /// Номер сеанса (А§6.4): ответ прежнего сеанса не трогает новый.
   int _session = 0;
 
+  /// Смещение начала звучащей единицы в блоке: 0 или начало предложения, с которого начат блок.
+  int _unitStart = 0;
+
   /// Состояние держится, пока его не сменит пользователь (только для показа: «Готовлю голос…», «Жду связь…»).
   bool _held = false;
 
@@ -66,6 +70,8 @@ class FakeNarrationController extends NarrationController {
   @override
   double get blockProgress => _progress;
   @override
+  ReadingPosition? get unitStart => _block == null ? null : ReadingPosition(_block!, _unitStart);
+  @override
   double get speed => _speed;
   @override
   SleepTimer? get sleepTimer => _sleep;
@@ -77,11 +83,42 @@ class FakeNarrationController extends NarrationController {
   // --- команды контракта ---------------------------------------------------------------------------------
 
   @override
-  void listen(Book book, ReadingPosition from) {
+  void listen(Book book, PageRange page) {
     _book = book;
-    final start = _spokenFrom(from.block, forward: true) ?? from.block;
-    final len = book.blocks[start].text.length;
-    _newSession(start, start == from.block && len > 0 ? (from.offset / len).clamp(0.0, 0.99) : 0);
+    final saved = library.listeningPositionOf(book.id);
+    // 1. Место прослушивания на этой странице — продолжаем с него.
+    if (saved != null && page.contains(saved)) {
+      _startAt(book, saved);
+      return;
+    }
+    // 2. Первое предложение, которое начинается на странице.
+    for (var b = page.start.block; b <= page.end.block && b < book.blocks.length; b++) {
+      final block = book.blocks[b];
+      if (!block.isSpoken || block.text.trim().isEmpty) continue;
+      final from = b == page.start.block ? page.start.offset : 0;
+      final to = b == page.end.block ? page.end.offset : block.text.length;
+      for (final s in sentenceStarts(block.text)) {
+        if (s >= from && s < to) {
+          _startAt(book, ReadingPosition(b, s));
+          return;
+        }
+      }
+    }
+    // 3. Страница целиком внутри одного предложения — с его начала (только тогда страница уходит туда, где оно
+    // начинается).
+    final first = book.blocks[page.start.block];
+    if (first.isSpoken) {
+      _startAt(book, ReadingPosition(page.start.block, sentenceStartAt(first.text, page.start.offset)));
+    } else {
+      _startAt(book, ReadingPosition(page.start.block, 0));
+    }
+  }
+
+  /// Новый сеанс с места [p]: с блока и смещения внутри него (стартовый отрезок от предложения, А§6.1).
+  void _startAt(Book book, ReadingPosition p) {
+    _book = book;
+    final block = _spokenFrom(p.block, forward: true) ?? p.block;
+    _newSession(block, block == p.block ? p.offset : 0);
   }
 
   @override
@@ -91,7 +128,7 @@ class FakeNarrationController extends NarrationController {
     if (_state == NarrationState.stopped) {
       // Новый сеанс с актуальной сохранённой позиции: после остановки её мог переписать экран (А§5).
       final saved = library.positionOf(book.id) ?? ReadingPosition(_block ?? 0, 0);
-      listen(book, saved);
+      _startAt(book, saved);
       return;
     }
     if (_state == NarrationState.paused) {
@@ -114,7 +151,8 @@ class FakeNarrationController extends NarrationController {
     if (_book?.id == book.id && (_state == NarrationState.paused || isActive)) {
       _moveKeepingIntent(block);
     } else {
-      listen(book, ReadingPosition(block, 0));
+      // «Читать отсюда» — с начала выбранного абзаца (FR-P3, D).
+      _startAt(book, ReadingPosition(block, 0));
     }
   }
 
@@ -143,6 +181,7 @@ class FakeNarrationController extends NarrationController {
     _prepare?.cancel();
     _block = target;
     _progress = 0;
+    _unitStart = 0;
     _held = false;
     _savePosition();
     if (_state == NarrationState.paused) {
@@ -228,6 +267,7 @@ class FakeNarrationController extends NarrationController {
       _book = book;
       _block = _spokenFrom(fromBlock, forward: true) ?? fromBlock;
       _progress = 0.35;
+      _unitStart = 0;
       _session++;
     }
     _prepare?.cancel();
@@ -273,11 +313,13 @@ class FakeNarrationController extends NarrationController {
 
   // --- ход «звука» -----------------------------------------------------------------------------------
 
-  void _newSession(int block, double progress) {
+  void _newSession(int block, int offset) {
     _session++;
     final session = _session;
+    final len = _book!.blocks[block].text.length;
     _block = block;
-    _progress = progress;
+    _unitStart = offset.clamp(0, math.max(0, len - 1));
+    _progress = len == 0 ? 0 : _unitStart / len;
     _error = null;
     _stopReason = null;
     _held = false;
@@ -332,6 +374,7 @@ class FakeNarrationController extends NarrationController {
     final chapterEnds = book.chapterOf(nextBlock) != book.chapterOf(block);
     _block = nextBlock;
     _progress = 0;
+    _unitStart = 0;
     _savePosition();
     if (chapterEnds && _sleep?.kind == SleepKind.endOfChapter) {
       _sleep = null;
@@ -354,13 +397,15 @@ class FakeNarrationController extends NarrationController {
 
   int _lastSpoken() => _spokenFrom(_book!.blocks.length - 1, forward: false) ?? 0;
 
-  /// Позицию, пока сеанс активен, пишет контроллер: начало звучащего места (А§5).
+  /// Пока сеанс активен, позицию чтения пишет контроллер: звучащее место (А§5). Место прослушивания — начало
+  /// звучащей единицы — пишется всегда и не стирается ни паузой, ни остановкой, ни «Закрыть» (А§4).
   void _savePosition() {
     final book = _book;
     final block = _block;
     if (book == null || block == null) return;
     final offset = (_progress * book.blocks[block].text.length).floor();
     library.savePosition(book.id, ReadingPosition(block, offset), fraction: book.fractionAt(block, offset));
+    library.saveListeningPosition(book.id, ReadingPosition(block, _unitStart));
   }
 
   @override

@@ -247,14 +247,14 @@ void main() {
       expect(p.narration.sleepTimer?.minutes, 30);
       expect(find.text('30 мин'), findsOneWidget);
 
-      final shown = reader(tester).layout.pages[reader(tester).page];
-      final onScreen = ReadingPosition(shown.firstBlock, shown.firstOffset);
+      expect(reader(tester).following, isTrue);
+      final onScreen = reader(tester).soundingPosition!;
       await tester.tap(find.byKey(const Key('player-close')));
       await tester.pump();
       expect(p.narration.state, NarrationState.idle);
       expect(find.byKey(const Key('player-panel')), findsNothing);
       expect(p.library.positionOf('kapitanskaya'), onScreen,
-          reason: '«Закрыть»: позиция — начало страницы, которая была на экране (FR-P8)');
+          reason: '«Закрыть» при следовании: позиция — звучавшее место на экране (FR-P8, FR-P3)');
       // Панель ушла, страница стала длиннее и пересчитана от того же места: оно на экране.
       final st = reader(tester);
       final page = st.layout.pages[st.page];

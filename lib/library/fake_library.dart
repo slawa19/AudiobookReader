@@ -76,6 +76,15 @@ class FakeLibrary extends Library {
   @override
   ReadingPosition? positionOf(String bookId) => _positions[bookId];
 
+  /// В настоящей библиотеке — `state.json` рядом с позицией чтения; в прототипе — память.
+  final Map<String, ReadingPosition> _listening = {};
+
+  @override
+  ReadingPosition? listeningPositionOf(String bookId) => _listening[bookId];
+
+  @override
+  void saveListeningPosition(String bookId, ReadingPosition position) => _listening[bookId] = position;
+
   @override
   void savePosition(String bookId, ReadingPosition position, {double? fraction, String? chapterTitle}) {
     if (_positions[bookId] == position) return;
@@ -109,6 +118,7 @@ class FakeLibrary extends Library {
   void deleteBook(String bookId) {
     _entries.removeWhere((e) => e.id == bookId);
     _positions.remove(bookId);
+    _listening.remove(bookId);
     notifyListeners();
   }
 

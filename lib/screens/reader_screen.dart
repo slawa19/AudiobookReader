@@ -57,6 +57,10 @@ class ReaderScreenState extends State<ReaderScreen> {
   // Переходы по страницам. Каждый переход получает номер; завершение старого перехода не трогает признаки
   // нового. Перетаскивание пальцем сразу отменяет автоматический переход (№13 ревью).
   int _navOp = 0;
+
+  /// Посчитана ли нынешняя раскладка с панелью плеера: если нет, а панель уже видна, раскладка вот-вот
+  /// пересчитается, и листать по старой нельзя.
+  bool _layoutForPlayer = false;
   bool _programmatic = false;
   int? _animatingTo;
   bool _userDragging = false;
@@ -113,7 +117,13 @@ class ReaderScreenState extends State<ReaderScreen> {
     if (key == _layoutKey) return;
     _layoutKey = key;
     _layout = BookLayout.compute(book: book, style: style, column: column, imageSizes: s.library.imageSizes(book.id));
-    _page = _layout!.pageOf(_anchor.block, _anchor.offset);
+    // Пока экран следует за голосом, новая раскладка (появилась или изменилась панель плеера) ставится сразу на
+    // звучащее место, а не на прежний якорь: иначе звучащее оказалось бы на другой странице, и экран догонял бы его
+    // анимацией поверх смены раскладки (замечание владельца 2026-11-14).
+    final at = soundingPosition;
+    final follow = _following && at != null && narration.state != NarrationState.idle;
+    _layoutForPlayer = _mine;
+    _page = follow ? _layout!.pageOf(at.block, at.offset) : _layout!.pageOf(_anchor.block, _anchor.offset);
     final old = _pc;
     _pc = PageController(initialPage: _page);
     _generation++;
@@ -151,6 +161,13 @@ class ReaderScreenState extends State<ReaderScreen> {
     if (pc.hasClients && pc.page != null && pc.page!.round() != _page) {
       _onPageChanged(pc.page!.round(), programmatic: !user);
     }
+  }
+
+  /// Сообщение о смене страницы от [PageView] поколения [generation]: сообщения уже заменённого (раскладка
+  /// пересчиталась) не значат ничего — ни листания пользователем, ни отключения следования.
+  void _onPageChangedFrom(int generation, int i) {
+    if (generation != _generation) return;
+    _onPageChanged(i);
   }
 
   void _onPageChanged(int i, {bool? programmatic}) {
@@ -201,7 +218,10 @@ class ReaderScreenState extends State<ReaderScreen> {
     if (narration.bookId == book.id) {
       if (state == NarrationState.stopped && _lastState != NarrationState.stopped) _following = true;
       final at = soundingPosition;
-      if (_following && at != null && _layout != null && state != NarrationState.idle) {
+      // Панель плеера только что появилась или исчезла — раскладка пересчитается в этом же кадре и сама встанет
+      // на звучащее место; листать по старой раскладке нельзя.
+      final layoutStale = _layoutForPlayer != _mine;
+      if (!layoutStale && _following && at != null && _layout != null && state != NarrationState.idle) {
         final target = _layout!.pageOf(at.block, at.offset);
         if (target != _page) goToPage(target, user: false);
       }
@@ -274,14 +294,13 @@ class ReaderScreenState extends State<ReaderScreen> {
     return false;
   }
 
-  /// «Слушать»: с первого озвучиваемого места на экране, в том числе с хвоста абзаца, начатого на прошлой
-  /// странице (FR-P3, решение по ревью 2026-11-14).
+  /// «Слушать» (FR-P3): экран только сообщает видимую страницу, место выбирает контроллер. Следование включено
+  /// сразу: кнопки «К месту чтения» после старта быть не может.
   void listen() {
     if (!_requireKey()) return;
-    final first = _current.fragments.where((f) => !f.isImage && book.blocks[f.block].isSpoken).firstOrNull;
-    final from = first == null ? _pagePosition : ReadingPosition(first.block, first.start);
+    final page = PageRange(_pagePosition, ReadingPosition(_current.lastBlock, _current.lastEnd));
     _following = true;
-    narration.listen(book, from);
+    narration.listen(book, page);
     _setPanels(false);
   }
 
@@ -295,10 +314,14 @@ class ReaderScreenState extends State<ReaderScreen> {
   }
 
   void _closeNarration() {
-    // «Закрыть» — одна команда контроллера: сеанс завершён, затем позиция страницы на экране отдана писателю
-    // (FR-P8). Панель уходит, страница становится длиннее и пересчитывается от этого же места.
-    _anchor = _pagePosition;
-    narration.close(screenPosition: _pagePosition);
+    // «Закрыть» — одна команда контроллера: сеанс завершён, затем позиция чтения — место на экране — отдана
+    // писателю (FR-P8). Панель уходит, страница становится длиннее и пересчитывается так, чтобы это место
+    // осталось на экране: если экран следовал за голосом — звучавшее место, иначе — начало страницы, которую
+    // пользователь листал сам. Прежде бралось начало страницы, и пересчёт уводил экран назад, туда, где звучавшего
+    // абзаца уже не было (замечание владельца 2026-11-14).
+    final place = (_following ? soundingPosition : null) ?? _pagePosition;
+    _anchor = place;
+    narration.close(screenPosition: place);
     setState(() => _following = true);
   }
 
@@ -348,6 +371,7 @@ class ReaderScreenState extends State<ReaderScreen> {
         _pad = EdgeInsets.fromLTRB(24, _topInset + 28, 24, reserved);
         _column = Size(area.width - _pad.horizontal, math.max(_style.lineHeight * 3, area.height - _pad.vertical));
         _ensureLayout(_style, _column);
+        final generation = _generation;
         final highlight = <int>{
           if (playerVisible && narration.block != null) narration.block!,
           ?_selectedBlock,
@@ -366,7 +390,7 @@ class ReaderScreenState extends State<ReaderScreen> {
                   child: PageView.builder(
                     key: ValueKey('pages-$_generation'),
                     controller: _pc,
-                    onPageChanged: _onPageChanged,
+                    onPageChanged: (i) => _onPageChangedFrom(generation, i),
                     itemCount: _layout!.pages.length,
                     itemBuilder: (context, i) => ColoredBox(
                       color: scheme.surface,
