@@ -21,6 +21,10 @@ class PlayerPanel extends StatelessWidget {
     required this.onSleep,
     required this.onTopUp,
     required this.onChooseModel,
+    required this.onChangeKey,
+    required this.onPlay,
+    required this.onPrevious,
+    required this.onNext,
     this.header,
     this.download,
     this.onBodyHeight,
@@ -43,6 +47,14 @@ class PlayerPanel extends StatelessWidget {
   final VoidCallback onSleep;
   final VoidCallback onTopUp;
   final VoidCallback onChooseModel;
+  final VoidCallback onChangeKey;
+
+  /// «Слушать» (из паузы и из панели ошибки), «назад» и «вперёд»: действия, которыми пользователь сам запускает
+  /// или меняет место звука. Экран при них включает следование за голосом (решение a) и передаёт команду
+  /// контроллеру.
+  final VoidCallback onPlay;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
 
   /// Ползунок по книге, когда показаны панели чтения (FR-R5: доступен и во время прослушивания).
   final Widget? header;
@@ -60,15 +72,19 @@ class PlayerPanel extends StatelessWidget {
     final state = narration.state;
     final Widget content;
     if (state == NarrationState.stopped && narration.stopReason == StopReason.error && narration.error != null) {
+      final error = narration.error!;
       content = _ErrorContent(
-        error: narration.error!,
-        modelLabel: TtsModel.byId(settings.modelId).label,
+        error: error,
+        // Недоступна модель, на которой случилась ошибка, а не та, что выбрана в настройках после (№11 проверки).
+        modelLabel: TtsModel.byId(error.modelId ?? settings.modelId).label,
         onClose: onClose,
-        onListen: narration.resume,
+        onListen: onPlay,
         onTopUp: onTopUp,
         onChooseModel: onChooseModel,
+        onChangeKey: onChangeKey,
       );
     } else if (state == NarrationState.stopped) {
+      // «Книга закончилась» — только «Закрыть»: ни «назад/вперёд», ни «Слушать» (решение i).
       content = _MessageContent(
           title: context.l10n.endOfBook, body: context.l10n.endOfBookBody, onClose: onClose);
     } else {
@@ -81,6 +97,9 @@ class PlayerPanel extends StatelessWidget {
         onVoice: onVoice,
         onSpeed: onSpeed,
         onSleep: onSleep,
+        onPlay: onPlay,
+        onPrevious: onPrevious,
+        onNext: onNext,
       );
     }
     final body = Padding(
@@ -122,6 +141,9 @@ class _Controls extends StatelessWidget {
     required this.onVoice,
     required this.onSpeed,
     required this.onSleep,
+    required this.onPlay,
+    required this.onPrevious,
+    required this.onNext,
   });
 
   final NarrationController narration;
@@ -132,6 +154,9 @@ class _Controls extends StatelessWidget {
   final VoidCallback onVoice;
   final VoidCallback onSpeed;
   final VoidCallback onSleep;
+  final VoidCallback onPlay;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
 
   @override
   Widget build(BuildContext context) {
@@ -148,37 +173,24 @@ class _Controls extends StatelessWidget {
             ? l10n.endOfChapterShort
             : l10n.minutesShort((sleep.remaining(narration.now()).inSeconds / 60).ceil());
 
-    final Widget status = busy
-        ? Row(
-            key: const Key('player-status'),
-            children: [
-              const SizedBox(width: 8),
-              const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5)),
-              const SizedBox(width: 12),
-              Flexible(
-                child: Text(
-                  state == NarrationState.preparing ? l10n.preparing : l10n.waiting,
-                  style: theme.textTheme.titleSmall?.copyWith(color: scheme.onSurface),
-                ),
-              ),
-            ],
-          )
-        : Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              VoiceChip(key: const Key('voice-chip'), voiceName: voiceName, onPressed: onVoice),
-              if (!following)
-                FilledButton.tonalIcon(
-                  key: const Key('to-reading-place'),
-                  style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-                  onPressed: onBackToReading,
-                  icon: const Icon(Icons.my_location_rounded),
-                  label: Text(l10n.toReadingPlace),
-                ),
-            ],
-          );
+    // Чип голоса и «К месту чтения» есть во всех состояниях со звуком и без (решение k): «Жду связь…» может
+    // длиться долго, а вернуться к месту и сменить голос нужно и тогда.
+    final Widget chips = Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        VoiceChip(key: const Key('voice-chip'), voiceName: voiceName, onPressed: onVoice),
+        if (!following)
+          FilledButton.tonalIcon(
+            key: const Key('to-reading-place'),
+            style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+            onPressed: onBackToReading,
+            icon: const Icon(Icons.my_location_rounded),
+            label: Text(l10n.toReadingPlace),
+          ),
+      ],
+    );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -186,10 +198,28 @@ class _Controls extends StatelessWidget {
         ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 52),
           child: Row(children: [
-            Expanded(child: status),
+            Expanded(child: chips),
             IconButton(key: const Key('player-close'), tooltip: l10n.close, icon: const Icon(Icons.close_rounded), onPressed: onClose),
           ]),
         ),
+        // Состояние без звука — отдельной строкой под чипами (FR-P6).
+        if (busy)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+            child: Row(
+              key: const Key('player-status'),
+              children: [
+                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5)),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Text(
+                    state == NarrationState.preparing ? l10n.preparing : l10n.waiting,
+                    style: theme.textTheme.titleSmall?.copyWith(color: scheme.onSurface),
+                  ),
+                ),
+              ],
+            ),
+          ),
         const SizedBox(height: 4),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -208,19 +238,19 @@ class _Controls extends StatelessWidget {
               key: const Key('previous'),
               tooltip: l10n.previous,
               iconSize: 30,
-              onPressed: narration.previous,
+              onPressed: onPrevious,
               icon: const Icon(Icons.skip_previous_rounded),
             ),
             _PlayButton(
               playing: wantsToPlay,
               label: wantsToPlay ? l10n.pause : l10n.listen,
-              onPressed: wantsToPlay ? narration.pause : narration.resume,
+              onPressed: wantsToPlay ? narration.pause : onPlay,
             ),
             IconButton(
               key: const Key('next'),
               tooltip: l10n.next,
               iconSize: 30,
-              onPressed: narration.next,
+              onPressed: onNext,
               icon: const Icon(Icons.skip_next_rounded),
             ),
             SizedBox(
@@ -302,6 +332,7 @@ class _ErrorContent extends StatelessWidget {
     required this.onListen,
     required this.onTopUp,
     required this.onChooseModel,
+    required this.onChangeKey,
   });
 
   final NarrationError error;
@@ -310,6 +341,7 @@ class _ErrorContent extends StatelessWidget {
   final VoidCallback onListen;
   final VoidCallback onTopUp;
   final VoidCallback onChooseModel;
+  final VoidCallback onChangeKey;
 
   @override
   Widget build(BuildContext context) {
@@ -319,6 +351,7 @@ class _ErrorContent extends StatelessWidget {
       NarrationErrorKind.payment => (l10n.error402Title, '${l10n.google(error.googleMessage)} ${l10n.error402Body}'),
       NarrationErrorKind.modelNotFound =>
         (l10n.error404Title(modelLabel), '${l10n.google(error.googleMessage)} ${l10n.error404Body}'),
+      NarrationErrorKind.badKey => (l10n.errorKeyTitle, '${l10n.google(error.googleMessage)} ${l10n.errorKeyBody}'),
       NarrationErrorKind.other => (l10n.errorOtherTitle, l10n.quoted(error.googleMessage)),
     };
     final listen = OutlinedButton.icon(
@@ -347,6 +380,17 @@ class _ErrorContent extends StatelessWidget {
             style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
             onPressed: onChooseModel,
             child: Text(l10n.chooseModel),
+          ),
+          second: listen,
+        ),
+      NarrationErrorKind.badKey => ButtonPair(
+          labels: [l10n.changeKey, l10n.listen],
+          first: FilledButton.icon(
+            key: const Key('change-key'),
+            style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+            onPressed: onChangeKey,
+            icon: const Icon(Icons.key_rounded),
+            label: Text(l10n.changeKey),
           ),
           second: listen,
         ),

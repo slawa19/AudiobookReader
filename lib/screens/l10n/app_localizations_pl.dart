@@ -217,6 +217,16 @@ class AppLocalizationsPl extends AppLocalizations {
   String get error404Body => 'Wybierz inny model.';
 
   @override
+  String get errorKeyTitle => 'Google nie przyjął klucza Gemini';
+
+  @override
+  String get errorKeyBody =>
+      'Sprawdź klucz w ustawieniach i naciśnij „Słuchaj”.';
+
+  @override
+  String get changeKey => 'Zmień klucz';
+
+  @override
   String get errorOtherTitle => 'Google odmówił nagrania';
 
   @override

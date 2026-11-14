@@ -47,7 +47,9 @@ class FakeLibrary extends Library {
   @override
   List<ShelfEntry> get shelf {
     if (demoEmptyShelf) return const [];
-    return [..._entries]..sort((a, b) => b.lastOpened.compareTo(a.lastOpened));
+    final opened = _entries.where((e) => e.opened).toList()..sort((a, b) => b.lastOpened!.compareTo(a.lastOpened!));
+    final fresh = _entries.where((e) => !e.opened).toList()..sort((a, b) => b.addedAt.compareTo(a.addedAt));
+    return [...opened, ...fresh];
   }
 
   @override
@@ -85,14 +87,34 @@ class FakeLibrary extends Library {
   @override
   void saveListeningPosition(String bookId, ReadingPosition position) => _listening[bookId] = position;
 
+  /// С какого места книга считается дочитанной (FR-L4): начало последней страницы или конец прослушивания.
+  final Map<String, ReadingPosition> _finishedFrom = {};
+
+  static bool _before(ReadingPosition a, ReadingPosition b) => a.block < b.block || (a.block == b.block && a.offset < b.offset);
+
   @override
-  void savePosition(String bookId, ReadingPosition position, {double? fraction, String? chapterTitle}) {
-    if (_positions[bookId] == position) return;
+  void savePosition(String bookId, ReadingPosition position,
+      {double? fraction, String? chapterTitle, bool atEnd = false}) {
+    final finished = _finishedFrom[bookId];
+    if (atEnd) {
+      if (finished == null || _before(position, finished)) _finishedFrom[bookId] = position;
+    } else if (finished != null && _before(position, finished)) {
+      _finishedFrom.remove(bookId);
+    }
+    final done = _finishedFrom.containsKey(bookId);
+    if (_positions[bookId] == position && !atEnd) return;
     _positions[bookId] = position;
     final e = _entries.where((e) => e.id == bookId).firstOrNull;
+    final book = _books[bookId];
     if (e != null) {
-      if (fraction != null) e.fraction = fraction;
-      if (chapterTitle != null) e.chapterTitle = chapterTitle;
+      final f = fraction ?? book?.fractionAt(position.block, position.offset);
+      if (done) {
+        e.fraction = 1;
+      } else if (f != null) {
+        e.fraction = f;
+      }
+      final title = chapterTitle ?? (book == null ? null : _chapterLabel(book, position.block));
+      if (title != null) e.chapterTitle = title;
     }
     notifyListeners();
   }
@@ -100,7 +122,9 @@ class FakeLibrary extends Library {
   @override
   void markOpened(String bookId) {
     final e = entry(bookId);
-    e.lastOpened = DateTime.now().isAfter(_now) ? DateTime.now() : _now.add(const Duration(minutes: 1));
+    final last = _entries.map((e) => e.lastOpened).whereType<DateTime>().fold<DateTime>(_now, (a, b) => b.isAfter(a) ? b : a);
+    final now = DateTime.now();
+    e.lastOpened = now.isAfter(last) ? now : last.add(const Duration(minutes: 1));
     e.fraction ??= 0;
     notifyListeners();
   }
@@ -119,6 +143,8 @@ class FakeLibrary extends Library {
     _entries.removeWhere((e) => e.id == bookId);
     _positions.remove(bookId);
     _listening.remove(bookId);
+    _finishedFrom.remove(bookId);
+    _bookVoices.remove(bookId);
     notifyListeners();
   }
 
@@ -139,26 +165,34 @@ class FakeLibrary extends Library {
     (name: 'bestseller.epub', kind: 'drm'),
   ];
 
-  /// Возвращает id имеющейся книги, если файл уже на полке (FR-L3); иначе начинает добавление.
+  /// Книги, которые получаются из «файлов» имитации выбора (id — как первые знаки sha256 у настоящей, А§4).
+  static final _demoFileBooks = <String, ShelfEntry Function(DateTime addedAt)>{
+    'duplicate': (at) => ShelfEntry(
+        id: 'zapiski', title: 'Записки охотника', author: 'Иван Тургенев', addedAt: at, bookBytes: 1300 * 1024),
+    'ok': (at) => ShelfEntry(
+        id: 'belkin', title: 'Повести Белкина', author: 'Александр Пушкин', addedAt: at, bookBytes: 410 * 1024),
+  };
+
+  /// Возвращает id имеющейся книги, если файл уже на полке (FR-L3); иначе начинает добавление. Тот же файл,
+  /// который уже добавляется, второй раз не добавляется. Удалённая книга добавляется заново.
   String? addDemoFile(String name, String kind) {
-    if (kind == 'duplicate') return 'zapiski';
+    final make = _demoFileBooks[kind];
+    if (make != null) {
+      final id = make(_now).id;
+      if (_entries.any((e) => e.id == id)) return id;
+    }
+    if (_jobs.any((j) => j.fileName == name && j.status == AddJobStatus.adding)) return null;
     final job = AddJob(fileName: name, status: AddJobStatus.adding);
     _jobs.insert(0, job);
     notifyListeners();
     Future<void>.delayed(const Duration(milliseconds: 2200), () {
       if (!_jobs.contains(job)) return;
-      switch (kind) {
-        case 'ok':
-          _jobs.remove(job);
-          _entries.add(ShelfEntry(
-            id: 'belkin',
-            title: 'Повести Белкина',
-            author: 'Александр Пушкин',
-            lastOpened: DateTime.now(),
-            bookBytes: 410 * 1024,
-          ));
-        default:
-          _fail(job, kind);
+      if (make != null) {
+        _jobs.remove(job);
+        final entry = make(DateTime.now());
+        if (!_entries.any((e) => e.id == entry.id)) _entries.add(entry);
+      } else {
+        _fail(job, kind);
       }
       notifyListeners();
     });
@@ -238,12 +272,15 @@ class FakeLibrary extends Library {
   }
 
   static List<ShelfEntry> _demoEntries(DateTime now) {
-    ShelfEntry e(String id, String title, String author, int hoursAgo, {bool cover = true, double? fraction, int kb = 600}) =>
+    // [hoursAgo] — когда открывали; `null` — ни разу (книга «новая»).
+    ShelfEntry e(String id, String title, String author, int? hoursAgo,
+            {bool cover = true, double? fraction, int kb = 600, int addedDaysAgo = 60}) =>
         ShelfEntry(
           id: id,
           title: title,
           author: author,
-          lastOpened: now.subtract(Duration(hours: hoursAgo)),
+          addedAt: now.subtract(Duration(days: addedDaysAgo)),
+          lastOpened: hoursAgo == null ? null : now.subtract(Duration(hours: hoursAgo)),
           cover: cover ? AssetImage('assets/demo/covers/$id.png') : null,
           fraction: fraction,
           bookBytes: kb * 1024,
@@ -251,7 +288,7 @@ class FakeLibrary extends Library {
     return [
       e('kapitanskaya', 'Капитанская дочка', 'Александр Пушкин', 1, kb: 480),
       e('dama', 'Дама с собачкой. Рассказы', 'Антон Чехов', 30, kb: 520),
-      e('voyna', 'Война и мир', 'Лев Толстой', 200, kb: 5800),
+      e('voyna', 'Война и мир', 'Лев Толстой', null, kb: 5800, addedDaysAgo: 8),
       e('zapiski', 'Записки охотника', 'Иван Тургенев', 260, cover: false, fraction: 0.58, kb: 1300),
       e('geroy', 'Герой нашего времени', 'Михаил Лермонтов', 400, fraction: 0.03, kb: 700),
       e('dushi', 'Мёртвые души', 'Николай Гоголь', 900, fraction: 1, kb: 1900),

@@ -27,7 +27,8 @@ class ShelfEntry {
     required this.id,
     required this.title,
     required this.author,
-    required this.lastOpened,
+    required this.addedAt,
+    this.lastOpened,
     this.cover,
     this.fraction,
     this.chapterTitle,
@@ -38,9 +39,14 @@ class ShelfEntry {
   final String title;
   final String author;
   final ImageProvider? cover;
-  DateTime lastOpened;
+  final DateTime addedAt;
 
-  /// Доля прочитанного; `null` — книгу ещё не открывали («новая»).
+  /// Время последнего открытия; `null` — книгу ни разу не открывали («новая»): карточки «Продолжить» у неё нет.
+  DateTime? lastOpened;
+
+  bool get opened => lastOpened != null;
+
+  /// Доля прочитанного; `null` — книгу ещё не открывали. 1 — дочитана (FR-L4).
   double? fraction;
   String? chapterTitle;
 
@@ -69,7 +75,9 @@ class AddJob {
 
 /// Полка и хранение книг (А§2, `library`). Единственный писатель позиции и настроек книги.
 abstract class Library extends ChangeNotifier {
-  /// Книги по убыванию времени последнего открытия (FR-L4).
+  /// Полка (FR-L4): сначала открывавшиеся книги по убыванию времени последнего открытия, затем ни разу не
+  /// открытые — новые сверху. Экран ставит первую открывавшуюся в карточку «Продолжить», а неоткрытые — в
+  /// начало списка под ней.
   List<ShelfEntry> get shelf;
 
   List<AddJob> get addJobs;
@@ -86,7 +94,13 @@ abstract class Library extends ChangeNotifier {
   /// Позиция чтения (А§5): начало первой строки на экране либо, пока озвучка активна, звучащее место.
   ReadingPosition? positionOf(String bookId);
 
-  void savePosition(String bookId, ReadingPosition position, {double? fraction, String? chapterTitle});
+  /// Записывает позицию чтения. Долю и название главы для полки библиотека считает сама по книге, если их не
+  /// передали: писатель позиции (экран или контроллер) их знать не обязан.
+  ///
+  /// [atEnd] — показана последняя страница или прослушивание дошло до конца книги: книга дочитана, доля 1. Это не
+  /// откатывается, пока новая позиция не окажется раньше места, где книгу дочитали (человек ушёл назад дальше
+  /// последней страницы).
+  void savePosition(String bookId, ReadingPosition position, {double? fraction, String? chapterTitle, bool atEnd = false});
 
   /// Место прослушивания (А§4, `state.json`): начало последней звучавшей единицы. Хранится отдельно от позиции
   /// чтения и не забывается при паузе, остановке и «Закрыть» — с него продолжает «Слушать» (FR-P3).

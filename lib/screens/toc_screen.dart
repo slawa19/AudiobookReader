@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../book/model.dart';
 import '../playback/chapter_download.dart';
+import '../tts/voices.dart';
 import 'common.dart';
 import 'services.dart';
 
@@ -49,22 +50,39 @@ class _TocScreenState extends State<TocScreen> {
         ]),
       ),
       body: ListenableBuilder(
-        listenable: Listenable.merge([downloads, widget.services.settings]),
-        builder: (context, _) => ListView(
-          padding: EdgeInsets.fromLTRB(12, 4, 12, 24 + MediaQuery.paddingOf(context).bottom),
-          children: [
-            for (var i = 0; i < book.chapters.length; i++) ...[
-              _ChapterTile(
-                key: i == widget.current ? _currentKey : Key('chapter-$i'),
-                chapter: book.chapters[i],
-                current: i == widget.current,
-                voiced: downloads.isVoiced(book.id, i),
-                onTap: () => Navigator.pop(context, i),
-              ),
-              if (i == widget.current) _DownloadBlock(services: widget.services, book: book, chapter: i),
+        listenable: Listenable.merge([downloads, widget.services.settings, widget.services.library]),
+        builder: (context, _) {
+          // Готовность и оценка — для действующего профиля голоса книги (FR-D2, решение g).
+          final profile = downloads.profileFor(book.id);
+          final task = downloads.task;
+          final running = task != null && task.status == DownloadStatus.running;
+          // Блок задачи (ход или ошибка) — у той главы, которой она принадлежит, даже если читатель уже в другой;
+          // предложение скачать — у текущей главы и только когда никакая задача не идёт.
+          int? blockAt(int i) {
+            if (task != null && task.bookId == book.id && task.chapter == i) return i;
+            if (i == widget.current && !running && !downloads.isVoiced(book.id, i, profile)) return i;
+            return null;
+          }
+
+          return ListView(
+            padding: EdgeInsets.fromLTRB(12, 4, 12, 24 + MediaQuery.paddingOf(context).bottom),
+            children: [
+              for (var i = 0; i < book.chapters.length; i++) ...[
+                _ChapterTile(
+                  key: i == widget.current ? _currentKey : Key('chapter-$i'),
+                  chapter: book.chapters[i],
+                  current: i == widget.current,
+                  voiced: downloads.isVoiced(book.id, i, profile),
+                  onTap: () => Navigator.pop(context, i),
+                ),
+                if (blockAt(i) != null)
+                  _DownloadBlock(services: widget.services, book: book, chapter: i, profile: profile)
+                else if (i == widget.current)
+                  const SizedBox(height: 4),
+              ],
             ],
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -110,11 +128,12 @@ class _ChapterTile extends StatelessWidget {
 }
 
 class _DownloadBlock extends StatelessWidget {
-  const _DownloadBlock({required this.services, required this.book, required this.chapter});
+  const _DownloadBlock({required this.services, required this.book, required this.chapter, required this.profile});
 
   final AppServices services;
   final Book book;
   final int chapter;
+  final VoiceProfile profile;
 
   @override
   Widget build(BuildContext context) {
@@ -122,17 +141,18 @@ class _DownloadBlock extends StatelessWidget {
     final scheme = theme.colorScheme;
     final l10n = context.l10n;
     final downloads = services.downloads;
-    if (downloads.isVoiced(book.id, chapter)) return const SizedBox(height: 4);
     final task = downloads.task;
     final mine = task != null && task.bookId == book.id && task.chapter == chapter;
-    final est = downloads.estimate(book, chapter);
+    // Оценка — остаток для действующего профиля: после «Остановить» и после ошибки — не цена всей главы.
+    final est = downloads.estimate(book, chapter, profile);
     final minutes = (est.seconds / 60).ceil();
     final indent = (book.chapters[chapter].level - 1) * 24.0 + 16;
 
     final List<Widget> children;
     if (mine && task.status == DownloadStatus.running) {
       children = [
-        Text(l10n.downloading((task.readySeconds / 60).floor(), minutes), style: theme.textTheme.bodyMedium),
+        Text(l10n.downloading((task.readySeconds / 60).floor(), (task.totalSeconds / 60).ceil()),
+            style: theme.textTheme.bodyMedium),
         const SizedBox(height: 10),
         LinearProgressIndicator(
           value: task.fraction,
@@ -183,7 +203,7 @@ class _DownloadBlock extends StatelessWidget {
           child: FilledButton.tonalIcon(
             key: const Key('download-start'),
             style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-            onPressed: () => downloads.start(book, chapter),
+            onPressed: () => downloads.start(book, chapter, profile),
             icon: Icon(failed ? Icons.refresh_rounded : Icons.download_rounded),
             label: Text(failed ? l10n.downloadAgain : l10n.downloadChapter),
           ),

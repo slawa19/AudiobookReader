@@ -134,6 +134,9 @@
     }
   },
   "error404Body": "Выберите другую модель.",
+  "errorKeyTitle": "Google не принял ключ Gemini",
+  "errorKeyBody": "Проверьте ключ в настройках и нажмите «Слушать».",
+  "changeKey": "Изменить ключ",
   "errorOtherTitle": "Google отказал в озвучке",
   "google": "Google: «{message}»",
   "@google": {

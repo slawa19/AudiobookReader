@@ -92,5 +92,26 @@ enum TtsModel {
       date.isBefore(DateTime(2027)) ? dollarsPerHourNow : dollarsPerHourFrom2027;
 }
 
+/// Профиль голоса (А§6.2): то, от чего зависит звук. Готовность главы и оценка остатка считаются для
+/// действующего профиля: звук другим голосом или моделью для него не годится. Стиль в прототипе один — по языку
+/// книги, и он не меняется у книги, поэтому здесь его нет.
+class VoiceProfile {
+  const VoiceProfile({required this.voice, required this.modelId});
+
+  final String voice;
+  final String modelId;
+
+  String get key => '$voice/$modelId';
+
+  @override
+  bool operator ==(Object other) => other is VoiceProfile && other.voice == voice && other.modelId == modelId;
+
+  @override
+  int get hashCode => Object.hash(voice, modelId);
+
+  @override
+  String toString() => 'VoiceProfile($voice, $modelId)';
+}
+
 /// Секунд звука на знак текста — верх замера (GEMINI_TTS.md, «Цена»).
 const secondsPerChar = 0.069;

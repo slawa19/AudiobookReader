@@ -217,6 +217,17 @@ class AppLocalizationsDe extends AppLocalizations {
   String get error404Body => 'Wählen Sie ein anderes Modell.';
 
   @override
+  String get errorKeyTitle =>
+      'Google hat den Gemini-Schlüssel nicht akzeptiert';
+
+  @override
+  String get errorKeyBody =>
+      'Prüfen Sie den Schlüssel in den Einstellungen und tippen Sie auf „Anhören“.';
+
+  @override
+  String get changeKey => 'Schlüssel ändern';
+
+  @override
   String get errorOtherTitle => 'Google hat die Vertonung abgelehnt';
 
   @override

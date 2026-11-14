@@ -146,6 +146,7 @@ void main() {
       ('end', '17-player-end-of-book'),
       ('error402', '18-player-402'),
       ('error404', '18-player-404'),
+      ('errorKey', '18-player-error-key'),
       ('errorOther', '18-player-error-other'),
     ]) {
       testWidgets('плеер: $state', (tester) async {

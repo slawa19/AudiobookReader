@@ -217,6 +217,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get error404Body => 'Выберите другую модель.';
 
   @override
+  String get errorKeyTitle => 'Google не принял ключ Gemini';
+
+  @override
+  String get errorKeyBody => 'Проверьте ключ в настройках и нажмите «Слушать».';
+
+  @override
+  String get changeKey => 'Изменить ключ';
+
+  @override
   String get errorOtherTitle => 'Google отказал в озвучке';
 
   @override

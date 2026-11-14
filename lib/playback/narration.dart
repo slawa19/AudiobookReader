@@ -8,17 +8,21 @@ enum NarrationState { idle, preparing, playing, waiting, paused, stopped }
 
 enum StopReason { error, endOfBook }
 
-/// Классы постоянных ошибок, которые экран показывает по-разному (FR-P6, FR-P7).
-enum NarrationErrorKind { payment, modelNotFound, other }
+/// Классы постоянных ошибок, которые экран показывает по-разному (FR-P6, FR-P7). [badKey] — отказ по ключу
+/// (400/403 «API key not valid» и подобные): распознанная причина с кнопкой «Изменить ключ».
+enum NarrationErrorKind { payment, modelNotFound, badKey, other }
 
 @immutable
 class NarrationError {
-  const NarrationError(this.kind, this.googleMessage);
+  const NarrationError(this.kind, this.googleMessage, {this.modelId});
 
   final NarrationErrorKind kind;
 
   /// Текст Google как есть — не переводится.
   final String googleMessage;
+
+  /// Модель, на которой случилась ошибка (для 404): панель называет её, а не ту, что выбрана в настройках потом.
+  final String? modelId;
 }
 
 /// Видимая страница: от [start] (включительно) до [end] (не включая) — блок и смещение.
@@ -108,15 +112,21 @@ abstract class NarrationController extends ChangeNotifier {
   void next();
   void previous();
 
-  /// «Закрыть» (FR-P8) или закрытие книги: сеанс завершается (`idle`), затем [screenPosition] — место на экране —
-  /// передаётся писателю позиции чтения; с этого момента её пишет экран (А§5). Место прослушивания при этом не
-  /// забывается: с него продолжит следующее «Слушать», если оно на экране.
-  void close({ReadingPosition? screenPosition});
+  /// «Закрыть» (FR-P8) или закрытие книги: сеанс завершается (`idle`), таймер сна снимается, затем
+  /// [screenPosition] — место на экране — передаётся писателю позиции чтения; с этого момента её пишет экран (А§5).
+  /// [screenAtEnd] — на экране последняя страница: книга остаётся дочитанной (FR-L4). Место прослушивания при этом
+  /// не забывается: с него продолжит следующее «Слушать», если оно на экране.
+  void close({ReadingPosition? screenPosition, bool screenAtEnd = false});
 
   void setSpeed(double speed);
+
+  /// Таймер сна (FR-D1). Снимается при срабатывании, «Закрыть», закрытии книги и смене книги; смена места, главы
+  /// и голоса в той же книге его не снимает. Срок, истёкший без звука: на паузе — таймер просто снят; в
+  /// `preparing`/`waiting` — пауза, и таймер снят.
   void setSleepTimer(SleepTimer? timer);
 
-  /// Смена голоса или модели: новый сеанс с текущего отрезка с прежним намерением (FR-V2).
+  /// Голос или модель действительно сменились: новый сеанс с текущего отрезка с прежним намерением (FR-V2).
+  /// Касание уже выбранного голоса или модели сюда не приходит (решение j).
   void restartSession();
 
   /// «Очистить озвучку» (FR-M3, А§4): сеанс завершается, «Скачать главу» останавливается, готовность глав и

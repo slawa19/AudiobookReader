@@ -44,16 +44,25 @@ class _VoiceScreenState extends State<VoiceScreen> {
 
   String _language(BuildContext context) => widget.book?.language ?? context.l10n.localeName;
 
+  /// Голос, которым звучит книга этого экрана (или книга текущего прослушивания — для голоса приложения).
+  String _effectiveVoice() {
+    final bookId = widget.book?.id ?? s.narration.bookId;
+    return (bookId == null ? null : s.library.bookVoice(bookId)) ?? s.settings.voice;
+  }
+
   void _select(String? v) {
-    if (v == null) return;
+    // Касание уже выбранной строки ничего не меняет и сеанс не перезапускает (решение j).
+    if (v == null || v == _value) return;
+    final before = _effectiveVoice();
     final book = widget.book;
     if (book == null) {
       s.settings.voice = v;
     } else {
       s.library.setBookVoice(book.id, v == _asSettings ? null : v);
     }
-    // Смена голоса — новый сеанс с текущего отрезка с прежним намерением (FR-V2).
-    s.narration.restartSession();
+    // Смена голоса — новый сеанс с текущего отрезка с прежним намерением (FR-V2); тот же голос под другой строкой
+    // («Как в настройках» и он же явно) звук не меняет.
+    if (_effectiveVoice() != before) s.narration.restartSession();
   }
 
   @override

@@ -13,7 +13,8 @@ class SettingsScreen extends StatefulWidget {
 
   final AppServices services;
 
-  /// «Слушать» без ключа приводит сюда с фокусом на поле ключа (FR-P7).
+  /// «Слушать» без ключа и «Изменить ключ» после отказа по ключу приводят сюда сразу к полю ключа (FR-P7): поле
+  /// открыто для ввода, даже если ключ сохранён.
   final bool focusKey;
 
   /// Ответ 404 на модель — «Выбрать модель» открывает выбор сразу.
@@ -33,6 +34,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _editingKey = widget.focusKey;
     if (widget.openModel) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _chooseModel());
     }
@@ -50,7 +52,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context,
       (context) => _ModelSheet(current: TtsModel.byId(s.settings.modelId), tariffs: s.tariffs),
     );
-    if (picked != null) {
+    // Касание уже выбранной модели ничего не меняет и сеанс не перезапускает (решение j).
+    if (picked != null && picked.id != s.settings.modelId) {
       s.settings.modelId = picked.id;
       s.narration.restartSession();
     }
@@ -90,7 +93,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _saveKey() {
-    s.settings.apiKey = _keyController.text;
+    // «Готово» на пустом поле ключ не трогает: удаления ключа в интерфейсе нет (решение j).
+    if (_keyController.text.trim().isNotEmpty) s.settings.apiKey = _keyController.text;
     _keyController.clear();
     setState(() => _editingKey = false);
   }

@@ -217,6 +217,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get error404Body => 'Choose another model.';
 
   @override
+  String get errorKeyTitle => 'Google did not accept your Gemini key';
+
+  @override
+  String get errorKeyBody => 'Check the key in Settings and tap “Listen”.';
+
+  @override
+  String get changeKey => 'Change key';
+
+  @override
   String get errorOtherTitle => 'Google refused to narrate';
 
   @override

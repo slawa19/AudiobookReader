@@ -30,6 +30,13 @@ class _ShelfScreenState extends State<ShelfScreen> {
       listenable: Listenable.merge([library, services.audio]),
       builder: (context, _) {
         final books = library.shelf;
+        // «Продолжить» — только у книги, которую открывали (последняя открытая). Ни разу не открытые — первыми
+        // под карточкой, новые сверху; остальные — по времени последнего открытия (FR-L4, решение e).
+        final continued = books.where((e) => e.opened).firstOrNull;
+        final rows = [
+          ...books.where((e) => !e.opened),
+          ...books.where((e) => e.opened && e != continued),
+        ];
         final jobs = library.addJobs;
         final empty = books.isEmpty && jobs.isEmpty;
         final bottomInset = MediaQuery.paddingOf(context).bottom;
@@ -72,18 +79,18 @@ class _ShelfScreenState extends State<ShelfScreen> {
                 SliverFillRemaining(hasScrollBody: false, child: _EmptyShelf(onAdd: () => services.addBook(context)))
               else ...[
                 for (final job in jobs) SliverToBoxAdapter(child: _AddJobRow(job: job, library: library)),
-                if (books.isNotEmpty)
+                if (continued != null)
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                       child: _ContinueCard(
-                          entry: books.first, onOpen: () => _open(books.first), onMenu: () => _menu(books.first)),
+                          entry: continued, onOpen: () => _open(continued), onMenu: () => _menu(continued)),
                     ),
                   ),
                 SliverList.builder(
-                  itemCount: books.length > 1 ? books.length - 1 : 0,
+                  itemCount: rows.length,
                   itemBuilder: (context, i) {
-                    final e = books[i + 1];
+                    final e = rows[i];
                     return _BookRow(entry: e, onOpen: () => _open(e), onMenu: () => _menu(e));
                   },
                 ),
@@ -269,7 +276,7 @@ class _BookRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            if (entry.fraction == null)
+            if (!entry.opened || entry.fraction == null)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(

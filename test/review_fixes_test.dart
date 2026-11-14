@@ -56,7 +56,7 @@ void main() {
 
   testWidgets('№5: «Очистить озвучку» сбрасывает готовность глав, пробы и останавливает скачивание', (tester) async {
     final p = await pumpPrototype(tester);
-    expect(p.downloads.isVoiced('dama', 1), isTrue);
+    expect(p.downloads.isVoiced('dama', 1, p.downloads.profileFor('dama')), isTrue);
     final book = await p.library.loadBook('dama');
     p.downloads.demoShow(book, 3, failed: false);
     p.sampler.play('Kore', bookLanguage: 'ru');
@@ -69,7 +69,7 @@ void main() {
     await tester.tap(find.byKey(const Key('clear-confirm')));
     await advance(tester, const Duration(milliseconds: 600));
     expect(p.audio.totalBytes, 0);
-    expect(p.downloads.isVoiced('dama', 1), isFalse, reason: 'готовность глав сброшена');
+    expect(p.downloads.isVoiced('dama', 1, p.downloads.profileFor('dama')), isFalse, reason: 'готовность глав сброшена');
     expect(p.downloads.task, isNull, reason: 'скачивание остановлено');
     p.sampler.play('Kore', bookLanguage: 'ru');
     await tester.pump();

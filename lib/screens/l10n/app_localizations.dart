@@ -444,6 +444,24 @@ abstract class AppLocalizations {
   /// **'Выберите другую модель.'**
   String get error404Body;
 
+  /// No description provided for @errorKeyTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Google не принял ключ Gemini'**
+  String get errorKeyTitle;
+
+  /// No description provided for @errorKeyBody.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверьте ключ в настройках и нажмите «Слушать».'**
+  String get errorKeyBody;
+
+  /// No description provided for @changeKey.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изменить ключ'**
+  String get changeKey;
+
   /// No description provided for @errorOtherTitle.
   ///
   /// In ru, this message translates to:
