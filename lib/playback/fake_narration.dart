@@ -1,19 +1,26 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import '../audio/audio_store.dart';
 import '../book/model.dart';
 import '../library/library.dart';
 import '../tts/voices.dart';
+import 'chapter_download.dart';
 import 'narration.dart';
+import 'voice_sample.dart';
 
 /// Подставная озвучка прототипа: звука нет, таймер двигает «звучащий» блок по книге.
 ///
-/// Единица — блок, а не отрезок А§6.1: деления длинных абзацев и склейки коротких реплик в прототипе нет.
+/// Единица — блок, а не отрезок А§6.1: деления длинных абзацев и склейки коротких реплик в прототипе нет. Старт
+/// с середины блока (хвост абзаца с прошлой страницы) — доля пройденного блока, как старт с части отрезка.
 /// Длительность блока — знаки × 0,069 с ÷ скорость ÷ [demoAcceleration], чтобы следование за голосом было видно
 /// за минуту, а не за десять.
 class FakeNarrationController extends NarrationController {
   FakeNarrationController({
     required this.library,
+    required this.audio,
+    required this.downloads,
+    required this.sampler,
     this.prepareDelay = const Duration(milliseconds: 1400),
     this.tick = const Duration(milliseconds: 100),
     this.demoAcceleration = 4,
@@ -21,6 +28,9 @@ class FakeNarrationController extends NarrationController {
   }) : _clock = clock ?? DateTime.now;
 
   final Library library;
+  final AudioStore audio;
+  final ChapterDownloads downloads;
+  final VoiceSampler sampler;
   final Duration prepareDelay;
   final Duration tick;
   final double demoAcceleration;
@@ -36,6 +46,9 @@ class FakeNarrationController extends NarrationController {
   SleepTimer? _sleep;
   Timer? _timer;
   Timer? _prepare;
+
+  /// Номер сеанса (А§6.4): ответ прежнего сеанса не трогает новый.
+  int _session = 0;
 
   /// Состояние держится, пока его не сменит пользователь (только для показа: «Готовлю голос…», «Жду связь…»).
   bool _held = false;
@@ -61,27 +74,24 @@ class FakeNarrationController extends NarrationController {
 
   Book? get book => _book;
 
+  // --- команды контракта ---------------------------------------------------------------------------------
+
   @override
-  void start(Book book, int fromBlock) {
+  void listen(Book book, ReadingPosition from) {
     _book = book;
-    _block = _spokenFrom(fromBlock, forward: true) ?? fromBlock;
-    _progress = 0;
-    _error = null;
-    _stopReason = null;
-    _held = false;
-    _savePosition();
-    _enter(NarrationState.preparing);
-    _prepare?.cancel();
-    _prepare = Timer(prepareDelay, () {
-      if (_state == NarrationState.preparing && !_held) _enter(NarrationState.playing);
-    });
+    final start = _spokenFrom(from.block, forward: true) ?? from.block;
+    final len = book.blocks[start].text.length;
+    _newSession(start, start == from.block && len > 0 ? (from.offset / len).clamp(0.0, 0.99) : 0);
   }
 
   @override
   void resume() {
-    if (_book == null) return;
+    final book = _book;
+    if (book == null) return;
     if (_state == NarrationState.stopped) {
-      start(_book!, _block ?? 0);
+      // Новый сеанс с актуальной сохранённой позиции: после остановки её мог переписать экран (А§5).
+      final saved = library.positionOf(book.id) ?? ReadingPosition(_block ?? 0, 0);
+      listen(book, saved);
       return;
     }
     if (_state == NarrationState.paused) {
@@ -94,33 +104,69 @@ class FakeNarrationController extends NarrationController {
   void pause() {
     if (_state == NarrationState.preparing || _state == NarrationState.playing || _state == NarrationState.waiting) {
       _held = false;
+      _prepare?.cancel();
       _enter(NarrationState.paused);
     }
   }
 
   @override
-  void next() => _jump(forward: true);
+  void readFrom(Book book, int block) {
+    if (_book?.id == book.id && (_state == NarrationState.paused || isActive)) {
+      _moveKeepingIntent(block);
+    } else {
+      listen(book, ReadingPosition(block, 0));
+    }
+  }
 
   @override
-  void previous() => _jump(forward: false);
+  void moveIfListening(Book book, int block) {
+    if (_book?.id == book.id && (_state == NarrationState.paused || isActive)) _moveKeepingIntent(block);
+  }
 
-  void _jump({required bool forward}) {
+  @override
+  void next() => _step(forward: true);
+
+  @override
+  void previous() => _step(forward: false);
+
+  void _step({required bool forward}) {
     if (_book == null || _block == null) return;
     final target = forward ? _spokenFrom(_block! + 1, forward: true) : _spokenFrom(_block! - 1, forward: false);
     if (target == null) return;
+    _moveKeepingIntent(target);
+  }
+
+  /// Смена места внутри сеанса: новый сеанс, намерение прежнее (А§6.6). Пауза остаётся паузой.
+  void _moveKeepingIntent(int block) {
+    final target = _spokenFrom(block, forward: true) ?? block;
+    _session++;
+    _prepare?.cancel();
     _block = target;
     _progress = 0;
+    _held = false;
     _savePosition();
     if (_state == NarrationState.paused) {
       notifyListeners();
     } else {
-      _held = false;
+      // В прототипе звук «соседнего» отрезка всегда готов: сразу playing (А§6.6: или preparing, если звука нет).
       _enter(NarrationState.playing);
     }
   }
 
   @override
-  void close() {
+  void close({ReadingPosition? screenPosition}) {
+    final book = _book;
+    _endSession();
+    // Сначала сеанс завершён — потом позиция экрана уходит писателю. Позднее ни одна запись контроллера её не
+    // перепишет: номер сеанса уже сменился (А§5).
+    if (book != null && screenPosition != null) {
+      library.savePosition(book.id, screenPosition, fraction: book.fractionAt(screenPosition.block, screenPosition.offset));
+    }
+    notifyListeners();
+  }
+
+  void _endSession() {
+    _session++;
     _timer?.cancel();
     _prepare?.cancel();
     _held = false;
@@ -130,7 +176,6 @@ class FakeNarrationController extends NarrationController {
     _error = null;
     _stopReason = null;
     _state = NarrationState.idle;
-    notifyListeners();
   }
 
   @override
@@ -148,12 +193,30 @@ class FakeNarrationController extends NarrationController {
   @override
   void restartSession() {
     if (_book == null || _block == null) return;
-    _progress = 0;
-    if (_state == NarrationState.paused || _state == NarrationState.stopped || _state == NarrationState.idle) {
-      notifyListeners();
-      return;
-    }
-    start(_book!, _block!);
+    if (_state == NarrationState.paused || isActive) _moveKeepingIntent(_block!);
+  }
+
+  @override
+  void clearAllNarration() {
+    if (_state != NarrationState.idle) _endSession();
+    downloads.forget();
+    sampler.clearCache();
+    audio.clearAll();
+    notifyListeners();
+  }
+
+  @override
+  void deleteBookNarration(String bookId) {
+    if (_book?.id == bookId) _endSession();
+    downloads.forget(bookId: bookId);
+    audio.removeBook(bookId);
+    notifyListeners();
+  }
+
+  @override
+  void deleteBook(String bookId) {
+    deleteBookNarration(bookId);
+    library.deleteBook(bookId);
   }
 
   // --- только для показа: состояния, которые в жизни вызывает сеть -----------------------------------------
@@ -165,6 +228,7 @@ class FakeNarrationController extends NarrationController {
       _book = book;
       _block = _spokenFrom(fromBlock, forward: true) ?? fromBlock;
       _progress = 0.35;
+      _session++;
     }
     _prepare?.cancel();
     _error = null;
@@ -209,11 +273,30 @@ class FakeNarrationController extends NarrationController {
 
   // --- ход «звука» -----------------------------------------------------------------------------------
 
+  void _newSession(int block, double progress) {
+    _session++;
+    final session = _session;
+    _block = block;
+    _progress = progress;
+    _error = null;
+    _stopReason = null;
+    _held = false;
+    _savePosition();
+    _enter(NarrationState.preparing);
+    _prepare?.cancel();
+    _prepare = Timer(prepareDelay, () {
+      if (session == _session && _state == NarrationState.preparing && !_held) _enter(NarrationState.playing);
+    });
+  }
+
   void _enter(NarrationState s) {
     _state = s;
     _timer?.cancel();
     if (s == NarrationState.playing) {
-      _timer = Timer.periodic(tick, (_) => _advance());
+      final session = _session;
+      _timer = Timer.periodic(tick, (_) {
+        if (session == _session) _advance();
+      });
     }
     if (s == NarrationState.stopped || s == NarrationState.paused) _savePosition();
     notifyListeners();
@@ -271,11 +354,13 @@ class FakeNarrationController extends NarrationController {
 
   int _lastSpoken() => _spokenFrom(_book!.blocks.length - 1, forward: false) ?? 0;
 
+  /// Позицию, пока сеанс активен, пишет контроллер: начало звучащего места (А§5).
   void _savePosition() {
     final book = _book;
     final block = _block;
     if (book == null || block == null) return;
-    library.savePosition(book.id, ReadingPosition(block, 0), fraction: book.fractionAt(block, 0));
+    final offset = (_progress * book.blocks[block].text.length).floor();
+    library.savePosition(book.id, ReadingPosition(block, offset), fraction: book.fractionAt(block, offset));
   }
 
   @override

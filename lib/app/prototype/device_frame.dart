@@ -1,11 +1,16 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../library/settings.dart';
+
 /// Только прототип в браузере: приложение внутри рамки телефона заданного размера в dp, с переключателем
 /// размеров и масштаба шрифта. Окно браузера любой ширины не растягивает экран телефона.
 class DeviceFrame extends StatefulWidget {
-  const DeviceFrame({super.key, required this.child});
+  const DeviceFrame({super.key, required this.child, this.settings});
 
   final Widget child;
+
+  /// Для быстрого переключателя языка интерфейса над рамкой.
+  final AppSettings? settings;
 
   @override
   State<DeviceFrame> createState() => _DeviceFrameState();
@@ -71,6 +76,22 @@ class _DeviceFrameState extends State<DeviceFrame> {
                       showSelectedIcon: false,
                       onSelectionChanged: (s) => setState(() => _device = s.first),
                     ),
+                    if (widget.settings != null)
+                      ListenableBuilder(
+                        listenable: widget.settings!,
+                        builder: (context, _) => SegmentedButton<String>(
+                          segments: const [
+                            ButtonSegment(value: '', label: Text('Система')),
+                            ButtonSegment(value: 'ru', label: Text('RU')),
+                            ButtonSegment(value: 'en', label: Text('EN')),
+                            ButtonSegment(value: 'pl', label: Text('PL')),
+                            ButtonSegment(value: 'de', label: Text('DE')),
+                          ],
+                          selected: {widget.settings!.language ?? ''},
+                          showSelectedIcon: false,
+                          onSelectionChanged: (s) => widget.settings!.language = s.first.isEmpty ? null : s.first,
+                        ),
+                      ),
                     Text(
                       'Долгое нажатие на «Книги» — состояния для показа',
                       style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),

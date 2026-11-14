@@ -3,11 +3,11 @@ import 'package:material_ui/material_ui.dart';
 import '../book/model.dart';
 import '../playback/voice_sample.dart';
 import '../tts/voices.dart';
+import 'common.dart';
 import 'services.dart';
-import 'strings.dart';
 
 /// Выбор голоса (FR-V1, FR-V2). С [book] — свой голос книги (первая строка — «Как в настройках»),
-/// без — голос приложения.
+/// без — голос приложения. Фраза пробы — на языке книги; для голоса приложения — на языке интерфейса.
 class VoiceScreen extends StatefulWidget {
   const VoiceScreen({super.key, required this.services, this.book});
 
@@ -24,6 +24,13 @@ class _VoiceScreenState extends State<VoiceScreen> {
   AppServices get s => widget.services;
 
   @override
+  void initState() {
+    super.initState();
+    // Открытие экрана голоса ставит прослушивание на паузу (FR-V1) — после первого кадра, не посреди построения.
+    WidgetsBinding.instance.addPostFrameCallback((_) => s.narration.pause());
+  }
+
+  @override
   void dispose() {
     s.sampler.stop();
     super.dispose();
@@ -34,6 +41,8 @@ class _VoiceScreenState extends State<VoiceScreen> {
     if (book == null) return s.settings.voice;
     return s.library.bookVoice(book.id) ?? _asSettings;
   }
+
+  String _language(BuildContext context) => widget.book?.language ?? context.l10n.localeName;
 
   void _select(String? v) {
     if (v == null) return;
@@ -51,6 +60,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = context.l10n;
     final book = widget.book;
     final female = allVoices.where((v) => v.female).toList();
     final male = allVoices.where((v) => !v.female).toList();
@@ -58,8 +68,8 @@ class _VoiceScreenState extends State<VoiceScreen> {
       appBar: AppBar(
         titleSpacing: 0,
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text(S.voiceTitle),
-          Text(book == null ? S.voiceForApp : S.voiceForBook(book.title),
+          Text(l10n.voice),
+          Text(book == null ? l10n.voiceForApp : l10n.voiceForBook(book.title),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
@@ -78,19 +88,20 @@ class _VoiceScreenState extends State<VoiceScreen> {
                   child: _VoiceTile(
                     value: _asSettings,
                     selected: _value == _asSettings,
-                    title: S.voiceAsSettings,
-                    subtitle: S.voiceNow(s.settings.voice),
+                    title: l10n.voiceAsSettings,
+                    subtitle: l10n.voiceNow(s.settings.voice),
                   ),
                 ),
               ),
-            _header(context, S.female(female.length)),
-            _list(female),
-            _header(context, S.male(male.length)),
-            _list(male),
+            _header(context, l10n.female(female.length)),
+            _list(context, female),
+            _header(context, l10n.male(male.length)),
+            _list(context, male),
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(24, 16, 24, 24 + MediaQuery.paddingOf(context).bottom),
-                child: Text(S.probeNote, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                child: Text(l10n.probeNote(s.sampler.phraseFor(_language(context))),
+                    style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
               ),
             ),
           ]),
@@ -109,7 +120,11 @@ class _VoiceScreenState extends State<VoiceScreen> {
     );
   }
 
-  Widget _list(List<Voice> voices) => SliverPadding(
+  /// На узком экране с крупным шрифтом «Проба» — кнопка-значок: имя и характер голоса не рвутся посреди слова.
+  bool _compact(BuildContext context) =>
+      MediaQuery.sizeOf(context).width / MediaQuery.textScalerOf(context).scale(1) < 340;
+
+  Widget _list(BuildContext context, List<Voice> voices) => SliverPadding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         sliver: SliverList.builder(
           itemCount: voices.length,
@@ -121,12 +136,16 @@ class _VoiceScreenState extends State<VoiceScreen> {
               value: v.name,
               selected: _value == v.name,
               title: v.name,
-              subtitle: v.character,
+              subtitle: voiceCharacter(context.l10n, v.character),
+              error: sampling == SampleState.failed ? s.sampler.errorMessage : null,
               trailing: _ProbeButton(
                 key: Key('probe-${v.name}'),
+                compact: _compact(context),
                 state: sampling,
                 progress: s.sampler.progress,
-                onPressed: () => sampling == SampleState.idle ? s.sampler.play(v.name) : s.sampler.stop(),
+                onPressed: () => sampling == SampleState.loading || sampling == SampleState.playing
+                    ? s.sampler.stop()
+                    : s.sampler.play(v.name, bookLanguage: _language(context)),
               ),
             );
           },
@@ -135,7 +154,15 @@ class _VoiceScreenState extends State<VoiceScreen> {
 }
 
 class _VoiceTile extends StatelessWidget {
-  const _VoiceTile({super.key, required this.value, required this.selected, required this.title, required this.subtitle, this.trailing});
+  const _VoiceTile({
+    super.key,
+    required this.value,
+    required this.selected,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+    this.error,
+  });
 
   final String value;
   final bool selected;
@@ -143,15 +170,27 @@ class _VoiceTile extends StatelessWidget {
   final String subtitle;
   final Widget? trailing;
 
+  /// Постоянная ошибка пробы — текст Google как есть.
+  final String? error;
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    // На подсветке второстепенный цвет в сепии даёт контраст 4,2 — подпись выбранной строки основным цветом.
+    final sub = TextStyle(color: selected ? scheme.onSurface : null);
     return ListTile(
       selected: selected,
       contentPadding: const EdgeInsets.only(left: 4, right: 8),
       leading: Radio<String>(value: value),
       title: Text(title),
-      // На подсветке второстепенный цвет в сепии даёт контраст 4,2 — подпись выбранной строки основным цветом.
-      subtitle: Text(subtitle, style: selected ? TextStyle(color: Theme.of(context).colorScheme.onSurface) : null),
+      subtitle: error == null
+          ? Text(subtitle, style: sub)
+          : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(subtitle, style: sub),
+              Text('${context.l10n.probeFailed}. ${context.l10n.google(error!)}',
+                  key: const Key('probe-error'), style: theme.textTheme.bodySmall?.copyWith(color: scheme.error)),
+            ]),
       trailing: trailing,
       onTap: () => RadioGroup.maybeOf<String>(context)?.onChanged(value),
     );
@@ -159,25 +198,44 @@ class _VoiceTile extends StatelessWidget {
 }
 
 class _ProbeButton extends StatelessWidget {
-  const _ProbeButton({super.key, required this.state, required this.progress, required this.onPressed});
+  const _ProbeButton(
+      {super.key, required this.state, required this.progress, required this.onPressed, this.compact = false});
 
   final SampleState state;
   final double progress;
   final VoidCallback onPressed;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    if (state == SampleState.idle) {
+    final label = Text(context.l10n.probe);
+    if (compact) {
+      final busy = state == SampleState.loading || state == SampleState.playing;
+      final icon = busy
+          ? SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                  value: state == SampleState.playing ? progress : null, strokeWidth: 2.5, color: scheme.onPrimary),
+            )
+          : Icon(state == SampleState.failed ? Icons.refresh_rounded : Icons.play_arrow_rounded);
+      return busy
+          ? IconButton.filled(tooltip: context.l10n.probe, onPressed: onPressed, icon: icon)
+          : IconButton.filledTonal(tooltip: context.l10n.probe, onPressed: onPressed, icon: icon);
+    }
+    // Цель касания не меньше 48 dp (FR-R8): стандартная плотность и минимум 48.
+    final style = FilledButton.styleFrom(minimumSize: const Size(48, 48), visualDensity: VisualDensity.standard);
+    if (state == SampleState.idle || state == SampleState.failed) {
       return FilledButton.tonalIcon(
-        style: FilledButton.styleFrom(minimumSize: const Size(0, 44), visualDensity: VisualDensity.compact),
+        style: style,
         onPressed: onPressed,
-        icon: const Icon(Icons.play_arrow_rounded, size: 20),
-        label: const Text(S.probe),
+        icon: Icon(state == SampleState.failed ? Icons.refresh_rounded : Icons.play_arrow_rounded, size: 20),
+        label: label,
       );
     }
     return FilledButton.icon(
-      style: FilledButton.styleFrom(minimumSize: const Size(0, 44), visualDensity: VisualDensity.compact),
+      style: style,
       onPressed: onPressed,
       icon: SizedBox(
         width: 18,
@@ -191,7 +249,7 @@ class _ProbeButton extends StatelessWidget {
                 backgroundColor: scheme.onPrimary.withValues(alpha: 0.3),
               ),
       ),
-      label: const Text(S.probe),
+      label: label,
     );
   }
 }

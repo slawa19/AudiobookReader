@@ -117,6 +117,28 @@ class _DemoStatesSheet extends StatelessWidget {
               ActionChip(key: const Key('demo-add-drm'), label: const Text('Защищена от копирования'), onPressed: () => p.library.demoAddJob('drm')),
               ActionChip(label: const Text('Убрать строки'), onPressed: p.library.clearAddJobs),
             ]),
+            section('Проба голоса', [
+              ActionChip(
+                key: const Key('demo-probe-fail'),
+                label: const Text('Следующая проба Aoede упадёт'),
+                onPressed: () => p.sampler.demoFailVoice = 'Aoede',
+              ),
+            ]),
+            section('Язык интерфейса', [
+              for (final (code, label) in const [
+                (null, 'Как в системе'),
+                ('ru', 'RU'),
+                ('en', 'EN'),
+                ('pl', 'PL'),
+                ('de', 'DE'),
+              ])
+                ChoiceChip(
+                  key: Key('demo-lang-${code ?? 'system'}'),
+                  label: Text(label),
+                  selected: p.settings.language == code,
+                  onSelected: (_) => p.settings.language = code,
+                ),
+            ]),
             const SizedBox(height: 8),
             SwitchListTile(
               key: const Key('demo-empty'),

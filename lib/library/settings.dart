@@ -30,6 +30,7 @@ class AppSettings extends ChangeNotifier {
   String _voice;
   String _modelId;
   String? _apiKey;
+  String? _language;
 
   ThemeChoice get theme => _theme;
   int get fontStep => _fontStep;
@@ -37,11 +38,20 @@ class AppSettings extends ChangeNotifier {
   String get voice => _voice;
   String get modelId => _modelId;
 
-  /// Ключ в настоящем приложении лежит в защищённом хранилище; экрану нужен только хвост.
+  /// Язык интерфейса: код языка или `null` — «Как в системе» (язык телефона; не из поддерживаемых — английский).
+  String? get language => _language;
+
+  /// Ключ в настоящем приложении лежит в защищённом хранилище; экрану нужен только хвост — не больше четырёх
+  /// последних знаков, у короткого ключа — сколько есть.
   bool get hasApiKey => _apiKey != null && _apiKey!.isNotEmpty;
-  String get apiKeyTail => hasApiKey ? _apiKey!.substring(_apiKey!.length - 4) : '';
+  String get apiKeyTail {
+    final key = _apiKey;
+    if (key == null || key.isEmpty) return '';
+    return key.length <= 4 ? key : key.substring(key.length - 4);
+  }
 
   set theme(ThemeChoice v) => _set(() => _theme = v);
+  set language(String? v) => _set(() => _language = v);
   set fontStep(int v) => _set(() => _fontStep = v.clamp(0, fontSteps.length - 1));
   set speed(double v) => _set(() => _speed = v);
   set voice(String v) => _set(() => _voice = v);

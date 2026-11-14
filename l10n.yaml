@@ -1,0 +1,10 @@
+# Строки интерфейса: lib/screens/l10n/app_<язык>.arb, классы генерирует `flutter gen-l10n` (входит в инструмент
+# Flutter, запускается сам при `flutter pub get`, `flutter test`, `flutter build`). Единственное разрешённое
+# исключение из правила «без генерации кода» (ARCHITECTURE.md, разделы 8 и 10).
+arb-dir: lib/screens/l10n
+template-arb-file: app_ru.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+output-dir: lib/screens/l10n
+nullable-getter: false
+preferred-supported-locales: [en, ru, pl, de]

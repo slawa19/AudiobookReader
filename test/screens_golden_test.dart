@@ -5,6 +5,7 @@
 
 import 'package:audiobook_reader/library/library.dart';
 import 'package:audiobook_reader/library/settings.dart';
+import 'package:audiobook_reader/playback/narration.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -248,14 +249,62 @@ void main() {
       await snapshot(tester, 'n320-06-reading-step6');
     });
 
-    testWidgets('плеер играет', (tester) async {
+    testWidgets('плеер играет (playing, таймер сна включён), с панелями', (tester) async {
+      final p = await pumpPrototype(tester, size: phone320, textScale: 1.3);
+      await openKapitanskaya(tester, p);
+      p.narration.setSleepTimer(SleepTimer.minutes(30, p.narration.now().subtract(const Duration(minutes: 7))));
+      p.narration.demoShow('playing', book: currentBook(tester), fromBlock: 39);
+      await advance(tester, const Duration(milliseconds: 600));
+      expect(p.narration.state, NarrationState.playing);
+      await tapCenter(tester);
+      await advance(tester, const Duration(milliseconds: 400));
+      await snapshot(tester, 'n320-14-player');
+    });
+
+    testWidgets('лист «Вид текста»', (tester) async {
+      final p = await pumpPrototype(tester, size: phone320, textScale: 1.3);
+      await openKapitanskaya(tester, p);
+      await tapCenter(tester);
+      await tester.tap(find.byTooltip('Вид текста'));
+      await settle(tester);
+      await snapshot(tester, 'n320-09-appearance');
+    });
+
+    testWidgets('лист таймера сна, таймер включён', (tester) async {
       final p = await pumpPrototype(tester, size: phone320, textScale: 1.3);
       await openKapitanskaya(tester, p);
       p.narration.demoShow('sleep', book: currentBook(tester), fromBlock: 39);
       await advance(tester, const Duration(milliseconds: 600));
+      await tester.tap(find.byKey(const Key('sleep')));
+      await advance(tester, const Duration(milliseconds: 800));
+      await snapshot(tester, 'n320-20-sleep-timer');
+    });
+
+    testWidgets('лист модели', (tester) async {
+      await pumpPrototype(tester, size: phone320, textScale: 1.3);
+      await tester.tap(find.byTooltip('Настройки'));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('settings-model')));
+      await settle(tester);
+      await snapshot(tester, 'n320-24-model');
+    });
+
+    testWidgets('оглавление со скачиванием', (tester) async {
+      final p = await pumpPrototype(tester, size: phone320, textScale: 1.3);
+      await openDama(tester, p, at: const ReadingPosition(180, 0));
       await tapCenter(tester);
-      await advance(tester, const Duration(milliseconds: 400));
-      await snapshot(tester, 'n320-14-player');
+      await tester.tap(find.byTooltip('Оглавление'));
+      await settle(tester);
+      await snapshot(tester, 'n320-10-contents');
+    });
+
+    testWidgets('выбор голоса', (tester) async {
+      await pumpPrototype(tester, size: phone320, textScale: 1.3);
+      await tester.tap(find.byTooltip('Настройки'));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('settings-voice')));
+      await settle(tester);
+      await snapshot(tester, 'n320-27-voice');
     });
 
     testWidgets('плеер 402', (tester) async {
@@ -271,6 +320,58 @@ void main() {
       await tester.tap(find.byTooltip('Настройки'));
       await settle(tester);
       await snapshot(tester, 'n320-22-settings');
+    });
+  });
+
+  group('языки', () {
+    for (final lang in ['en', 'pl', 'de']) {
+      testWidgets('$lang: полка', (tester) async {
+        await pumpPrototype(tester, locale: lang);
+        await snapshot(tester, 'l10n-$lang-01-shelf');
+      });
+
+      testWidgets('$lang: чтение с панелями', (tester) async {
+        final p = await pumpPrototype(tester, locale: lang);
+        await openKapitanskaya(tester, p);
+        await tapCenter(tester);
+        await settle(tester);
+        await snapshot(tester, 'l10n-$lang-07-reading-panels');
+      });
+
+      testWidgets('$lang: плеер и ошибка 402', (tester) async {
+        final p = await pumpPrototype(tester, locale: lang);
+        await openKapitanskaya(tester, p);
+        p.narration.demoShow('sleep', book: currentBook(tester), fromBlock: 39);
+        await advance(tester, const Duration(milliseconds: 600));
+        await snapshot(tester, 'l10n-$lang-14-player');
+        p.narration.demoShow('error402', book: currentBook(tester), fromBlock: 39);
+        await advance(tester, const Duration(milliseconds: 600));
+        await snapshot(tester, 'l10n-$lang-18-player-402');
+      });
+
+      testWidgets('$lang: настройки', (tester) async {
+        await pumpPrototype(tester, locale: lang);
+        await tester.tap(find.byIcon(Icons.settings_outlined));
+        await settle(tester);
+        await snapshot(tester, 'l10n-$lang-22-settings');
+      });
+    }
+
+    testWidgets('de, 320×640 ×1,3: плеер с панелями', (tester) async {
+      final p = await pumpPrototype(tester, size: phone320, textScale: 1.3, locale: 'de');
+      await openKapitanskaya(tester, p);
+      p.narration.demoShow('sleep', book: currentBook(tester), fromBlock: 39);
+      await advance(tester, const Duration(milliseconds: 600));
+      await tapCenter(tester);
+      await advance(tester, const Duration(milliseconds: 400));
+      await snapshot(tester, 'l10n-de-n320-14-player');
+    });
+
+    testWidgets('pl, 320×640 ×1,3: настройки', (tester) async {
+      await pumpPrototype(tester, size: phone320, textScale: 1.3, locale: 'pl');
+      await tester.tap(find.byIcon(Icons.settings_outlined));
+      await settle(tester);
+      await snapshot(tester, 'l10n-pl-n320-22-settings');
     });
   });
 

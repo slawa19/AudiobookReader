@@ -10,7 +10,7 @@ Future<void> main() async {
   final prototype = await Prototype.create();
   if (kIsWeb) {
     // Прототип в браузере: приложение в рамке телефона.
-    runApp(DeviceFrame(child: AudiobookApp(prototype: prototype, phoneChrome: true)));
+    runApp(DeviceFrame(settings: prototype.settings, child: AudiobookApp(prototype: prototype, phoneChrome: true)));
   } else {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     runApp(AudiobookApp(prototype: prototype));

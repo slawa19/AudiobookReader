@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../book/model.dart';
+import '../library/settings.dart';
 import '../tts/voices.dart';
+import 'tariffs.dart';
 
 enum DownloadStatus { running, failed }
 
@@ -16,6 +18,8 @@ class ChapterDownloadTask {
   final double totalSeconds;
   double readySeconds = 0;
   DownloadStatus status = DownloadStatus.running;
+
+  /// Текст Google как есть.
   String? googleMessage;
 
   double get fraction => totalSeconds == 0 ? 1 : (readySeconds / totalSeconds).clamp(0.0, 1.0);
@@ -35,18 +39,30 @@ abstract class ChapterDownloads extends ChangeNotifier {
 
   bool isVoiced(String bookId, int chapter);
 
-  DownloadEstimate estimate(Book book, int chapter, TtsModel model, DateTime today);
+  /// Готовая оценка: модель — из настроек, тариф — на сегодня. Экран ничего не считает (FR-D2, FR-M1).
+  DownloadEstimate estimate(Book book, int chapter);
 
-  void start(Book book, int chapter, TtsModel model);
+  void start(Book book, int chapter);
 
   /// «Стоп» / «Остановить».
   void stop();
+
+  /// Звук удалён (А§4): задача затронутой книги остановлена, готовность глав сброшена. `null` — все книги.
+  /// Зовёт только `NarrationController` как часть одной операции удаления.
+  void forget({String? bookId});
 }
 
 /// Подставная реализация: доля готового растёт по таймеру, сети нет.
 class FakeChapterDownloads extends ChapterDownloads {
-  FakeChapterDownloads({this.tick = const Duration(milliseconds: 250), this.demoSeconds = 40});
+  FakeChapterDownloads({
+    required this.settings,
+    required this.tariffs,
+    this.tick = const Duration(milliseconds: 250),
+    this.demoSeconds = 40,
+  });
 
+  final AppSettings settings;
+  final Tariffs tariffs;
   final Duration tick;
 
   /// За сколько секунд прототип «озвучивает» главу.
@@ -63,21 +79,20 @@ class FakeChapterDownloads extends ChapterDownloads {
   bool isVoiced(String bookId, int chapter) => _voiced.contains('$bookId#$chapter');
 
   @override
-  DownloadEstimate estimate(Book book, int chapter, TtsModel model, DateTime today) {
+  DownloadEstimate estimate(Book book, int chapter) {
     final ch = book.chapters[chapter];
     var chars = 0;
     for (var i = ch.firstBlock; i < ch.endBlock; i++) {
       if (book.blocks[i].isSpoken) chars += book.blocks[i].text.length;
     }
     final seconds = chars * secondsPerChar;
-    return DownloadEstimate(seconds, seconds / 3600 * model.dollarsPerHourAt(today));
+    return DownloadEstimate(seconds, seconds / 3600 * tariffs.dollarsPerHour(TtsModel.byId(settings.modelId)));
   }
 
   @override
-  void start(Book book, int chapter, TtsModel model) {
+  void start(Book book, int chapter) {
     _timer?.cancel();
-    final est = estimate(book, chapter, model, DateTime(2026, 11, 14));
-    _task = ChapterDownloadTask(bookId: book.id, chapter: chapter, totalSeconds: est.seconds);
+    _task = ChapterDownloadTask(bookId: book.id, chapter: chapter, totalSeconds: estimate(book, chapter).seconds);
     _run();
     notifyListeners();
   }
@@ -104,9 +119,19 @@ class FakeChapterDownloads extends ChapterDownloads {
     notifyListeners();
   }
 
+  @override
+  void forget({String? bookId}) {
+    if (_task != null && (bookId == null || _task!.bookId == bookId)) {
+      _timer?.cancel();
+      _task = null;
+    }
+    _voiced.removeWhere((k) => bookId == null || k.startsWith('$bookId#'));
+    notifyListeners();
+  }
+
   /// Только для показа: задача на заданной доле или с постоянной ошибкой.
   void demoShow(Book book, int chapter, {required bool failed}) {
-    start(book, chapter, TtsModel.flash);
+    start(book, chapter);
     final t = _task!;
     t.readySeconds = t.totalSeconds * 0.4;
     if (failed) {
@@ -115,14 +140,6 @@ class FakeChapterDownloads extends ChapterDownloads {
       t.googleMessage = 'API key not valid. Please pass a valid API key.';
     }
     notifyListeners();
-  }
-
-  /// Ошибка показывается в блоке главы в оглавлении; «Скачать главу» оттуда начинает заново.
-  void dismissFailure() {
-    if (_task?.status == DownloadStatus.failed) {
-      _task = null;
-      notifyListeners();
-    }
   }
 
   @override

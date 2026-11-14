@@ -1,0 +1,469 @@
+{
+  "@@locale": "ru",
+  "shelfTitle": "Книги",
+  "@shelfTitle": {
+    "description": "Заголовок полки"
+  },
+  "settings": "Настройки",
+  "addBook": "Добавить книгу",
+  "continueReading": "Продолжить",
+  "progressNew": "новая",
+  "@progressNew": {
+    "description": "Книгу ещё не открывали"
+  },
+  "adding": "Добавляется…",
+  "dismiss": "Убрать",
+  "emptyTitle": "Полка пуста",
+  "emptyBody": "Добавьте книгу в FB2 или EPUB кнопкой «+» или откройте файл из другого приложения через «Открыть с помощью».",
+  "addFailedUnsupported": "Этот формат не поддерживается",
+  "addFailedUnreadable": "Не удалось прочитать книгу",
+  "addFailedProtected": "Книга защищена от копирования, открыть её нельзя",
+  "deleteNarration": "Удалить озвучку",
+  "deleteBook": "Удалить книгу",
+  "deleteBookTitle": "Удалить книгу?",
+  "deleteBookBody": "«{title}» и её озвучка удалятся с телефона. Освободится {size}.",
+  "@deleteBookBody": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteNarrationTitle": "Удалить озвучку книги?",
+  "deleteNarrationBody": "Звук «{title}» удалится, освободится {size}. Чтобы послушать снова, его придётся озвучить и оплатить заново.",
+  "@deleteNarrationBody": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "cancel": "Отмена",
+  "delete": "Удалить",
+  "pickerTitle": "Выбор файла",
+  "pickerNote": "В прототипе — имитация системного окна выбора файла.",
+  "back": "Назад",
+  "contents": "Оглавление",
+  "textAppearance": "Вид текста",
+  "listen": "Слушать",
+  "readFromHere": "Читать отсюда",
+  "toReadingPlace": "К месту чтения",
+  "percent": "{value}",
+  "@percent": {
+    "description": "Доля книги, формат по локали",
+    "placeholders": {
+      "value": {
+        "type": "double",
+        "format": "percentPattern"
+      }
+    }
+  },
+  "ofBook": "{value} книги",
+  "@ofBook": {
+    "placeholders": {
+      "value": {
+        "type": "double",
+        "format": "percentPattern"
+      }
+    }
+  },
+  "note": "Примечание {number}",
+  "@note": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "size": "Размер",
+  "smaller": "Мельче",
+  "larger": "Крупнее",
+  "theme": "Тема",
+  "asSystem": "Как в системе",
+  "themeLight": "Светлая",
+  "themeSepia": "Сепия",
+  "themeDark": "Тёмная",
+  "preparing": "Готовлю голос…",
+  "waiting": "Жду связь…",
+  "close": "Закрыть",
+  "pause": "Пауза",
+  "previous": "Предыдущий абзац",
+  "next": "Следующий абзац",
+  "speed": "Скорость",
+  "sleepTimer": "Таймер сна",
+  "voice": "Голос",
+  "minutesShort": "{count} мин",
+  "@minutesShort": {
+    "description": "Сокращение «минут» — без склонения",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "endOfChapterShort": "глава",
+  "speedValue": "{value}×",
+  "@speedValue": {
+    "placeholders": {
+      "value": {
+        "type": "double",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "endOfBook": "Книга закончилась",
+  "endOfBookBody": "Чтобы читать глазами, закройте панель.",
+  "error402Title": "На счёте Gemini закончились деньги",
+  "error402Body": "Пополните счёт и нажмите «Слушать» — продолжим с этого абзаца.",
+  "@error402Body": {
+    "description": "Автопродолжения нет (FR-P6): только «нажмите Слушать»"
+  },
+  "error404Title": "Модель {model} больше недоступна",
+  "@error404Title": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "error404Body": "Выберите другую модель.",
+  "errorOtherTitle": "Google отказал в озвучке",
+  "google": "Google: «{message}»",
+  "@google": {
+    "description": "Текст Google — как есть, без перевода",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "quoted": "«{message}»",
+  "@quoted": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "topUp": "Пополнить",
+  "chooseModel": "Выбрать модель",
+  "linkStub": "В прототипе ссылки не открываются: {url}",
+  "@linkStub": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "sleepMinutes": "{count, plural, one{{count} минута} few{{count} минуты} many{{count} минут} other{{count} минуты}}",
+  "@sleepMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sleepEndOfChapter": "До конца главы",
+  "sleepOff": "Выключить",
+  "sleepActive": "Пауза через {count} мин",
+  "@sleepActive": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "sleepActiveChapter": "Пауза в конце главы",
+  "voiced": "озвучена",
+  "@voiced": {
+    "description": "Глава полностью озвучена"
+  },
+  "notVoicedEstimate": "Не озвучено: ≈ {minutes} мин звука, ≈ {price}",
+  "@notVoicedEstimate": {
+    "description": "Оценка перед «Скачать главу» (FR-D2)",
+    "placeholders": {
+      "minutes": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "price": {
+        "type": "double",
+        "format": "currency",
+        "optionalParameters": {
+          "symbol": "$",
+          "decimalDigits": 2
+        }
+      }
+    }
+  },
+  "downloadChapter": "Скачать главу",
+  "downloadAgain": "Скачать снова",
+  "downloading": "Озвучиваю: готово {ready} из {total} мин",
+  "@downloading": {
+    "placeholders": {
+      "ready": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "downloadingWhileOpen": "Идёт, пока приложение открыто.",
+  "stopDownload": "Остановить",
+  "downloadStrip": "Скачиваю главу · {value}",
+  "@downloadStrip": {
+    "placeholders": {
+      "value": {
+        "type": "double",
+        "format": "percentPattern"
+      }
+    }
+  },
+  "stopShort": "Стоп",
+  "downloadFailed": "Скачивание остановилось",
+  "voiceForBook": "для книги «{title}»",
+  "@voiceForBook": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceForApp": "для всех книг",
+  "voiceAsSettings": "Как в настройках",
+  "voiceNow": "сейчас {name}",
+  "@voiceNow": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "female": "Женские · {count}",
+  "@female": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "male": "Мужские · {count}",
+  "@male": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "probe": "Проба",
+  "probeNote": "Проба читает одну и ту же фразу на языке книги: «{phrase}» Стоит меньше цента и оплачивается один раз.",
+  "@probeNote": {
+    "placeholders": {
+      "phrase": {
+        "type": "String"
+      }
+    }
+  },
+  "probeFailed": "Проба не удалась",
+  "geminiKey": "Ключ Gemini",
+  "change": "Изменить",
+  "whereKey": "Где взять ключ: aistudio.google.com",
+  "needKey": "Чтобы слушать, нужен ключ Gemini. Он вводится один раз и хранится только на телефоне.",
+  "pasteKey": "Вставьте ключ",
+  "paste": "Вставить",
+  "model": "Модель",
+  "perHour": "{price} за час звука",
+  "@perHour": {
+    "placeholders": {
+      "price": {
+        "type": "double",
+        "format": "currency",
+        "optionalParameters": {
+          "symbol": "$",
+          "decimalDigits": 2
+        }
+      }
+    }
+  },
+  "byDefault": "по умолчанию",
+  "thirdCheaper": "на треть дешевле",
+  "price2027": "С 1 января 2027 года Google берёт вдвое больше: {a} и {b} за час. Звук одной модели другой не засчитывается: после смены книги озвучиваются заново.",
+  "@price2027": {
+    "placeholders": {
+      "a": {
+        "type": "double",
+        "format": "currency",
+        "optionalParameters": {
+          "symbol": "$",
+          "decimalDigits": 2
+        }
+      },
+      "b": {
+        "type": "double",
+        "format": "currency",
+        "optionalParameters": {
+          "symbol": "$",
+          "decimalDigits": 2
+        }
+      }
+    }
+  },
+  "spent": "Потрачено",
+  "money": "{amount}",
+  "@money": {
+    "description": "Сумма в долларах, формат по локали",
+    "placeholders": {
+      "amount": {
+        "type": "double",
+        "format": "currency",
+        "optionalParameters": {
+          "symbol": "$",
+          "decimalDigits": 2
+        }
+      }
+    }
+  },
+  "storage": "Озвучка на телефоне",
+  "clear": "Очистить",
+  "storageNote": "Озвученное второй раз не оплачивается. После очистки его придётся озвучить и оплатить заново.",
+  "clearTitle": "Очистить озвучку?",
+  "clearBody": "Удалится {size} звука всех книг и проб голоса. Чтобы послушать снова, его придётся озвучить и оплатить заново.",
+  "@clearBody": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "megabytes": "{size} МБ",
+  "@megabytes": {
+    "placeholders": {
+      "size": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "gigabytes": "{size} ГБ",
+  "@gigabytes": {
+    "placeholders": {
+      "size": {
+        "type": "double",
+        "format": "decimalPatternDigits",
+        "optionalParameters": {
+          "decimalDigits": 1
+        }
+      }
+    }
+  },
+  "language": "Язык",
+  "langRu": "Русский",
+  "langEn": "English",
+  "langPl": "Polski",
+  "langDe": "Deutsch",
+  "voiceCharSoft": "мягкий",
+  "@voiceCharSoft": {
+    "description": "Характер голоса"
+  },
+  "voiceCharBreezy": "лёгкий, непринуждённый",
+  "@voiceCharBreezy": {
+    "description": "Характер голоса"
+  },
+  "voiceCharBright": "яркий",
+  "@voiceCharBright": {
+    "description": "Характер голоса"
+  },
+  "voiceCharCalm": "спокойный",
+  "@voiceCharCalm": {
+    "description": "Характер голоса"
+  },
+  "voiceCharSmooth": "плавный",
+  "@voiceCharSmooth": {
+    "description": "Характер голоса"
+  },
+  "voiceCharClear": "чёткий",
+  "@voiceCharClear": {
+    "description": "Характер голоса"
+  },
+  "voiceCharMature": "зрелый",
+  "@voiceCharMature": {
+    "description": "Характер голоса"
+  },
+  "voiceCharFirm": "твёрдый",
+  "@voiceCharFirm": {
+    "description": "Характер голоса"
+  },
+  "voiceCharUpbeat": "бодрый",
+  "@voiceCharUpbeat": {
+    "description": "Характер голоса"
+  },
+  "voiceCharYouthful": "молодой",
+  "@voiceCharYouthful": {
+    "description": "Характер голоса"
+  },
+  "voiceCharForward": "напористый",
+  "@voiceCharForward": {
+    "description": "Характер голоса"
+  },
+  "voiceCharWarm": "тёплый",
+  "@voiceCharWarm": {
+    "description": "Характер голоса"
+  },
+  "voiceCharGentle": "нежный",
+  "@voiceCharGentle": {
+    "description": "Характер голоса"
+  },
+  "voiceCharFriendly": "дружелюбный",
+  "@voiceCharFriendly": {
+    "description": "Характер голоса"
+  },
+  "voiceCharGravelly": "с хрипотцой",
+  "@voiceCharGravelly": {
+    "description": "Характер голоса"
+  },
+  "voiceCharInformative": "деловой",
+  "@voiceCharInformative": {
+    "description": "Характер голоса"
+  },
+  "voiceCharBreathy": "с придыханием",
+  "@voiceCharBreathy": {
+    "description": "Характер голоса"
+  },
+  "voiceCharExcitable": "возбуждённый",
+  "@voiceCharExcitable": {
+    "description": "Характер голоса"
+  },
+  "voiceCharLively": "живой",
+  "@voiceCharLively": {
+    "description": "Характер голоса"
+  },
+  "voiceCharKnowledgeable": "знающий",
+  "@voiceCharKnowledgeable": {
+    "description": "Характер голоса"
+  },
+  "voiceCharEven": "ровный",
+  "@voiceCharEven": {
+    "description": "Характер голоса"
+  },
+  "voiceCharEasygoing": "непринуждённый",
+  "@voiceCharEasygoing": {
+    "description": "Характер голоса"
+  },
+  "voiceCharConversational": "разговорный",
+  "@voiceCharConversational": {
+    "description": "Характер голоса"
+  }
+}

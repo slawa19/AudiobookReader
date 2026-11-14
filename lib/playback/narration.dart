@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../book/model.dart';
+import '../library/library.dart';
 
 /// Состояния прослушивания — ровно таблица А§6.6, других нет.
 enum NarrationState { idle, preparing, playing, waiting, paused, stopped }
@@ -16,7 +17,7 @@ class NarrationError {
 
   final NarrationErrorKind kind;
 
-  /// Текст Google как есть.
+  /// Текст Google как есть — не переводится.
   final String googleMessage;
 }
 
@@ -41,7 +42,9 @@ class SleepTimer {
 }
 
 /// Единственное место, где сходятся очередь, плеер, сеанс и позиция (А§6.6). Экран подписан на него и ничего
-/// не решает сам.
+/// не решает сам: каждое действие пользователя — одна команда, а не последовательность вызовов.
+///
+/// Подставная реализация прототипа и настоящая (А§6.3–6.6) выполняют один и тот же контракт.
 abstract class NarrationController extends ChangeNotifier {
   NarrationState get state;
   StopReason? get stopReason;
@@ -61,21 +64,45 @@ abstract class NarrationController extends ChangeNotifier {
   /// «Активно» в смысле А§5: позицию пишет контроллер.
   bool get isActive => state != NarrationState.idle && state != NarrationState.stopped;
 
-  /// «Слушать» с блока или «Читать отсюда» (FR-P3). Без ключа экран сюда не приходит (FR-P7).
-  void start(Book book, int fromBlock);
+  /// «Слушать» без сеанса: новый сеанс с места [from] — первого озвучиваемого места на экране, в том числе
+  /// хвоста абзаца, начатого на прошлой странице (FR-P3). Без ключа экран сюда не приходит (FR-P7).
+  void listen(Book book, ReadingPosition from);
 
-  /// «Слушать» после паузы или остановки.
+  /// «Слушать» в панели плеера: из `paused` — с места паузы; из `stopped` — новый сеанс с актуальной сохранённой
+  /// позиции (её мог переписать экран после явного перемещения, А§5).
   void resume();
+
   void pause();
+
+  /// «Читать отсюда» (FR-P3): смена места с прежним намерением. Из `paused` — пауза на новом месте; из
+  /// `preparing`/`playing`/`waiting` — звучит с нового места; без сеанса или из `stopped` — новый сеанс.
+  void readFrom(Book book, int block);
+
+  /// Переход по оглавлению: если идёт сеанс этой книги — смена места с прежним намерением (А§5, А§6.6);
+  /// без сеанса ничего не делает.
+  void moveIfListening(Book book, int block);
+
+  /// «Назад» и «вперёд» плеера — к началу предыдущего и следующего отрезка; намерение сохраняется.
   void next();
   void previous();
 
-  /// «Закрыть» (FR-P8) или закрытие книги: `idle`.
-  void close();
+  /// «Закрыть» (FR-P8) или закрытие книги: сеанс завершается (`idle`), затем [screenPosition] — начало страницы
+  /// на экране — передаётся писателю позиции. С этого момента позицию пишет экран (А§5).
+  void close({ReadingPosition? screenPosition});
 
   void setSpeed(double speed);
   void setSleepTimer(SleepTimer? timer);
 
   /// Смена голоса или модели: новый сеанс с текущего отрезка с прежним намерением (FR-V2).
   void restartSession();
+
+  /// «Очистить озвучку» (FR-M3, А§4): сеанс завершается, «Скачать главу» останавливается, готовность глав и
+  /// пробы сбрасываются, звук всех книг и проб удаляется. Одна операция.
+  void clearAllNarration();
+
+  /// «Удалить озвучку» книги (FR-D3, А§4).
+  void deleteBookNarration(String bookId);
+
+  /// Удаление книги (FR-L5, А§4): то же, что [deleteBookNarration], и папка книги с полки.
+  void deleteBook(String bookId);
 }

@@ -51,7 +51,7 @@ Offset noteRefCenter(WidgetTester tester, String noteId) {
     final b = book.blocks[f.block];
     for (final s in b.spans) {
       if (s.noteId != noteId || s.start < f.start || s.end > f.end) continue;
-      final tp = fragmentPainter(st.pageStyle, b, f.start, f.end, width: st.columnSize.width);
+      final tp = piecePainter(st.pageStyle, b, f.start, f.end, width: st.columnSize.width);
       final shift = hasIndent(b, f.start) ? 1 : 0;
       final box = tp.getBoxesForSelection(
           TextSelection(baseOffset: s.start - f.start + shift, extentOffset: s.end - f.start + shift)).first;

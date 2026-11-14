@@ -50,13 +50,20 @@ class ShelfEntry {
 
 enum AddJobStatus { adding, failed }
 
+/// Причина отказа добавления (FR-B2, FR-B6). Текст на языке интерфейса даёт экран.
+/// [unreadable] — в том числе файл, из которого не получилось ни одного блока: пустая книга до экрана чтения
+/// не доходит.
+enum AddFailure { unsupported, unreadable, protected }
+
 /// Добавляемая книга или отказ добавления (FR-L2, FR-B2, FR-B6): строка на полке до «✕».
 class AddJob {
-  AddJob({required this.fileName, required this.status, this.error, this.technical});
+  AddJob({required this.fileName, required this.status, this.failure, this.technical});
 
   final String fileName;
   AddJobStatus status;
-  String? error;
+  AddFailure? failure;
+
+  /// Техническая причина как есть (сообщение разборщика), не переводится.
   String? technical;
 }
 

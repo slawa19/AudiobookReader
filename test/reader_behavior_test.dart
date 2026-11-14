@@ -104,9 +104,10 @@ void main() {
   group('вид текста (FR-R6)', () {
     testWidgets('крупнее шрифт — меньше текста на странице, место чтения сохраняется', (tester) async {
       final p = await pumpPrototype(tester);
-      await openKapitanskaya(tester, p, at: const ReadingPosition(60, 0));
+      await openKapitanskaya(tester, p, at: const ReadingPosition(60, 300));
       final before = reader(tester).layout.pages.length;
       final anchor = reader(tester).layout.pages[reader(tester).page];
+      expect(anchor.firstOffset, greaterThan(0), reason: 'страница начинается внутри абзаца — проверка по смещению');
       await tapCenter(tester);
       await tester.tap(find.byTooltip('Вид текста'));
       await tester.pumpAndSettle();
@@ -117,8 +118,9 @@ void main() {
       final st = reader(tester);
       expect(st.layout.pages.length, greaterThan(before));
       final page = st.layout.pages[st.page];
-      expect(page.firstBlock <= anchor.firstBlock && page.lastBlock >= anchor.firstBlock, isTrue,
-          reason: 'после смены размера на экране то же место книги');
+      // Место чтения — сохранённая позиция (60, 300): страница после смены размера содержит её — блок и
+      // смещение, а не только блок.
+      expect(page.contains(60, 300), isTrue, reason: 'после смены размера на экране то же место книги');
     });
 
     testWidgets('тема применяется сразу', (tester) async {
@@ -185,7 +187,9 @@ void main() {
       }
       expect(reader(tester).page, greaterThan(startPage));
       final st = reader(tester);
-      expect(st.layout.pages[st.page].containsBlock(p.narration.block!), isTrue);
+      final at = st.soundingPosition!;
+      expect(st.layout.pages[st.page].contains(at.block, at.offset), isTrue,
+          reason: 'на экране звучащее место (блок и смещение), а не просто тот же блок');
     });
 
     testWidgets('листаю сам → следование отключено, «К месту чтения» возвращает', (tester) async {

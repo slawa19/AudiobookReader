@@ -6,6 +6,9 @@ import '../book/model.dart';
 import 'page_style.dart';
 
 /// Кусок блока на странице: текст [start, end) блока [block] и его место по вертикали.
+///
+/// У картинки два вида кусков: сама картинка ([imageSize] задан, текст пуст) и строки подписи (текст подписи,
+/// [imageSize] — `null`). Заголовок и подпись делятся по строкам так же, как абзац.
 class PageFragment {
   const PageFragment({
     required this.block,
@@ -24,17 +27,16 @@ class PageFragment {
 
   /// У картинки — размер, в который она вписана.
   final Size? imageSize;
+
+  bool get isImage => imageSize != null;
 }
 
 /// Страница: пара «начало» и «конец» (А§5) плюс раскладка кусков.
 class BookPageLayout {
-  const BookPageLayout({required this.chapter, required this.fragments, this.titlePage = false});
+  const BookPageLayout({required this.chapter, required this.fragments});
 
   final int chapter;
   final List<PageFragment> fragments;
-
-  /// Страница-заглавие раздела без собственного текста (например, «Ионыч» перед главой I).
-  final bool titlePage;
 
   int get firstBlock => fragments.first.block;
   int get firstOffset => fragments.first.start;
@@ -42,12 +44,22 @@ class BookPageLayout {
   int get lastEnd => fragments.last.end;
 
   bool containsBlock(int block) => block >= firstBlock && block <= lastBlock;
+
+  /// Стоит ли место (блок, смещение) на этой странице.
+  bool contains(int block, int offset) {
+    for (final f in fragments) {
+      if (f.block == block && offset >= f.start && (offset < f.end || (offset == f.end && f.end == f.start))) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
 
 /// Вся книга, разбитая на страницы для одного размера колонки и одной типографики.
 ///
 /// Прототип считает книгу целиком и сразу (≈ 100 тыс. знаков — доли секунды). Расчёт порциями от текущей
-/// позиции (А§5, FR-R1) — работа этапа 1.
+/// позиции (А§5, FR-R1) — работа этапа 1. Пустых глав нет: модель их отбрасывает (класс [Book]).
 class BookLayout {
   BookLayout._(this.pages, this.chapterFirstPage);
 
@@ -97,116 +109,121 @@ class _Paginator {
 
   double get lh => style.lineHeight;
 
+  late List<BookPageLayout> _pages;
+  late List<PageFragment> _cur;
+  late double _y;
+  late int _chapter;
+
+  void _flush() {
+    if (_cur.isNotEmpty) _pages.add(BookPageLayout(chapter: _chapter, fragments: _cur));
+    _cur = <PageFragment>[];
+    _y = 0;
+  }
+
   List<BookPageLayout> chapter(int c) {
     final ch = book.chapters[c];
-    final pages = <BookPageLayout>[];
-    var cur = <PageFragment>[];
-    var y = 0.0;
+    _pages = [];
+    _cur = [];
+    _y = 0;
+    _chapter = c;
     BlockKind? prevKind;
 
-    void flush() {
-      if (cur.isNotEmpty) pages.add(BookPageLayout(chapter: c, fragments: cur));
-      cur = <PageFragment>[];
-      y = 0;
-      prevKind = null;
-    }
-
+    // Раздел только из заголовка («Ионыч» перед главой I) — страница-заглавие: заголовок ниже обычного.
     final titleOnly = ch.blockCount == 1 && book.blocks[ch.firstBlock].kind == BlockKind.heading;
 
     for (var i = ch.firstBlock; i < ch.endBlock; i++) {
       final block = book.blocks[i];
       switch (block.kind) {
         case BlockKind.heading:
-          final atChapterStart = i == ch.firstBlock;
-          final top = titleOnly ? column.height * 0.28 : (atChapterStart ? lh * 1.0 : lh * 1.5);
-          final h = top + headingHeight(block) + lh * 1.2;
-          if (cur.isNotEmpty && y + h > column.height) flush();
-          cur.add(PageFragment(block: i, start: 0, end: block.text.length, top: y + top, height: h - top));
-          y += h;
+          final top = titleOnly ? column.height * 0.28 : (i == ch.firstBlock ? lh * 1.0 : lh * 1.5);
+          _placeLines(i, _measure(block, 0, block.text.length),
+              before: top, beforeAtPageTop: true, after: lh * 1.2, keepTogether: true);
         case BlockKind.image:
-          final size = imageBox(block);
-          final caption = block.text.isEmpty ? 0.0 : captionHeight(block) + lh * 0.3;
-          final sp = cur.isEmpty ? 0.0 : lh * 0.6;
-          var h = size.height + caption;
-          if (cur.isNotEmpty && y + sp + h > column.height) {
-            flush();
-          }
-          final spNow = cur.isEmpty ? 0.0 : sp;
-          h = math.min(h, column.height);
-          cur.add(PageFragment(block: i, start: 0, end: block.text.length, top: y + spNow, height: h, imageSize: size));
-          y += spNow + h + lh * 0.6;
+          _placeImage(i, block, gap: _cur.isEmpty ? 0.0 : lh * 0.6);
         case BlockKind.separator:
-          final sp = cur.isEmpty ? 0.0 : lh;
-          if (cur.isNotEmpty && y + sp + lh > column.height) flush();
-          final spNow = cur.isEmpty ? 0.0 : sp;
-          cur.add(PageFragment(block: i, start: 0, end: block.text.length, top: y + spNow, height: lh));
-          y += spNow + lh * 2;
+          final sp = _cur.isEmpty ? 0.0 : lh;
+          if (_cur.isNotEmpty && _y + sp + lh > column.height) _flush();
+          final spNow = _cur.isEmpty ? 0.0 : sp;
+          _cur.add(PageFragment(block: i, start: 0, end: block.text.length, top: _y + spNow, height: lh));
+          _y += spNow + lh * 2;
         case BlockKind.paragraph:
         case BlockKind.verse:
         case BlockKind.cite:
-          final m = measure(block);
-          var line = 0;
-          while (line < m.lineTops.length) {
-            final sp = (cur.isEmpty || line > 0) ? 0.0 : spacingBefore(prevKind, block.kind);
-            final avail = column.height - y - sp;
-            var k = 0;
-            var h = 0.0;
-            while (line + k < m.lineTops.length && h + m.lineHeights[line + k] <= avail + 0.01) {
-              h += m.lineHeights[line + k];
-              k++;
-            }
-            if (k == 0) {
-              if (cur.isNotEmpty) {
-                flush();
-                continue;
-              }
-              h = m.lineHeights[line];
-              k = 1;
-            }
-            final start = m.lineStarts[line];
-            final end = line + k < m.lineStarts.length ? m.lineStarts[line + k] : block.text.length;
-            cur.add(PageFragment(block: i, start: start, end: end, top: y + sp, height: h));
-            y += sp + h;
-            line += k;
-            prevKind = block.kind;
-            if (line < m.lineTops.length) flush();
-          }
-          prevKind = block.kind;
-          continue;
+          _placeLines(i, _measure(block, 0, block.text.length), before: _spacingBefore(prevKind, block.kind));
       }
       prevKind = block.kind;
     }
-    flush();
-    if (titleOnly && pages.isNotEmpty) {
-      pages[0] = BookPageLayout(chapter: c, fragments: pages[0].fragments, titlePage: true);
-    }
-    return pages;
+    _flush();
+    return _pages;
   }
 
-  double spacingBefore(BlockKind? prev, BlockKind kind) {
+  /// Кладёт строки куска на страницы. [before] — отступ перед первой строкой (у начала страницы — только при
+  /// [beforeAtPageTop]); [keepTogether] — не делить, если целиком помещается на пустую страницу.
+  void _placeLines(int i, _Measured m,
+      {double before = 0, bool beforeAtPageTop = false, double after = 0, bool keepTogether = false}) {
+    if (m.lineHeights.isEmpty) return;
+    final total = m.lineHeights.fold(0.0, (a, b) => a + b);
+    if (keepTogether && _cur.isNotEmpty) {
+      final fitsEmpty = before + total <= column.height;
+      if (fitsEmpty && _y + before + total > column.height) _flush();
+    }
+    var line = 0;
+    while (line < m.lineHeights.length) {
+      final sp = line > 0 ? 0.0 : (_cur.isEmpty && !beforeAtPageTop ? 0.0 : before);
+      final avail = column.height - _y - sp;
+      var k = 0;
+      var h = 0.0;
+      while (line + k < m.lineHeights.length && h + m.lineHeights[line + k] <= avail + 0.01) {
+        h += m.lineHeights[line + k];
+        k++;
+      }
+      if (k == 0) {
+        if (_cur.isNotEmpty) {
+          _flush();
+          continue;
+        }
+        // Строка выше пустой страницы (огромный кегль) — кладём одну, иначе разбивка не продвинется.
+        h = m.lineHeights[line];
+        k = 1;
+      }
+      final start = m.lineStarts[line];
+      final end = line + k < m.lineStarts.length ? m.lineStarts[line + k] : m.end;
+      _cur.add(PageFragment(block: i, start: start, end: end, top: _y + sp, height: h));
+      _y += sp + h;
+      line += k;
+      if (line < m.lineHeights.length) _flush();
+    }
+    _y += after;
+  }
+
+  /// Картинка вписывается в страницу вместе с первой строкой подписи; длинная подпись продолжается кусками.
+  void _placeImage(int i, Block block, {required double gap}) {
+    final caption = block.text.isEmpty ? null : _measure(block, 0, block.text.length);
+    final captionGap = caption == null ? 0.0 : lh * 0.3;
+    final firstLine = caption == null ? 0.0 : caption.lineHeights.first;
+    var size = _imageBox(block, column.height - captionGap - firstLine);
+    if (_cur.isNotEmpty && _y + gap + size.height + captionGap + firstLine > column.height) _flush();
+    final g = _cur.isEmpty ? 0.0 : gap;
+    if (_cur.isEmpty) size = _imageBox(block, column.height - captionGap - firstLine);
+    _cur.add(PageFragment(block: i, start: 0, end: 0, top: _y + g, height: size.height, imageSize: size));
+    _y += g + size.height;
+    if (caption != null) _placeLines(i, caption, before: captionGap);
+    _y += lh * 0.6;
+  }
+
+  double _spacingBefore(BlockKind? prev, BlockKind kind) {
     if (prev == null) return 0;
     final a = style.isVerseLike(prev);
     final b = style.isVerseLike(kind);
     if (a != b) return lh * 0.6;
     if (a && b && prev != kind) return lh * 0.15;
-    if (prev == BlockKind.heading || prev == BlockKind.image || prev == BlockKind.separator) return 0;
     return 0;
   }
 
-  double headingHeight(Block block) {
-    final tp = TextPainter(
-      text: headingSpan(style, block),
-      textAlign: TextAlign.center,
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: column.width);
-    final h = tp.height;
-    tp.dispose();
-    return h;
-  }
-
-  Size imageBox(Block block) {
+  /// Картинка во всю ширину колонки, но не выше 62 % страницы и не выше [maxHeight].
+  Size _imageBox(Block block, double maxHeight) {
     final natural = imageSizes[block.imageId] ?? const Size(4, 3);
-    final maxH = column.height * 0.62;
+    final maxH = math.max(lh * 2, math.min(column.height * 0.62, maxHeight));
     var w = column.width;
     var h = w * natural.height / natural.width;
     if (h > maxH) {
@@ -216,92 +233,119 @@ class _Paginator {
     return Size(w, h);
   }
 
-  double captionHeight(Block block) {
-    final tp = TextPainter(
-      text: TextSpan(text: block.text, style: style.caption),
-      textAlign: TextAlign.center,
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: column.width);
-    final h = tp.height;
-    tp.dispose();
-    return h;
-  }
-
-  _Measured measure(Block block) {
-    final tp = fragmentPainter(style, block, 0, block.text.length, width: column.width);
+  _Measured _measure(Block block, int start, int end) {
+    final tp = piecePainter(style, block, start, end, width: column.width);
     final metrics = tp.computeLineMetrics();
-    final tops = <double>[];
     final heights = <double>[];
     final starts = <int>[];
-    final shift = hasIndent(block, 0) ? 1 : 0;
+    final shift = hasIndent(block, start) ? 1 : 0;
     var y = 0.0;
     for (var i = 0; i < metrics.length; i++) {
-      tops.add(y);
       heights.add(metrics[i].height);
       if (i == 0) {
-        starts.add(0);
+        starts.add(start);
       } else {
-        final pos = tp.getPositionForOffset(Offset(0.5, y + metrics[i].height / 2)).offset - shift;
-        starts.add(pos.clamp(0, block.text.length));
+        // Начало строки — позиция у левого края строки. Для выравнивания по центру (заголовок, подпись) левее
+        // текста стоит её же начало.
+        final pos = tp.getPositionForOffset(Offset(0.5, y + metrics[i].height / 2)).offset - shift + start;
+        starts.add(math.max(starts.last + 1, pos.clamp(start, end)));
       }
       y += metrics[i].height;
     }
     tp.dispose();
-    return _Measured(tops, heights, starts);
+    return _Measured(heights, starts, end);
   }
 }
 
 class _Measured {
-  _Measured(this.lineTops, this.lineHeights, this.lineStarts);
+  _Measured(this.lineHeights, this.lineStarts, this.end);
 
-  final List<double> lineTops;
   final List<double> lineHeights;
   final List<int> lineStarts;
+  final int end;
 }
 
 /// Красная строка — только у абзаца и только в его начале.
 bool hasIndent(Block block, int start) => block.kind == BlockKind.paragraph && start == 0;
 
 /// Отступ слева у куска блока.
-double fragmentInset(PageStyle style, Block block) =>
-    style.isVerseLike(block.kind) ? style.insetVerse : 0;
+double fragmentInset(PageStyle style, Block block) => style.isVerseLike(block.kind) ? style.insetVerse : 0;
 
-/// Текст куска для измерения и отрисовки — один и тот же.
-InlineSpan fragmentSpan(PageStyle style, Block block, int start, int end, {Color? color, Color? noteColor}) {
-  return TextSpan(
-    style: style.textStyleFor(block.kind).copyWith(color: color),
-    children: [
-      if (hasIndent(block, start))
-        WidgetSpan(
-          alignment: PlaceholderAlignment.baseline,
-          baseline: TextBaseline.alphabetic,
-          child: SizedBox(width: style.indent, height: 1),
-        ),
-      ...style.spans(block, start, end, noteColor: noteColor),
-    ],
-  );
+/// Текст куска для измерения и отрисовки — один и тот же: абзац, стих, цитата, заголовок или подпись картинки.
+InlineSpan pieceSpan(PageStyle style, Block block, int start, int end, {Color? color, Color? subColor, Color? noteColor}) {
+  // Кусок, оборванный сразу после перевода строки (стихи, заголовок), рисуется без него: иначе внизу куска
+  // появилась бы лишняя пустая строка.
+  if (end > start && block.text.codeUnitAt(end - 1) == 0x0A) end--;
+  switch (block.kind) {
+    case BlockKind.heading:
+      return _headingSpan(style, block, start, end, color: color, subColor: subColor);
+    case BlockKind.image:
+      return TextSpan(text: block.text.substring(start, end), style: style.caption.copyWith(color: subColor ?? color));
+    default:
+      return TextSpan(
+        style: style.textStyleFor(block.kind).copyWith(color: color),
+        children: [
+          if (hasIndent(block, start))
+            WidgetSpan(
+              alignment: PlaceholderAlignment.baseline,
+              baseline: TextBaseline.alphabetic,
+              child: SizedBox(width: style.indent, height: 1),
+            ),
+          ...style.spans(block, start, end, noteColor: noteColor),
+        ],
+      );
+  }
 }
 
-TextPainter fragmentPainter(PageStyle style, Block block, int start, int end, {required double width}) {
-  final inset = fragmentInset(style, block);
+TextAlign pieceAlign(Block block) =>
+    block.kind == BlockKind.heading || block.kind == BlockKind.image ? TextAlign.center : TextAlign.start;
+
+StrutStyle? pieceStrut(PageStyle style, Block block) => switch (block.kind) {
+      BlockKind.paragraph || BlockKind.verse || BlockKind.cite => style.strutFor(block.kind),
+      _ => null,
+    };
+
+TextPainter piecePainter(PageStyle style, Block block, int start, int end, {required double width}) {
   final tp = TextPainter(
-    text: fragmentSpan(style, block, start, end),
+    text: pieceSpan(style, block, start, end),
+    textAlign: pieceAlign(block),
     textDirection: TextDirection.ltr,
-    strutStyle: style.strutFor(block.kind),
+    strutStyle: pieceStrut(style, block),
   );
   if (hasIndent(block, start)) {
     tp.setPlaceholderDimensions([
-      PlaceholderDimensions(size: Size(style.indent, 1), alignment: PlaceholderAlignment.baseline, baseline: TextBaseline.alphabetic, baselineOffset: 1),
+      PlaceholderDimensions(
+          size: Size(style.indent, 1),
+          alignment: PlaceholderAlignment.baseline,
+          baseline: TextBaseline.alphabetic,
+          baselineOffset: 1),
     ]);
   }
-  tp.layout(maxWidth: width - inset);
+  tp.layout(maxWidth: width - fragmentInset(style, block));
   return tp;
 }
 
-InlineSpan headingSpan(PageStyle style, Block block, {Color? color, Color? subColor}) {
-  final lines = block.text.split('\n');
-  return TextSpan(children: [
-    TextSpan(text: lines.first, style: style.headingTitle.copyWith(color: color)),
-    for (final l in lines.skip(1)) TextSpan(text: '\n$l', style: style.headingSub.copyWith(color: subColor ?? color)),
-  ]);
+/// Заголовок: первая строка — крупно, остальные (после `\n`) — курсивом. Кусок [start, end) сохраняет стиль
+/// своей строки, поэтому длинный заголовок делится по строкам, как абзац.
+InlineSpan _headingSpan(PageStyle style, Block block, int start, int end, {Color? color, Color? subColor}) {
+  final text = block.text;
+  final children = <InlineSpan>[];
+  var lineStart = 0;
+  var lineNo = 0;
+  while (lineStart <= text.length) {
+    final nl = text.indexOf('\n', lineStart);
+    final lineEnd = nl < 0 ? text.length : nl + 1;
+    final a = math.max(start, lineStart);
+    final b = math.min(end, lineEnd);
+    if (a < b) {
+      children.add(TextSpan(
+        text: text.substring(a, b),
+        style: lineNo == 0 ? style.headingTitle.copyWith(color: color) : style.headingSub.copyWith(color: subColor ?? color),
+      ));
+    }
+    if (nl < 0) break;
+    lineStart = lineEnd;
+    lineNo++;
+  }
+  return TextSpan(children: children);
 }

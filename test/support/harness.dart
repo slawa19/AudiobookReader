@@ -17,6 +17,7 @@ Future<Prototype> pumpPrototype(
   Size size = phone412,
   double textScale = 1,
   double demoAcceleration = 4,
+  String locale = 'ru',
 }) async {
   // В тестах тени по умолчанию рисуются сплошной обводкой; для снимков нужны настоящие.
   debugDisableShadows = false;
@@ -26,11 +27,16 @@ Future<Prototype> pumpPrototype(
   tester.view.padding = const FakeViewPadding(top: 32 * snapshotDpr, bottom: 20 * snapshotDpr);
   tester.view.viewPadding = const FakeViewPadding(top: 32 * snapshotDpr, bottom: 20 * snapshotDpr);
   tester.platformDispatcher.textScaleFactorTestValue = textScale;
+  // Язык телефона. Тестовая среда Flutter по умолчанию en_US; тесты по умолчанию — на русском.
+  tester.platformDispatcher.localesTestValue = [Locale(locale)];
+  tester.platformDispatcher.localeTestValue = Locale(locale);
   addTearDown(() {
     tester.view.reset();
     tester.platformDispatcher.clearAllTestValues();
   });
-  final p = (await tester.runAsync(() => Prototype.create(demoAcceleration: demoAcceleration)))!;
+  // Часы приложения закреплены: тарифы «на сегодня» и таймер сна не зависят от дня прогона.
+  final p = (await tester.runAsync(
+      () => Prototype.create(demoAcceleration: demoAcceleration, clock: () => DateTime(2026, 11, 14, 12, 30))))!;
   addTearDown(() {
     p.narration.close();
     p.downloads.stop();

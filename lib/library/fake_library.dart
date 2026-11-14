@@ -59,7 +59,13 @@ class FakeLibrary extends Library {
   Book? cachedBook(String bookId) => _books[bookId] ?? (_entries.any((e) => e.id == bookId) ? _stub(bookId) : null);
 
   @override
-  Future<Book> loadBook(String bookId) async => cachedBook(bookId)!;
+  Future<Book> loadBook(String bookId) async {
+    if (loadDelay > Duration.zero) await Future<void>.delayed(loadDelay);
+    return cachedBook(bookId)!;
+  }
+
+  /// Задержка открытия книги — как чтение `book.json` с диска (для теста двойного нажатия).
+  Duration loadDelay = Duration.zero;
 
   @override
   Map<String, Size> imageSizes(String bookId) => const {'steppe': Size(960, 600)};
@@ -172,12 +178,12 @@ class FakeLibrary extends Library {
     job.status = AddJobStatus.failed;
     switch (kind) {
       case 'unsupported':
-        job.error = 'Этот формат не поддерживается';
+        job.failure = AddFailure.unsupported;
       case 'broken':
-        job.error = 'Не удалось прочитать книгу';
+        job.failure = AddFailure.unreadable;
         job.technical = 'XML: unexpected end of file, line 1204';
       case 'drm':
-        job.error = 'Книга защищена от копирования, открыть её нельзя';
+        job.failure = AddFailure.protected;
     }
   }
 

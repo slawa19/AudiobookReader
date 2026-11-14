@@ -22,6 +22,115 @@ Size column(Size screen) => Size(screen.width - 48, screen.height - (32 + 28) - 
 
 const imageSizes = {'steppe': Size(960, 600)};
 
+PageStyle styleFor(int step, double scale) =>
+    PageStyle(fontSize: fontSteps[step].size, lineHeight: fontSteps[step].lineHeight, textScaler: TextScaler.linear(scale));
+
+/// Синтетическая книга с неудобными блоками: заголовок длиннее страницы, картинка с подписью длиннее страницы,
+/// стихи, цитата, разделитель. Правила разбивки общие — книга не повторяет ни одну настоящую.
+Book awkwardBook() {
+  final longTitle = List.filled(40, 'Очень длинное название раздела').join(' ');
+  final longCaption = List.filled(60, 'длинная подпись к картинке').join(' ');
+  final para = List.filled(30, 'Обычный абзац текста для заполнения страницы.').join(' ');
+  final blocks = [
+    Block(index: 0, kind: BlockKind.heading, text: 'Глава\n$longTitle'),
+    Block(index: 1, kind: BlockKind.paragraph, text: para),
+    Block(index: 2, kind: BlockKind.image, text: longCaption, imageId: 'steppe'),
+    Block(index: 3, kind: BlockKind.verse, text: 'Первая строка стиха,\nвторая строка стиха,\nтретья строка.'),
+    const Block(index: 4, kind: BlockKind.cite, text: 'Цитата прямым начертанием.'),
+    const Block(index: 5, kind: BlockKind.separator, text: ''),
+    Block(index: 6, kind: BlockKind.paragraph, text: para),
+  ];
+  return Book(
+    id: 'awkward',
+    title: 'Неудобная книга',
+    author: 'Тест',
+    language: 'ru',
+    chapters: const [
+      Chapter(title: 'Пустой раздел', level: 1, firstBlock: 0, blockCount: 0),
+      Chapter(title: 'Глава', level: 1, firstBlock: 0, blockCount: 7),
+    ],
+    blocks: blocks,
+    notes: const {},
+  );
+}
+
+void checkCoverage(Book book, BookLayout layout, Size col) {
+  final covered = <int, List<(int, int)>>{};
+  for (final page in layout.pages) {
+    expect(page.fragments, isNotEmpty);
+    for (final f in page.fragments) {
+      expect(f.top + f.height, lessThanOrEqualTo(col.height + 0.5),
+          reason: '${book.id}: кусок блока ${f.block} вылезает за низ страницы');
+      if (!f.isImage && book.blocks[f.block].text.isNotEmpty) {
+        expect(f.end, greaterThan(f.start), reason: '${book.id}: пустой кусок блока ${f.block}');
+      }
+      covered.putIfAbsent(f.block, () => []).add((f.start, f.end));
+    }
+  }
+  for (final b in book.blocks) {
+    final parts = covered[b.index];
+    expect(parts, isNotNull, reason: '${book.id}: блок ${b.index} не попал ни на одну страницу');
+    var at = 0;
+    for (final (s, e) in parts!) {
+      expect(s, at, reason: '${book.id}: в блоке ${b.index} пропуск или повтор текста');
+      at = e;
+    }
+    expect(at, b.text.length);
+  }
+  for (var c = 0; c < book.chapters.length; c++) {
+    expect(layout.pages[layout.chapterFirstPage[c]].firstBlock, book.chapters[c].firstBlock);
+  }
+}
+
+const colors = PageColors(
+  ink: Color(0xFF000000),
+  ink2: Color(0xFF555555),
+  accent: Color(0xFFAA0000),
+  highlight: Color(0xFFEEEEEE),
+  rule: Color(0xFFCCCCCC),
+);
+
+/// Рисует страницы в теме Material и сравнивает высоту каждого текстового куска (абзац, стих, цитата,
+/// заголовок, подпись) с посчитанной. Возвращает число проверенных кусков.
+Future<int> checkRenderedHeights(WidgetTester tester, Book book, BookLayout layout, PageStyle style, Size col,
+    Iterable<int> pages) async {
+  var checked = 0;
+  for (final i in pages) {
+    final page = layout.pages[i];
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTheme(lightPalette),
+      home: Material(
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox.fromSize(
+            size: col,
+            child: BookPage(
+              book: book,
+              page: page,
+              style: style,
+              colors: colors,
+              imageFor: (_) => const AssetImage('assets/demo/images/steppe.png'),
+            ),
+          ),
+        ),
+      ),
+    ));
+    final paragraphs = tester
+        .renderObjectList<RenderParagraph>(find.descendant(of: find.byType(BookPage), matching: find.byType(RichText)))
+        .toList();
+    var r = 0;
+    for (final f in page.fragments) {
+      if (f.isImage) continue;
+      final rendered = paragraphs[r++];
+      if (book.blocks[f.block].kind == BlockKind.separator) continue;
+      expect(rendered.size.height, moreOrLessEquals(f.height, epsilon: 0.5),
+          reason: 'страница $i, блок ${f.block}: строки перенеслись не так, как посчитала разбивка');
+      checked++;
+    }
+  }
+  return checked;
+}
+
 void main() {
   late Book kapitanskaya;
   late Book dama;
@@ -39,46 +148,22 @@ void main() {
 
   for (final (label, screen, step, scale) in cases) {
     test('разбивка покрывает весь текст без пропусков и не режет строки: $label', () {
-      for (final book in [kapitanskaya, dama]) {
-        final style = PageStyle(
-            fontSize: fontSteps[step].size, lineHeight: fontSteps[step].lineHeight, textScaler: TextScaler.linear(scale));
+      for (final book in [kapitanskaya, dama, awkwardBook()]) {
         final col = column(screen);
-        final layout = BookLayout.compute(book: book, style: style, column: col, imageSizes: imageSizes);
-
-        final covered = <int, List<(int, int)>>{};
-        for (final page in layout.pages) {
-          expect(page.fragments, isNotEmpty);
-          for (final f in page.fragments) {
-            expect(f.top + f.height, lessThanOrEqualTo(col.height + 0.5),
-                reason: '${book.id}: кусок блока ${f.block} вылезает за низ страницы');
-            covered.putIfAbsent(f.block, () => []).add((f.start, f.end));
-          }
-        }
-        for (final b in book.blocks) {
-          final parts = covered[b.index];
-          expect(parts, isNotNull, reason: '${book.id}: блок ${b.index} не попал ни на одну страницу');
-          var at = 0;
-          for (final (s, e) in parts!) {
-            expect(s, at, reason: '${book.id}: в блоке ${b.index} пропуск или повтор текста');
-            at = e;
-          }
-          expect(at, b.text.length);
-        }
-        // Каждая глава начинается с новой страницы.
-        for (var c = 0; c < book.chapters.length; c++) {
-          expect(layout.pages[layout.chapterFirstPage[c]].firstBlock, book.chapters[c].firstBlock);
-        }
+        final layout = BookLayout.compute(book: book, style: styleFor(step, scale), column: col, imageSizes: imageSizes);
+        checkCoverage(book, layout, col);
       }
     });
   }
 
   test('страница находится по месту в книге', () {
-    final style = PageStyle(fontSize: 16, lineHeight: 27, textScaler: TextScaler.noScaling);
+    final style = styleFor(2, 1);
     final layout = BookLayout.compute(book: kapitanskaya, style: style, column: column(const Size(412, 915)), imageSizes: imageSizes);
     for (var i = 0; i < layout.pages.length; i++) {
       final p = layout.pages[i];
       expect(layout.pageOf(p.firstBlock, p.firstOffset), i);
-      expect(layout.pageOf(p.lastBlock, p.lastEnd - 1), i);
+      if (p.lastEnd > 0) expect(layout.pageOf(p.lastBlock, p.lastEnd - 1), i);
+      expect(p.contains(p.firstBlock, p.firstOffset), isTrue);
     }
   });
 
@@ -86,59 +171,80 @@ void main() {
     tester.view.physicalSize = const Size(412, 915);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    final style = PageStyle(fontSize: 16, lineHeight: 27, textScaler: TextScaler.noScaling);
+    final style = styleFor(2, 1);
     final col = column(const Size(412, 915));
     final layout = BookLayout.compute(book: kapitanskaya, style: style, column: col, imageSizes: imageSizes);
-    const colors = PageColors(ink: Color(0xFF000000), ink2: Color(0xFF555555), accent: Color(0xFFAA0000), highlight: Color(0xFFEEEEEE));
-    var checked = 0;
-    // Первые страницы трёх глав и соседние: заголовки, стихи, подписи, сноски, картинка.
+    // Первые страницы трёх глав и соседние: заголовки, стихи, цитаты, подписи, сноски, картинка.
     final pages = {
       for (final first in layout.chapterFirstPage) ...[first, first + 1, first + 2],
       layout.pageOf(43, 0),
     };
-    for (final i in pages) {
-      final page = layout.pages[i];
-      await tester.pumpWidget(MaterialApp(
-        theme: buildTheme(lightPalette),
-        home: Material(
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: SizedBox.fromSize(
-              size: col,
-              child: BookPage(
-                book: kapitanskaya,
-                page: page,
-                style: style,
-                colors: colors,
-                imageFor: (_) => const AssetImage('assets/demo/images/steppe.png'),
-              ),
-            ),
-          ),
-        ),
-      ));
-      final paragraphs = tester
-          .renderObjectList<RenderParagraph>(find.descendant(of: find.byType(BookPage), matching: find.byType(RichText)))
-          .toList();
-      var r = 0;
-      for (final f in page.fragments) {
-        final kind = kapitanskaya.blocks[f.block].kind;
-        if (kind == BlockKind.image) {
-          if (kapitanskaya.blocks[f.block].text.isNotEmpty) r++;
-          continue;
-        }
-        final rendered = paragraphs[r++];
-        if (kind == BlockKind.paragraph || kind == BlockKind.verse || kind == BlockKind.cite) {
-          expect(rendered.size.height, moreOrLessEquals(f.height, epsilon: 0.5),
-              reason: 'страница $i, блок ${f.block}: строки перенеслись не так, как посчитала разбивка');
-          checked++;
-        }
-      }
-    }
-    expect(checked, greaterThan(20));
+    expect(await checkRenderedHeights(tester, kapitanskaya, layout, style, col, pages), greaterThan(20));
+  });
+
+  testWidgets('№6: длинный заголовок и длинная подпись делятся по строкам и не выходят за страницу', (tester) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final book = awkwardBook();
+    final style = styleFor(5, 1.3);
+    final col = column(const Size(320, 640));
+    final layout = BookLayout.compute(book: book, style: style, column: col, imageSizes: imageSizes);
+    checkCoverage(book, layout, col);
+    final headingPages = layout.pages.where((p) => p.fragments.any((f) => f.block == 0)).length;
+    final captionPages = layout.pages.where((p) => p.fragments.any((f) => f.block == 2 && !f.isImage)).length;
+    expect(headingPages, greaterThan(1), reason: 'заголовок длиннее страницы разделён');
+    expect(captionPages, greaterThan(1), reason: 'подпись длиннее страницы продолжена на следующих');
+    final imagePage = layout.pages.firstWhere((p) => p.fragments.any((f) => f.block == 2 && f.isImage));
+    expect(imagePage.fragments.any((f) => f.block == 2 && !f.isImage), isTrue,
+        reason: 'первая строка подписи — на странице картинки');
+    final checked = await checkRenderedHeights(tester, book, layout, style, col, List.generate(layout.pages.length, (i) => i));
+    expect(checked, greaterThan(5));
+  });
+
+  test('№7: пустой раздел в главы не попадает, пустая книга не создаётся', () {
+    final book = awkwardBook();
+    expect(book.chapters.map((c) => c.title), ['Глава']);
+    final layout = BookLayout.compute(book: book, style: styleFor(2, 1), column: column(const Size(412, 915)));
+    expect(layout.chapterFirstPage, hasLength(book.chapters.length));
+    expect(
+      () => Book(id: 'x', title: 'x', author: 'x', language: 'ru', chapters: const [], blocks: const [], notes: const {}),
+      throwsA(isA<EmptyBookException>()),
+    );
+    // Похожий вход, где правило молчит: глава с блоками остаётся.
+    final one = Book(
+      id: 'y',
+      title: 'y',
+      author: 'y',
+      language: 'ru',
+      chapters: const [Chapter(title: 'Одна', level: 1, firstBlock: 0, blockCount: 1)],
+      blocks: const [Block(index: 0, kind: BlockKind.paragraph, text: 'Текст.')],
+      notes: const {},
+    );
+    expect(one.chapters, hasLength(1));
+  });
+
+  testWidgets('№21: цитата — прямое начертание и линия слева; стихи — курсив без линии', (tester) async {
+    final style = styleFor(2, 1);
+    expect(style.cite.fontStyle, isNot(FontStyle.italic));
+    expect(style.verse.fontStyle, FontStyle.italic);
+    final book = awkwardBook();
+    final col = column(const Size(412, 915));
+    final layout = BookLayout.compute(book: book, style: style, column: col, imageSizes: imageSizes);
+    final page = layout.pages.indexWhere((p) => p.fragments.any((f) => f.block == 4));
+    await tester.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox.fromSize(
+        size: col,
+        child: BookPage(book: book, page: layout.pages[page], style: style, colors: colors, imageFor: (_) => const AssetImage('x')),
+      ),
+    ));
+    expect(find.byKey(const ValueKey('rule-4-0')), findsOneWidget);
+    expect(find.byKey(const ValueKey('rule-3-0')), findsNothing);
   });
 
   testWidgets('проверка высоты чувствительна: у той же страницы на другой ширине высоты расходятся', (tester) async {
-    final style = PageStyle(fontSize: 16, lineHeight: 27, textScaler: TextScaler.noScaling);
+    final style = styleFor(2, 1);
     final col = column(const Size(412, 915));
     final layout = BookLayout.compute(book: kapitanskaya, style: style, column: col, imageSizes: imageSizes);
     final page = layout.pages[1];
@@ -146,7 +252,7 @@ void main() {
     for (final f in page.fragments) {
       final b = kapitanskaya.blocks[f.block];
       if (b.kind != BlockKind.paragraph) continue;
-      final tp = fragmentPainter(style, b, f.start, f.end, width: col.width - 12);
+      final tp = piecePainter(style, b, f.start, f.end, width: col.width - 12);
       if ((tp.height - f.height).abs() > 0.5) differs++;
       tp.dispose();
     }

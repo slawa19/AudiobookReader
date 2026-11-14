@@ -1,46 +1,75 @@
 // Голоса и модели Gemini TTS. Набор голосов и тарифы — docs/GEMINI_TTS.md. Чистый Dart.
 
+/// Характер голоса. Подпись на языке интерфейса даёт экран (строки — в ARB); здесь только ключ.
+/// Ключи следуют русским описаниям из GEMINI_TTS.md: где Google называет два голоса одним словом, а русское
+/// описание различается («спокойный» и «непринуждённый»), ключей два.
+enum VoiceCharacter {
+  soft,
+  breezy,
+  bright,
+  calm,
+  smooth,
+  clear,
+  mature,
+  firm,
+  upbeat,
+  youthful,
+  forward,
+  warm,
+  gentle,
+  friendly,
+  gravelly,
+  informative,
+  breathy,
+  excitable,
+  lively,
+  knowledgeable,
+  even,
+  easygoing,
+  conversational,
+}
+
 class Voice {
   const Voice(this.name, this.character, {required this.female});
 
   final String name;
-  final String character;
+  final VoiceCharacter character;
   final bool female;
 }
 
 const defaultVoiceName = 'Aoede';
 
 const allVoices = <Voice>[
-  Voice('Achernar', 'мягкий', female: true),
-  Voice('Aoede', 'лёгкий, непринуждённый', female: true),
-  Voice('Autonoe', 'яркий', female: true),
-  Voice('Callirrhoe', 'спокойный', female: true),
-  Voice('Despina', 'плавный', female: true),
-  Voice('Erinome', 'чёткий', female: true),
-  Voice('Gacrux', 'зрелый', female: true),
-  Voice('Kore', 'твёрдый', female: true),
-  Voice('Laomedeia', 'бодрый', female: true),
-  Voice('Leda', 'молодой', female: true),
-  Voice('Pulcherrima', 'напористый', female: true),
-  Voice('Sulafat', 'тёплый', female: true),
-  Voice('Vindemiatrix', 'нежный', female: true),
-  Voice('Zephyr', 'яркий', female: true),
-  Voice('Achird', 'дружелюбный', female: false),
-  Voice('Algenib', 'с хрипотцой', female: false),
-  Voice('Algieba', 'плавный', female: false),
-  Voice('Alnilam', 'твёрдый', female: false),
-  Voice('Charon', 'деловой', female: false),
-  Voice('Enceladus', 'с придыханием', female: false),
-  Voice('Fenrir', 'возбуждённый', female: false),
-  Voice('Iapetus', 'чёткий', female: false),
-  Voice('Orus', 'твёрдый', female: false),
-  Voice('Puck', 'бодрый', female: false),
-  Voice('Rasalgethi', 'деловой', female: false),
-  Voice('Sadachbia', 'живой', female: false),
-  Voice('Sadaltager', 'знающий', female: false),
-  Voice('Schedar', 'ровный', female: false),
-  Voice('Umbriel', 'непринуждённый', female: false),
-  Voice('Zubenelgenubi', 'разговорный', female: false),
+  Voice('Achernar', VoiceCharacter.soft, female: true),
+  Voice('Aoede', VoiceCharacter.breezy, female: true),
+  Voice('Autonoe', VoiceCharacter.bright, female: true),
+  Voice('Callirrhoe', VoiceCharacter.calm, female: true),
+  Voice('Despina', VoiceCharacter.smooth, female: true),
+  Voice('Erinome', VoiceCharacter.clear, female: true),
+  Voice('Gacrux', VoiceCharacter.mature, female: true),
+  Voice('Kore', VoiceCharacter.firm, female: true),
+  Voice('Laomedeia', VoiceCharacter.upbeat, female: true),
+  Voice('Leda', VoiceCharacter.youthful, female: true),
+  Voice('Pulcherrima', VoiceCharacter.forward, female: true),
+  Voice('Sulafat', VoiceCharacter.warm, female: true),
+  Voice('Vindemiatrix', VoiceCharacter.gentle, female: true),
+  Voice('Zephyr', VoiceCharacter.bright, female: true),
+  Voice('Achird', VoiceCharacter.friendly, female: false),
+  Voice('Algenib', VoiceCharacter.gravelly, female: false),
+  Voice('Algieba', VoiceCharacter.smooth, female: false),
+  Voice('Alnilam', VoiceCharacter.firm, female: false),
+  Voice('Charon', VoiceCharacter.informative, female: false),
+  Voice('Enceladus', VoiceCharacter.breathy, female: false),
+  Voice('Fenrir', VoiceCharacter.excitable, female: false),
+  Voice('Iapetus', VoiceCharacter.clear, female: false),
+  Voice('Orus', VoiceCharacter.firm, female: false),
+  Voice('Puck', VoiceCharacter.upbeat, female: false),
+  Voice('Rasalgethi', VoiceCharacter.informative, female: false),
+  Voice('Sadachbia', VoiceCharacter.lively, female: false),
+  Voice('Sadaltager', VoiceCharacter.knowledgeable, female: false),
+  Voice('Schedar', VoiceCharacter.even, female: false),
+  Voice('Umbriel', VoiceCharacter.easygoing, female: false),
+  Voice('Zubenelgenubi', VoiceCharacter.conversational, female: false),
 ];
 
 Voice voiceByName(String name) => allVoices.firstWhere((v) => v.name == name, orElse: () => allVoices[1]);

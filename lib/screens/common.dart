@@ -1,11 +1,24 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:material_ui/material_ui.dart';
 
 import '../book/model.dart';
 import '../library/library.dart';
 import '../reader/page_style.dart';
+import '../tts/voices.dart';
+import 'l10n/app_localizations.dart';
+
+/// Строки интерфейса — только из ARB (lib/screens/l10n), в коде экранов текста нет.
+extension L10nContext on BuildContext {
+  AppLocalizations get l10n => AppLocalizations.of(this);
+}
+
+/// Адреса, на которые ведут кнопки (не строки интерфейса).
+const billingUrl = 'https://aistudio.google.com/billing';
+const keyUrl = 'https://aistudio.google.com/apikey';
 
 /// Названия книг — гарнитурой книги (NOTES.md).
 TextStyle bookTitleStyle(BuildContext context, double size, {FontWeight weight = FontWeight.w700}) => TextStyle(
@@ -39,7 +52,7 @@ void setImmersive(bool hidden) {
   }
 }
 
-/// Название главы с родительским разделом: «Дама с собачкой · II».
+/// Название главы с родительским разделом: «Дама с собачкой · II». Название — текст книги, не переводится.
 String chapterLabel(Book book, int chapter) {
   final ch = book.chapters[chapter];
   if (ch.level > 1) {
@@ -49,6 +62,69 @@ String chapterLabel(Book book, int chapter) {
   }
   return ch.title;
 }
+
+/// Объём на диске по локали: «96 МБ», «1,2 ГБ».
+String formatBytes(AppLocalizations l10n, int bytes) {
+  final mb = bytes / (1024 * 1024);
+  if (mb >= 1024) return l10n.gigabytes(mb / 1024);
+  return l10n.megabytes(mb.round());
+}
+
+/// Доля на полке: «новая» у неоткрытой, «100 %» у дочитанной (решение владельца 2026-11-14, FR-L4);
+/// недочитанная никогда не показывает 0 % и 100 %.
+String shelfProgress(AppLocalizations l10n, double? fraction) {
+  if (fraction == null) return l10n.progressNew;
+  var p = (fraction * 100).round();
+  if (fraction > 0 && p == 0) p = 1;
+  if (fraction < 1 && p == 100) p = 99;
+  return l10n.percent(p / 100);
+}
+
+/// Название месяца в именительном падеже с заглавной буквы: «Ноябрь», «November», «Listopad».
+String monthName(AppLocalizations l10n, DateTime month) {
+  final s = DateFormat.LLLL(l10n.localeName).format(month);
+  return s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+}
+
+String voiceCharacter(AppLocalizations l10n, VoiceCharacter c) => switch (c) {
+      VoiceCharacter.soft => l10n.voiceCharSoft,
+      VoiceCharacter.breezy => l10n.voiceCharBreezy,
+      VoiceCharacter.bright => l10n.voiceCharBright,
+      VoiceCharacter.calm => l10n.voiceCharCalm,
+      VoiceCharacter.smooth => l10n.voiceCharSmooth,
+      VoiceCharacter.clear => l10n.voiceCharClear,
+      VoiceCharacter.mature => l10n.voiceCharMature,
+      VoiceCharacter.firm => l10n.voiceCharFirm,
+      VoiceCharacter.upbeat => l10n.voiceCharUpbeat,
+      VoiceCharacter.youthful => l10n.voiceCharYouthful,
+      VoiceCharacter.forward => l10n.voiceCharForward,
+      VoiceCharacter.warm => l10n.voiceCharWarm,
+      VoiceCharacter.gentle => l10n.voiceCharGentle,
+      VoiceCharacter.friendly => l10n.voiceCharFriendly,
+      VoiceCharacter.gravelly => l10n.voiceCharGravelly,
+      VoiceCharacter.informative => l10n.voiceCharInformative,
+      VoiceCharacter.breathy => l10n.voiceCharBreathy,
+      VoiceCharacter.excitable => l10n.voiceCharExcitable,
+      VoiceCharacter.lively => l10n.voiceCharLively,
+      VoiceCharacter.knowledgeable => l10n.voiceCharKnowledgeable,
+      VoiceCharacter.even => l10n.voiceCharEven,
+      VoiceCharacter.easygoing => l10n.voiceCharEasygoing,
+      VoiceCharacter.conversational => l10n.voiceCharConversational,
+    };
+
+String addFailureText(AppLocalizations l10n, AddFailure f) => switch (f) {
+      AddFailure.unsupported => l10n.addFailedUnsupported,
+      AddFailure.unreadable => l10n.addFailedUnreadable,
+      AddFailure.protected => l10n.addFailedProtected,
+    };
+
+/// Языки интерфейса: код → название на самом языке.
+List<(String code, String name)> interfaceLanguages(AppLocalizations l10n) => [
+      ('ru', l10n.langRu),
+      ('en', l10n.langEn),
+      ('pl', l10n.langPl),
+      ('de', l10n.langDe),
+    ];
 
 class BookCover extends StatelessWidget {
   const BookCover({super.key, required this.entry, required this.width, this.radius = 8, this.elevated = true});
@@ -90,23 +166,6 @@ class BookCover extends StatelessWidget {
   }
 }
 
-/// Надпись раздела в списках и листах.
-class SectionLabel extends StatelessWidget {
-  const SectionLabel(this.text, {super.key, this.padding = const EdgeInsets.fromLTRB(16, 20, 16, 8)});
-
-  final String text;
-  final EdgeInsets padding;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: padding,
-      child: Text(text, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
-    );
-  }
-}
-
 /// Две кнопки: в ряд поровну, а если подписи не помещаются — столбцом во всю ширину.
 class ButtonPair extends StatelessWidget {
   const ButtonPair({super.key, required this.first, required this.second, required this.labels});
@@ -137,4 +196,91 @@ class ButtonPair extends StatelessWidget {
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [first, const SizedBox(height: 8), second]);
     });
   }
+}
+
+/// Сообщает размер ребёнка после раскладки — чтобы страница кончалась над панелью, высота которой зависит от
+/// состояния, языка и масштаба шрифта.
+class MeasureSize extends SingleChildRenderObjectWidget {
+  const MeasureSize({super.key, required this.onChange, required super.child});
+
+  final ValueChanged<Size> onChange;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => RenderMeasureSize(onChange);
+
+  @override
+  void updateRenderObject(BuildContext context, RenderMeasureSize renderObject) => renderObject.onChange = onChange;
+}
+
+class RenderMeasureSize extends RenderProxyBox {
+  RenderMeasureSize(this.onChange);
+
+  ValueChanged<Size> onChange;
+  Size? _last;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    final s = size;
+    if (s != _last) {
+      _last = s;
+      WidgetsBinding.instance.addPostFrameCallback((_) => onChange(s));
+    }
+  }
+}
+
+/// Чип голоса книги: в нижней панели чтения и в панели плеера.
+class VoiceChip extends StatelessWidget {
+  const VoiceChip({super.key, required this.voiceName, required this.onPressed});
+
+  final String voiceName;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ActionChip(
+      avatar: Icon(Icons.record_voice_over_rounded, color: scheme.primary),
+      label: Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(voiceName),
+        const SizedBox(width: 2),
+        Icon(Icons.expand_more_rounded, size: 18, color: scheme.onSurfaceVariant),
+      ]),
+      tooltip: context.l10n.voice,
+      onPressed: onPressed,
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      shape: const StadiumBorder(),
+      side: BorderSide(color: scheme.outlineVariant),
+    );
+  }
+}
+
+/// Лист с ручкой, который не выходит за экран: при нехватке высоты (узкий экран, крупный шрифт) прокручивается.
+Future<T?> showScrollableSheet<T>(BuildContext context, WidgetBuilder builder, {Color? barrierColor}) {
+  return showModalBottomSheet<T>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    barrierColor: barrierColor,
+    builder: (context) => ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.9),
+      child: SingleChildScrollView(child: SafeArea(top: false, child: builder(context))),
+    ),
+  );
+}
+
+/// Заголовок листа.
+Widget sheetTitle(BuildContext context, String text, {String? subtitle}) {
+  final theme = Theme.of(context);
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(text, style: theme.textTheme.titleLarge),
+      if (subtitle != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Text(subtitle, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        ),
+    ]),
+  );
 }

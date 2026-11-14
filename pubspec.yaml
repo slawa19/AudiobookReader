@@ -12,6 +12,11 @@ dependencies:
   flutter:
     sdk: flutter
   material_ui: 1.11.0
+  # Локализация: ARB + gen-l10n (l10n.yaml). Системные подписи Material — GlobalMaterialLocalizations из
+  # material_ui; flutter_localizations нужен сгенерированному классу строк.
+  flutter_localizations:
+    sdk: flutter
+  intl: 0.20.3
 
 dev_dependencies:
   flutter_test:
@@ -20,6 +25,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
 
   assets:
     - assets/demo/

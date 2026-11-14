@@ -2,10 +2,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../book/model.dart';
 import '../playback/chapter_download.dart';
-import '../tts/voices.dart';
 import 'common.dart';
 import 'services.dart';
-import 'strings.dart';
 
 /// Оглавление (FR-R4) и «Скачать главу» для текущей главы (FR-D2, А§6.7). Возвращает выбранную главу.
 class TocScreen extends StatefulWidget {
@@ -35,14 +33,15 @@ class _TocScreenState extends State<TocScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = context.l10n;
     final book = widget.book;
     final downloads = widget.services.downloads;
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(tooltip: S.close, icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(tooltip: l10n.close, icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
         titleSpacing: 0,
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text(S.contents),
+          Text(l10n.contents),
           Text(book.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -84,6 +83,8 @@ class _ChapterTile extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final top = chapter.level == 1;
+    // На подсветке выбранной строки — основной цвет текста: второстепенный на `hl` в сепии даёт 4,2 (№17 ревью).
+    final markColor = current ? scheme.onSurface : scheme.onSurfaceVariant;
     return Padding(
       padding: EdgeInsets.only(left: (chapter.level - 1) * 24.0, top: top ? 6 : 0),
       child: ListTile(
@@ -96,10 +97,10 @@ class _ChapterTile extends StatelessWidget {
               .copyWith(color: current ? scheme.primary : scheme.onSurface),
         ),
         trailing: voiced
-            ? Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.download_done_rounded, size: 18, color: scheme.onSurfaceVariant),
+            ? Row(key: const Key('voiced-mark'), mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.download_done_rounded, size: 18, color: markColor),
                 const SizedBox(width: 4),
-                Text(S.voiced, style: theme.textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                Text(context.l10n.voiced, style: theme.textTheme.labelMedium?.copyWith(color: markColor)),
               ])
             : null,
         onTap: onTap,
@@ -119,28 +120,30 @@ class _DownloadBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = context.l10n;
     final downloads = services.downloads;
     if (downloads.isVoiced(book.id, chapter)) return const SizedBox(height: 4);
     final task = downloads.task;
     final mine = task != null && task.bookId == book.id && task.chapter == chapter;
-    final est = downloads.estimate(book, chapter, TtsModel.byId(services.settings.modelId), DateTime(2026, 11, 14));
+    final est = downloads.estimate(book, chapter);
     final minutes = (est.seconds / 60).ceil();
     final indent = (book.chapters[chapter].level - 1) * 24.0 + 16;
 
     final List<Widget> children;
     if (mine && task.status == DownloadStatus.running) {
       children = [
-        Text(S.downloading((task.readySeconds / 60).floor(), minutes), style: theme.textTheme.bodyMedium),
+        Text(l10n.downloading((task.readySeconds / 60).floor(), minutes), style: theme.textTheme.bodyMedium),
         const SizedBox(height: 10),
         LinearProgressIndicator(
           value: task.fraction,
           minHeight: 6,
           borderRadius: BorderRadius.circular(3),
+          // Внешний вид Material 3 2024 года; флаг помечен устаревшим, но другого способа включить его нет.
           // ignore: deprecated_member_use
           year2023: false,
         ),
         const SizedBox(height: 8),
-        Text(S.downloadingWhileOpen, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+        Text(l10n.downloadingWhileOpen, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: 12),
         Align(
           alignment: Alignment.centerLeft,
@@ -149,7 +152,7 @@ class _DownloadBlock extends StatelessWidget {
             style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
             onPressed: downloads.stop,
             icon: const Icon(Icons.stop_rounded),
-            label: const Text(S.stopDownload),
+            label: Text(l10n.stopDownload),
           ),
         ),
       ];
@@ -162,24 +165,27 @@ class _DownloadBlock extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(S.downloadFailed, style: theme.textTheme.titleSmall),
-                Text(S.google(task.googleMessage ?? ''),
+                Text(l10n.downloadFailed, style: theme.textTheme.titleSmall),
+                Text(l10n.google(task.googleMessage ?? ''),
                     style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
               ]),
             ),
           ]),
           const SizedBox(height: 12),
         ],
-        Text(S.notVoiced(minutes), style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+        // Оценка — отдельной строкой перед кнопкой (FR-D2).
+        Text(l10n.notVoicedEstimate(minutes, est.dollars),
+            key: const Key('download-estimate'),
+            style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: 10),
         Align(
           alignment: Alignment.centerLeft,
           child: FilledButton.tonalIcon(
             key: const Key('download-start'),
             style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-            onPressed: () => downloads.start(book, chapter, TtsModel.byId(services.settings.modelId)),
-            icon: const Icon(Icons.download_rounded),
-            label: Text(S.downloadChapter(S.dollars(est.dollars))),
+            onPressed: () => downloads.start(book, chapter),
+            icon: Icon(failed ? Icons.refresh_rounded : Icons.download_rounded),
+            label: Text(failed ? l10n.downloadAgain : l10n.downloadChapter),
           ),
         ),
       ];

@@ -83,17 +83,42 @@ class Note {
       );
 }
 
+/// Книга без единого блока не создаётся: разбор такой файл отклоняет («Не удалось прочитать книгу», FR-B6),
+/// и до экрана чтения она не доходит.
+class EmptyBookException implements Exception {
+  const EmptyBookException();
+
+  @override
+  String toString() => 'EmptyBookException: в книге нет ни одного блока';
+}
+
 class Book {
+  /// Раздел без собственных блоков (`blockCount == 0`) в главы не попадает: линейное разбиение А§3 — каждый
+  /// блок в одной главе — без него не нарушается, а страницы у такого раздела нет. Его заголовок, если он есть в
+  /// файле, — блок соседней главы.
   Book({
     required this.id,
     required this.title,
     required this.author,
     required this.language,
-    required this.chapters,
+    required List<Chapter> chapters,
     required this.blocks,
     required this.notes,
     this.parserVersion = 1,
-  }) : _charsBefore = _prefix(blocks);
+  })  : _charsBefore = _prefix(_nonEmpty(blocks)),
+        chapters = _chaptersFor(chapters, blocks.length);
+
+  static List<Block> _nonEmpty(List<Block> blocks) {
+    if (blocks.isEmpty) throw const EmptyBookException();
+    return blocks;
+  }
+
+  /// Пустые разделы отбрасываются; если глав не осталось, книга — одна глава без названия (как TXT, FR-B5).
+  static List<Chapter> _chaptersFor(List<Chapter> chapters, int blockCount) {
+    final kept = chapters.where((c) => c.blockCount > 0).toList();
+    if (kept.isEmpty) kept.add(Chapter(title: '', level: 1, firstBlock: 0, blockCount: blockCount));
+    return List.unmodifiable(kept);
+  }
 
   final String id;
   final String title;

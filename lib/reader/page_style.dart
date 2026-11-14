@@ -24,6 +24,9 @@ class PageStyle {
   /// Отступ стихов и цитат слева.
   double get insetVerse => fontSize * 2;
 
+  /// Где стоит вертикальная линия цитаты внутри отступа.
+  double get citeRuleX => fontSize * 0.6;
+
   double get verseSize => fontSize * 0.92;
   double get verseLineHeight => lineHeight * 0.92;
 
@@ -42,7 +45,11 @@ class PageStyle {
         forceStrutHeight: true,
       );
 
+  /// Правило оформления (README прототипа, FR-R3): стихи — курсив с отступом; цитата — прямое начертание с тем
+  /// же отступом и тонкой линией слева. Кегль у обоих 0,92 основного.
   TextStyle get verse => body.copyWith(fontSize: verseSize, height: verseLineHeight / verseSize, fontStyle: FontStyle.italic);
+
+  TextStyle get cite => body.copyWith(fontSize: verseSize, height: verseLineHeight / verseSize);
 
   StrutStyle get verseStrut => StrutStyle(
         fontFamily: bookFontFamily,
@@ -63,7 +70,11 @@ class PageStyle {
 
   bool isVerseLike(BlockKind k) => k == BlockKind.verse || k == BlockKind.cite;
 
-  TextStyle textStyleFor(BlockKind k) => isVerseLike(k) ? verse : body;
+  TextStyle textStyleFor(BlockKind k) => switch (k) {
+        BlockKind.verse => verse,
+        BlockKind.cite => cite,
+        _ => body,
+      };
   StrutStyle strutFor(BlockKind k) => isVerseLike(k) ? verseStrut : bodyStrut;
 
   /// Строит отрезок текста блока [start, end) с начертаниями. Цвет знака сноски — [noteColor]; на измерение
@@ -95,7 +106,6 @@ class PageStyle {
               // Надстрочный знак даёт сам шрифт (функция `sups` у Merriweather есть); кегль не уменьшаем.
               style = style.copyWith(
                 fontWeight: FontWeight.w700,
-                fontStyle: FontStyle.normal,
                 color: s.style == SpanStyle.noteRef ? noteColor : null,
                 fontFeatures: const [ui.FontFeature.superscripts()],
               );

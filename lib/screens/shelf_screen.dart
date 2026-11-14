@@ -5,20 +5,29 @@ import 'common.dart';
 import 'reader_screen.dart';
 import 'services.dart';
 import 'settings_screen.dart';
-import 'strings.dart';
 
 /// Полка (FR-L2, FR-L4, FR-L5). Последняя открытая книга — крупной карточкой «Продолжить».
-class ShelfScreen extends StatelessWidget {
+class ShelfScreen extends StatefulWidget {
   const ShelfScreen({super.key, required this.services});
 
   final AppServices services;
 
+  @override
+  State<ShelfScreen> createState() => _ShelfScreenState();
+}
+
+class _ShelfScreenState extends State<ShelfScreen> {
+  AppServices get services => widget.services;
   Library get library => services.library;
+
+  /// Книга открывается: повторное нажатие, пока читается `book.json`, второй экран не откроет.
+  bool _opening = false;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return ListenableBuilder(
-      listenable: library,
+      listenable: Listenable.merge([library, services.audio]),
       builder: (context, _) {
         final books = library.shelf;
         final jobs = library.addJobs;
@@ -28,7 +37,7 @@ class ShelfScreen extends StatelessWidget {
           floatingActionButton: empty
               ? null
               : FloatingActionButton(
-                  tooltip: S.addBook,
+                  tooltip: l10n.addBook,
                   onPressed: () => services.addBook(context),
                   child: const Icon(Icons.add_rounded, size: 28),
                 ),
@@ -46,11 +55,11 @@ class ShelfScreen extends StatelessWidget {
                           // Только прототип: долгое нажатие на заголовок — «Состояния для показа».
                           onLongPress:
                               services.openDemoStates == null ? null : () => services.openDemoStates!(context),
-                          child: Text(S.shelfTitle, style: bookTitleStyle(context, 30)),
+                          child: Text(l10n.shelfTitle, style: bookTitleStyle(context, 30)),
                         ),
                       ),
                       IconButton(
-                        tooltip: S.settings,
+                        tooltip: l10n.settings,
                         icon: const Icon(Icons.settings_outlined),
                         onPressed: () => Navigator.of(context)
                             .push(MaterialPageRoute<void>(builder: (_) => SettingsScreen(services: services))),
@@ -67,14 +76,15 @@ class ShelfScreen extends StatelessWidget {
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                      child: _ContinueCard(entry: books.first, onOpen: () => _open(context, books.first), onMenu: () => _menu(context, books.first)),
+                      child: _ContinueCard(
+                          entry: books.first, onOpen: () => _open(books.first), onMenu: () => _menu(books.first)),
                     ),
                   ),
                 SliverList.builder(
                   itemCount: books.length > 1 ? books.length - 1 : 0,
                   itemBuilder: (context, i) {
                     final e = books[i + 1];
-                    return _BookRow(entry: e, onOpen: () => _open(context, e), onMenu: () => _menu(context, e));
+                    return _BookRow(entry: e, onOpen: () => _open(e), onMenu: () => _menu(e));
                   },
                 ),
                 SliverToBoxAdapter(child: SizedBox(height: 96 + bottomInset)),
@@ -86,64 +96,65 @@ class ShelfScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _open(BuildContext context, ShelfEntry e) async {
-    final book = await library.loadBook(e.id);
-    library.markOpened(e.id);
-    if (!context.mounted) return;
-    await Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => ReaderScreen(services: services, book: book),
-    ));
+  Future<void> _open(ShelfEntry e) async {
+    if (_opening) return;
+    _opening = true;
+    try {
+      final book = await library.loadBook(e.id);
+      library.markOpened(e.id);
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ReaderScreen(services: services, book: book),
+      ));
+    } finally {
+      _opening = false;
+    }
   }
 
-  Future<void> _menu(BuildContext context, ShelfEntry e) async {
+  Future<void> _menu(ShelfEntry e) async {
     final audioBytes = services.audio.bytesForBook(e.id);
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      useSafeArea: true,
-      builder: (context) => _BookMenu(entry: e, audioBytes: audioBytes),
-    );
-    if (!context.mounted || choice == null) return;
-    final scheme = Theme.of(context).colorScheme;
+    final choice = await showScrollableSheet<String>(context, (context) => _BookMenu(entry: e, audioBytes: audioBytes));
+    if (!mounted || choice == null) return;
+    final l10n = context.l10n;
     if (choice == 'narration') {
       final ok = await _confirm(context,
           icon: Icons.music_off_rounded,
-          title: S.deleteNarrationTitle,
-          body: S.deleteNarrationBody(e.title, S.mb(audioBytes)),
-          action: S.delete,
-          color: scheme.error);
-      if (ok) services.deleteNarration(e.id);
+          title: l10n.deleteNarrationTitle,
+          body: l10n.deleteNarrationBody(e.title, formatBytes(l10n, audioBytes)),
+          action: l10n.delete);
+      if (ok) services.narration.deleteBookNarration(e.id);
     } else if (choice == 'book') {
       final ok = await _confirm(context,
           icon: Icons.delete_outline_rounded,
-          title: S.deleteBookTitle,
-          body: S.deleteBookBody(e.title, S.mb(e.bookBytes + audioBytes)),
-          action: S.delete,
-          color: scheme.error);
-      if (ok) {
-        services.deleteNarration(e.id);
-        library.deleteBook(e.id);
-      }
+          title: l10n.deleteBookTitle,
+          body: l10n.deleteBookBody(e.title, formatBytes(l10n, e.bookBytes + audioBytes)),
+          action: l10n.delete);
+      if (ok) services.narration.deleteBook(e.id);
     }
   }
 }
 
 Future<bool> _confirm(BuildContext context,
-    {required IconData icon, required String title, required String body, required String action, required Color color}) async {
+    {required IconData icon, required String title, required String body, required String action}) async {
   final ok = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      icon: Icon(icon),
-      title: Text(title),
-      content: Text(body),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text(S.cancel)),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Theme.of(context).colorScheme.onError),
-          onPressed: () => Navigator.pop(context, true),
-          child: Text(action),
-        ),
-      ],
-    ),
+    builder: (context) {
+      final scheme = Theme.of(context).colorScheme;
+      return AlertDialog(
+        icon: Icon(icon),
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.l10n.cancel)),
+          FilledButton(
+            key: const Key('confirm-delete'),
+            style: FilledButton.styleFrom(backgroundColor: scheme.error, foregroundColor: scheme.onError),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(action),
+          ),
+        ],
+      );
+    },
   );
   return ok ?? false;
 }
@@ -159,6 +170,7 @@ class _ContinueCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = context.l10n;
     final fraction = entry.fraction;
     // На узком экране с крупным шрифтом обложка и название меньше, чтобы слово не рвалось посередине.
     final narrow = MediaQuery.sizeOf(context).width / MediaQuery.textScalerOf(context).scale(1) < 330;
@@ -181,7 +193,7 @@ class _ContinueCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(8)),
-                      child: Text(S.continueReading,
+                      child: Text(l10n.continueReading,
                           style: theme.textTheme.labelMedium?.copyWith(color: scheme.onPrimaryContainer)),
                     ),
                     const SizedBox(height: 10),
@@ -190,13 +202,10 @@ class _ContinueCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(entry.author, style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
                     const SizedBox(height: 14),
+                    // Название главы переносится, а не обрезается (FR-R8).
                     if (entry.chapterTitle != null)
-                      Text(
-                        entry.chapterTitle!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                      ),
+                      Text(entry.chapterTitle!,
+                          style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
                     const SizedBox(height: 6),
                     Row(children: [
                       Expanded(
@@ -204,12 +213,13 @@ class _ContinueCard extends StatelessWidget {
                           value: fraction ?? 0,
                           minHeight: 6,
                           borderRadius: BorderRadius.circular(3),
+                          // Внешний вид Material 3 2024 года; флаг помечен устаревшим, но другого способа включить его нет.
                           // ignore: deprecated_member_use
                           year2023: false,
                         ),
                       ),
                       const SizedBox(width: 10),
-                      Text(S.shelfProgress(fraction),
+                      Text(shelfProgress(l10n, fraction),
                           style: theme.textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
                     ]),
                   ],
@@ -234,6 +244,7 @@ class _BookRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = context.l10n;
     final done = (entry.fraction ?? 0) >= 1;
     return InkWell(
       onTap: onOpen,
@@ -265,7 +276,7 @@ class _BookRow extends StatelessWidget {
                   border: Border.all(color: scheme.outlineVariant),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(S.progressNew, style: theme.textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                child: Text(l10n.progressNew, style: theme.textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
               )
             else
               Row(mainAxisSize: MainAxisSize.min, children: [
@@ -273,7 +284,7 @@ class _BookRow extends StatelessWidget {
                   Icon(Icons.check_circle_rounded, size: 16, color: scheme.primary),
                   const SizedBox(width: 4),
                 ],
-                Text(S.shelfProgress(entry.fraction),
+                Text(shelfProgress(l10n, entry.fraction),
                     style: theme.textTheme.labelLarge?.copyWith(color: scheme.onSurfaceVariant)),
               ]),
           ],
@@ -293,6 +304,7 @@ class _AddJobRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = context.l10n;
     final failed = job.status == AddJobStatus.failed;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
@@ -320,8 +332,9 @@ class _AddJobRow extends StatelessWidget {
                   children: [
                     Text(job.fileName, style: theme.textTheme.titleSmall, maxLines: 2, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 2),
-                    Text(failed ? job.error! : S.adding,
-                        style: theme.textTheme.bodyMedium?.copyWith(color: failed ? scheme.onSurface : scheme.onSurfaceVariant)),
+                    Text(failed && job.failure != null ? addFailureText(l10n, job.failure!) : l10n.adding,
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: failed ? scheme.onSurface : scheme.onSurfaceVariant)),
                     if (job.technical != null)
                       Text(job.technical!, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
                   ],
@@ -329,7 +342,7 @@ class _AddJobRow extends StatelessWidget {
               ),
               if (failed)
                 IconButton(
-                  tooltip: S.dismiss,
+                  tooltip: l10n.dismiss,
                   icon: const Icon(Icons.close_rounded),
                   onPressed: () => library.dismissAddJob(job),
                 )
@@ -352,6 +365,7 @@ class _EmptyShelf extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.fromLTRB(32, 0, 32, 96),
       child: Column(
@@ -364,15 +378,15 @@ class _EmptyShelf extends StatelessWidget {
             child: Icon(Icons.auto_stories_rounded, size: 52, color: scheme.primary),
           ),
           const SizedBox(height: 24),
-          Text(S.emptyTitle, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
+          Text(l10n.emptyTitle, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
           const SizedBox(height: 8),
-          Text(S.emptyBody,
+          Text(l10n.emptyBody,
               textAlign: TextAlign.center, style: theme.textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant)),
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: onAdd,
             icon: const Icon(Icons.add_rounded),
-            label: const Text(S.addBook),
+            label: Text(l10n.addBook),
             style: FilledButton.styleFrom(minimumSize: const Size(0, 52)),
           ),
         ],
@@ -391,42 +405,41 @@ class _BookMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    return SafeArea(
-      top: false,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-            child: Row(children: [
-              BookCover(entry: entry, width: 44, radius: 6, elevated: false),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(entry.title, style: bookTitleStyle(context, 17), maxLines: 2, overflow: TextOverflow.ellipsis),
-                  Text('${entry.author} · ${S.mb(entry.bookBytes + audioBytes)}',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
-                ]),
-              ),
-            ]),
-          ),
-          const Divider(indent: 16, endIndent: 16),
-          const SizedBox(height: 8),
-          if (audioBytes > 0)
-            ListTile(
-              leading: const Icon(Icons.music_off_rounded),
-              title: const Text(S.deleteNarration),
-              trailing: Text(S.mb(audioBytes), style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
-              onTap: () => Navigator.pop(context, 'narration'),
+    final l10n = context.l10n;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+          child: Row(children: [
+            BookCover(entry: entry, width: 44, radius: 6, elevated: false),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(entry.title, style: bookTitleStyle(context, 17), maxLines: 2, overflow: TextOverflow.ellipsis),
+                Text('${entry.author} · ${formatBytes(l10n, entry.bookBytes + audioBytes)}',
+                    style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+              ]),
             ),
+          ]),
+        ),
+        const Divider(indent: 16, endIndent: 16),
+        const SizedBox(height: 8),
+        if (audioBytes > 0)
           ListTile(
-            leading: Icon(Icons.delete_outline_rounded, color: scheme.error),
-            title: Text(S.deleteBook, style: TextStyle(color: scheme.error)),
-            onTap: () => Navigator.pop(context, 'book'),
+            leading: const Icon(Icons.music_off_rounded),
+            title: Text(l10n.deleteNarration),
+            trailing: Text(formatBytes(l10n, audioBytes),
+                style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+            onTap: () => Navigator.pop(context, 'narration'),
           ),
-          const SizedBox(height: 12),
-        ],
-      ),
+        ListTile(
+          leading: Icon(Icons.delete_outline_rounded, color: scheme.error),
+          title: Text(l10n.deleteBook, style: TextStyle(color: scheme.error)),
+          onTap: () => Navigator.pop(context, 'book'),
+        ),
+        const SizedBox(height: 12),
+      ],
     );
   }
 }

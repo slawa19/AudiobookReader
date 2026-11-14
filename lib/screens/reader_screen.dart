@@ -15,7 +15,6 @@ import 'player_panel.dart';
 import 'reader_sheets.dart';
 import 'services.dart';
 import 'settings_screen.dart';
-import 'strings.dart';
 import 'toc_screen.dart';
 import 'voice_screen.dart';
 
@@ -44,8 +43,6 @@ class ReaderScreenState extends State<ReaderScreen> {
   bool _following = true;
   int? _selectedBlock;
   double? _sliderDrag;
-  bool _programmatic = false;
-  int? _animatingTo;
   NarrationState _lastState = NarrationState.idle;
   late ReadingPosition _anchor;
   double _topInset = 0;
@@ -53,6 +50,16 @@ class ReaderScreenState extends State<ReaderScreen> {
   late PageStyle _style;
   late EdgeInsets _pad;
   late Size _column;
+
+  /// Высота тела панели плеера (без ползунка) — страница кончается над ней. До первого замера — оценка.
+  double? _playerBody;
+
+  // Переходы по страницам. Каждый переход получает номер; завершение старого перехода не трогает признаки
+  // нового. Перетаскивание пальцем сразу отменяет автоматический переход (№13 ревью).
+  int _navOp = 0;
+  bool _programmatic = false;
+  int? _animatingTo;
+  bool _userDragging = false;
 
   /// Для тестов: номер страницы и раскладка.
   int get page => _page;
@@ -78,6 +85,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     narration.addListener(_onNarration);
     s.downloads.addListener(_rebuild);
     s.settings.addListener(_rebuild);
+    s.library.addListener(_rebuild);
     setImmersive(true);
   }
 
@@ -86,10 +94,9 @@ class ReaderScreenState extends State<ReaderScreen> {
     narration.removeListener(_onNarration);
     s.downloads.removeListener(_rebuild);
     s.settings.removeListener(_rebuild);
-    // Закрытие книги завершает прослушивание (А§6.6).
-    if (narration.bookId == book.id && narration.state != NarrationState.idle) {
-      narration.close();
-    }
+    s.library.removeListener(_rebuild);
+    // Закрытие книги завершает прослушивание (А§6.6); позицию к этому моменту уже пишет контроллер.
+    if (narration.bookId == book.id && narration.state != NarrationState.idle) narration.close();
     setImmersive(false);
     _pc?.dispose();
     super.dispose();
@@ -110,6 +117,9 @@ class ReaderScreenState extends State<ReaderScreen> {
     final old = _pc;
     _pc = PageController(initialPage: _page);
     _generation++;
+    _navOp++;
+    _programmatic = false;
+    _animatingTo = null;
     if (old != null) WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
   }
 
@@ -125,31 +135,46 @@ class ReaderScreenState extends State<ReaderScreen> {
     final pc = _pc;
     if (pc == null || !pc.hasClients) return;
     target = target.clamp(0, _layout!.pages.length - 1);
-    // Уже листаем туда же — не перезапускать анимацию (озвучка зовёт сюда на каждом своём шаге).
-    if (target == _page || target == _animatingTo) return;
+    // Уже листаем туда же автоматически — не перезапускать анимацию (озвучка зовёт сюда на каждом шаге).
+    if (target == _page || (!user && target == _animatingTo)) return;
+    final op = ++_navOp;
     _programmatic = !user;
     if ((target - _page).abs() == 1) {
       _animatingTo = target;
       await pc.animateToPage(target, duration: const Duration(milliseconds: 320), curve: Curves.easeOutCubic);
-      if (_animatingTo == target) _animatingTo = null;
     } else {
       pc.jumpToPage(target);
     }
+    if (op != _navOp || !mounted) return; // начался другой переход — его признаки не трогаем
     _programmatic = false;
-    // Номер страницы — по контроллеру: уведомление о смене страницы приходит не при каждом переходе.
-    if (mounted && pc.hasClients && pc.page != null && pc.page!.round() != _page) {
+    _animatingTo = null;
+    if (pc.hasClients && pc.page != null && pc.page!.round() != _page) {
       _onPageChanged(pc.page!.round(), programmatic: !user);
     }
   }
 
   void _onPageChanged(int i, {bool? programmatic}) {
-    final auto = programmatic ?? _programmatic;
+    final auto = (programmatic ?? _programmatic) && !_userDragging;
     setState(() {
       _page = i;
       _anchor = _pagePosition;
       if (!auto && narration.isActive && narration.bookId == book.id) _following = false;
     });
     if (!auto) _saveScreenPosition();
+  }
+
+  bool _onScroll(ScrollNotification n) {
+    if (n is ScrollStartNotification && n.dragDetails != null) {
+      // Палец на странице: автоматический переход отменяется, следование за голосом — тоже.
+      _userDragging = true;
+      _navOp++;
+      _programmatic = false;
+      _animatingTo = null;
+      if (narration.isActive && narration.bookId == book.id && _following) setState(() => _following = false);
+    } else if (n is ScrollEndNotification) {
+      _userDragging = false;
+    }
+    return false;
   }
 
   /// Позицию пишет экран, только пока прослушивание не активно (А§5).
@@ -161,16 +186,23 @@ class ReaderScreenState extends State<ReaderScreen> {
 
   // --- следование за голосом (А§5, FR-P4) ---------------------------------------------------------------
 
+  /// Место, которое сейчас звучит: блок и оценка смещения внутри него по доле проигранного.
+  ReadingPosition? get soundingPosition {
+    final block = narration.block;
+    if (narration.bookId != book.id || block == null) return null;
+    final len = book.blocks[block].text.length;
+    final offset = math.min((narration.blockProgress.clamp(0.0, 1.0) * len).floor(), math.max(0, len - 1));
+    return ReadingPosition(block, offset);
+  }
+
   void _onNarration() {
     if (!mounted) return;
     final state = narration.state;
     if (narration.bookId == book.id) {
       if (state == NarrationState.stopped && _lastState != NarrationState.stopped) _following = true;
-      final block = narration.block;
-      if (_following && block != null && _layout != null && state != NarrationState.idle) {
-        final len = book.blocks[block].text.length;
-        final offset = (narration.blockProgress.clamp(0.0, 1.0) * len).floor();
-        final target = _layout!.pageOf(block, offset);
+      final at = soundingPosition;
+      if (_following && at != null && _layout != null && state != NarrationState.idle) {
+        final target = _layout!.pageOf(at.block, at.offset);
         if (target != _page) goToPage(target, user: false);
       }
     }
@@ -190,14 +222,15 @@ class ReaderScreenState extends State<ReaderScreen> {
       setState(() => _selectedBlock = null);
       return;
     }
-    if (_panels) {
-      _setPanels(false);
-      return;
-    }
+    // Знак сноски важнее панелей: видимую ссылку открываем и при открытых панелях (№12 ревью).
     final local = d.localPosition - Offset(_pad.left, _pad.top);
     final hit = hitTestPage(book: book, page: _current, style: _style, columnWidth: _column.width, p: local);
     if (hit.noteId != null) {
       showNoteSheet(context, book: book, noteId: hit.noteId!, style: _style);
+      return;
+    }
+    if (_panels) {
+      _setPanels(false);
       return;
     }
     final x = d.localPosition.dx / area.width;
@@ -241,17 +274,14 @@ class ReaderScreenState extends State<ReaderScreen> {
     return false;
   }
 
+  /// «Слушать»: с первого озвучиваемого места на экране, в том числе с хвоста абзаца, начатого на прошлой
+  /// странице (FR-P3, решение по ревью 2026-11-14).
   void listen() {
     if (!_requireKey()) return;
-    // Первый абзац, который начинается на этой странице; хвост абзаца с прошлой страницы не считается —
-    // иначе страница сразу уехала бы назад, к его началу.
-    final starts = _current.fragments.where((f) => f.start == 0 && book.blocks[f.block].isSpoken);
-    final first = starts.isNotEmpty
-        ? starts.first.block
-        : _current.fragments.map((f) => f.block).firstWhere((b) => book.blocks[b].isSpoken,
-            orElse: () => _current.firstBlock);
-    narration.start(book, first);
+    final first = _current.fragments.where((f) => !f.isImage && book.blocks[f.block].isSpoken).firstOrNull;
+    final from = first == null ? _pagePosition : ReadingPosition(first.block, first.start);
     _following = true;
+    narration.listen(book, from);
     _setPanels(false);
   }
 
@@ -261,38 +291,27 @@ class ReaderScreenState extends State<ReaderScreen> {
       _selectedBlock = null;
       _following = true;
     });
-    narration.start(book, block);
+    narration.readFrom(book, block);
   }
 
   void _closeNarration() {
-    // «Закрыть»: idle, позиция — начало страницы на экране (FR-P8). Панель уходит, страница становится длиннее
-    // и пересчитывается от этого же места.
-    final position = _pagePosition;
-    s.library.savePosition(book.id, position, fraction: _fraction, chapterTitle: chapterLabel(book, _current.chapter));
-    _anchor = position;
-    narration.close();
+    // «Закрыть» — одна команда контроллера: сеанс завершён, затем позиция страницы на экране отдана писателю
+    // (FR-P8). Панель уходит, страница становится длиннее и пересчитывается от этого же места.
+    _anchor = _pagePosition;
+    narration.close(screenPosition: _pagePosition);
     setState(() => _following = true);
   }
 
   Future<void> _openContents() async {
     final chapter = await _push<int>(TocScreen(services: s, book: book, current: _current.chapter));
     if (chapter == null || !mounted) return;
-    final target = _layout!.chapterFirstPage[chapter];
-    if (_mine && narration.isActive) {
-      final wasPaused = narration.state == NarrationState.paused;
-      narration.start(book, book.chapters[chapter].firstBlock);
-      if (wasPaused) narration.pause();
-      _following = true;
-    }
+    narration.moveIfListening(book, book.chapters[chapter].firstBlock);
+    _following = true;
     _setPanels(false);
-    await goToPage(target);
+    await goToPage(_layout!.chapterFirstPage[chapter]);
   }
 
-  Future<void> _openVoice() async {
-    // Открытие экрана голоса ставит прослушивание на паузу (FR-V1).
-    narration.pause();
-    await _push<void>(VoiceScreen(services: s, book: book));
-  }
+  Future<void> _openVoice() => _push<void>(VoiceScreen(services: s, book: book));
 
   // --- построение ------------------------------------------------------------------------------------------
 
@@ -305,29 +324,35 @@ class ReaderScreenState extends State<ReaderScreen> {
     _bottomInset = math.max(_bottomInset, media.viewPadding.bottom);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = context.l10n;
     final colors = PageColors(
       ink: scheme.onSurface,
       ink2: scheme.onSurfaceVariant,
       accent: scheme.primary,
       highlight: scheme.primaryContainer,
+      rule: scheme.outlineVariant,
     );
+    final task = s.downloads.task;
+    final downloading = task != null && task.bookId == book.id && task.status == DownloadStatus.running;
+    final downloadLine = downloading ? DownloadLine(task: task, onStop: s.downloads.stop) : null;
     return Scaffold(
       backgroundColor: scheme.surface,
       body: LayoutBuilder(builder: (context, c) {
         final area = Size(c.maxWidth, c.maxHeight);
         final playerVisible = _mine;
-        // Пока видна панель плеера, страница кончается над ней: под панелью текст не прячется.
-        _pad = EdgeInsets.fromLTRB(
-            24, _topInset + 28, 24, _bottomInset + (playerVisible ? PlayerPanel.controlsHeight + 16 : 44));
+        // Страница кончается над всем, что занято внизу постоянно: панелью плеера (вместе с её строкой
+        // скачивания и «К месту чтения») или строкой скачивания и долей книги.
+        final reserved = playerVisible
+            ? (_playerBody ?? PlayerPanel.controlsHeight + _bottomInset) + 16
+            : _bottomInset + (downloading ? 104 : 44);
+        _pad = EdgeInsets.fromLTRB(24, _topInset + 28, 24, reserved);
         _column = Size(area.width - _pad.horizontal, math.max(_style.lineHeight * 3, area.height - _pad.vertical));
         _ensureLayout(_style, _column);
         final highlight = <int>{
           if (playerVisible && narration.block != null) narration.block!,
           ?_selectedBlock,
         };
-        final task = s.downloads.task;
-        final showStrip = task != null && task.bookId == book.id && task.status == DownloadStatus.running;
-        final showToPlace = playerVisible && narration.isActive && !_following;
+        final previewChapter = _sliderDrag == null ? _current.chapter : book.chapterOf(book.placeAt(_sliderDrag!).$1);
         return Stack(
           children: [
             Positioned.fill(
@@ -336,23 +361,26 @@ class ReaderScreenState extends State<ReaderScreen> {
                 behavior: HitTestBehavior.opaque,
                 onTapUp: (d) => _onTapUp(d, area),
                 onLongPressStart: _onLongPress,
-                child: PageView.builder(
-                  key: ValueKey('pages-$_generation'),
-                  controller: _pc,
-                  onPageChanged: _onPageChanged,
-                  itemCount: _layout!.pages.length,
-                  itemBuilder: (context, i) => ColoredBox(
-                    color: scheme.surface,
-                    child: Padding(
-                      padding: _pad,
-                      child: BookPage(
-                        key: ValueKey('page-$i'),
-                        book: book,
-                        page: _layout!.pages[i],
-                        style: _style,
-                        colors: colors,
-                        imageFor: (id) => s.library.image(book.id, id),
-                        highlightBlocks: highlight,
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _onScroll,
+                  child: PageView.builder(
+                    key: ValueKey('pages-$_generation'),
+                    controller: _pc,
+                    onPageChanged: _onPageChanged,
+                    itemCount: _layout!.pages.length,
+                    itemBuilder: (context, i) => ColoredBox(
+                      color: scheme.surface,
+                      child: Padding(
+                        padding: _pad,
+                        child: BookPage(
+                          key: ValueKey('page-$i'),
+                          book: book,
+                          page: _layout!.pages[i],
+                          style: _style,
+                          colors: colors,
+                          imageFor: (id) => s.library.image(book.id, id),
+                          highlightBlocks: highlight,
+                        ),
                       ),
                     ),
                   ),
@@ -361,24 +389,27 @@ class ReaderScreenState extends State<ReaderScreen> {
             ),
             if (!_panels && !playerVisible)
               Positioned(
-                left: 0,
-                right: 0,
+                left: 16,
+                right: 16,
                 bottom: _bottomInset + 14,
-                child: IgnorePointer(
-                  child: Text(S.bookPercent((_fraction * 100).round()),
-                      key: const Key('footer-percent'),
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
-                ),
+                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  if (downloadLine != null) ...[downloadLine, const SizedBox(height: 12)],
+                  IgnorePointer(
+                    child: Text(l10n.percent(_fraction),
+                        key: const Key('footer-percent'),
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                  ),
+                ]),
               ),
-            if (_selectedBlock != null) _readFromHere(context),
+            if (_selectedBlock != null) _readFromHere(context, area),
             _Slide(
               visible: _panels,
               from: const Offset(0, -1),
               alignment: Alignment.topCenter,
               child: _TopBar(
                 title: book.title,
-                subtitle: chapterLabel(book, _current.chapter),
+                subtitle: book.chapters[previewChapter].title.isEmpty ? null : chapterLabel(book, previewChapter),
                 onBack: () => Navigator.of(context).maybePop(),
                 onContents: _openContents,
                 onAppearance: () => showTextAppearanceSheet(context, s.settings, s.themePreviews),
@@ -391,88 +422,62 @@ class ReaderScreenState extends State<ReaderScreen> {
                 from: const Offset(0, 1),
                 alignment: Alignment.bottomCenter,
                 child: _BottomPanel(
-                  slider: _sliderStrip(context, compact: false),
+                  slider: _sliderStrip(context),
+                  download: _panels ? downloadLine : null,
+                  voiceName: s.library.bookVoice(book.id) ?? s.settings.voice,
+                  onVoice: _openVoice,
                   onListen: listen,
                   bottomInset: _bottomInset,
                 ),
               ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (showToPlace)
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: FilledButton.tonalIcon(
-                          key: const Key('to-reading-place'),
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size(0, 48),
-                            elevation: 3,
-                            shadowColor: scheme.shadow,
-                          ),
-                          onPressed: _backToReadingPlace,
-                          icon: const Icon(Icons.my_location_rounded),
-                          label: const Text(S.toReadingPlace),
-                        ),
-                      ),
-                    ),
-                  if (showStrip && !_panels)
-                    _DownloadStrip(task: task, onStop: s.downloads.stop, bottomInset: playerVisible ? 0 : _bottomInset),
-                  if (playerVisible) ...[
-                    PlayerPanel(
-                      narration: narration,
-                      settings: s.settings,
-                      voiceName: s.library.bookVoice(book.id) ?? s.settings.voice,
-                      chapterTitle: chapterLabel(book, book.chapterOf(narration.block ?? _current.firstBlock)),
-                      onClose: _closeNarration,
-                      onVoice: _openVoice,
-                      onSpeed: () => showSpeedSheet(context, s.settings, narration),
-                      onSleep: () => showSleepSheet(context, narration),
-                      onTopUp: () => s.openUrl(context, S.billingUrl),
-                      onChooseModel: () => _push<void>(SettingsScreen(services: s, openModel: true)),
-                      header: _panels ? _sliderStrip(context, compact: true) : null,
-                    ),
-                  ],
-                ],
+            if (playerVisible)
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: PlayerPanel(
+                  narration: narration,
+                  settings: s.settings,
+                  voiceName: s.library.bookVoice(book.id) ?? s.settings.voice,
+                  following: _following,
+                  onBackToReading: _backToReadingPlace,
+                  onClose: _closeNarration,
+                  onVoice: _openVoice,
+                  onSpeed: () => showSpeedSheet(context, s.settings, narration),
+                  onSleep: () => showSleepSheet(context, narration),
+                  onTopUp: () => s.openUrl(context, billingUrl),
+                  onChooseModel: () => _push<void>(SettingsScreen(services: s, openModel: true)),
+                  header: _panels ? _sliderStrip(context) : null,
+                  download: downloadLine,
+                  onBodyHeight: (h) {
+                    if (_playerBody == null || (h - _playerBody!).abs() > 0.5) setState(() => _playerBody = h);
+                  },
+                ),
               ),
-            ),
           ],
         );
       }),
     );
   }
 
-  Widget _sliderStrip(BuildContext context, {required bool compact}) {
+  /// Ползунок по книге и доля. Название главы — только в шапке; при перетаскивании шапка показывает главу,
+  /// в которую попадёт палец.
+  Widget _sliderStrip(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final value = _sliderDrag ?? _fraction;
-    final (pb, _) = book.placeAt(value);
-    final label = _sliderDrag == null ? chapterLabel(book, _current.chapter) : chapterLabel(book, book.chapterOf(pb));
-    final strip = Padding(
-      padding: EdgeInsets.fromLTRB(20, compact ? 10 : 4, 20, compact ? 4 : 0),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(children: [
-              Expanded(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
-              ),
-              const SizedBox(width: 12),
-              Text(S.ofBook((value * 100).round()),
-                  style: theme.textTheme.labelLarge?.copyWith(color: scheme.onSurface)),
-            ]),
+            child: Text(context.l10n.ofBook(value),
+                textAlign: TextAlign.end, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.onSurface)),
           ),
           Slider(
             key: const Key('book-slider'),
             value: value.clamp(0.0, 1.0),
+            // Внешний вид Material 3 2024 года; флаг помечен устаревшим, но другого способа включить его нет.
             // ignore: deprecated_member_use
             year2023: false,
             onChanged: (v) => setState(() => _sliderDrag = v),
@@ -485,31 +490,34 @@ class ReaderScreenState extends State<ReaderScreen> {
         ],
       ),
     );
-    return strip;
   }
 
-  Widget _readFromHere(BuildContext context) {
+  /// «Читать отсюда» — у абзаца, но всегда в видимой части экрана: не за его краем и не под панелью плеера.
+  Widget _readFromHere(BuildContext context, Size area) {
     final frags = _current.fragments.where((f) => f.block == _selectedBlock).toList();
     if (frags.isEmpty) return const SizedBox.shrink();
+    const button = 48.0;
     final top = _pad.top + frags.first.top;
     final bottom = _pad.top + frags.last.top + frags.last.height;
-    final above = top > _pad.top + 64;
+    final minY = _topInset + 8;
+    final maxY = area.height - _pad.bottom - button - 8;
+    final double y = (top - button - 12 >= minY ? top - button - 12 : bottom + 12).clamp(minY, math.max(minY, maxY));
     return Positioned(
       left: 0,
       right: 0,
-      top: above ? top - 60 : bottom + 8,
+      top: y,
       child: Center(
         child: FilledButton.icon(
           key: const Key('read-from-here'),
           style: FilledButton.styleFrom(
-            minimumSize: const Size(0, 48),
+            minimumSize: const Size(0, button),
             elevation: 6,
             shadowColor: Theme.of(context).colorScheme.shadow,
             padding: const EdgeInsets.symmetric(horizontal: 20),
           ),
           onPressed: () => readFrom(_selectedBlock!),
           icon: const Icon(Icons.play_arrow_rounded),
-          label: const Text(S.readFromHere),
+          label: Text(context.l10n.readFromHere),
         ),
       ),
     );
@@ -557,7 +565,7 @@ class _TopBar extends StatelessWidget {
   });
 
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final VoidCallback onBack;
   final VoidCallback onContents;
   final VoidCallback onAppearance;
@@ -567,6 +575,7 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = context.l10n;
     return Material(
       key: const Key('reader-top-bar'),
       color: scheme.surfaceContainer,
@@ -578,28 +587,33 @@ class _TopBar extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(tooltip: S.back, icon: const Icon(Icons.arrow_back_rounded), onPressed: onBack),
+              IconButton(tooltip: l10n.back, icon: const Icon(Icons.arrow_back_rounded), onPressed: onBack),
               const SizedBox(width: 4),
               Expanded(
                 child: GestureDetector(
                   onLongPress: onTitleLongPress,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleMedium),
-                      Text(subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Название книги может сокращаться (исключение FR-R8), название главы — переносится.
+                        Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleMedium),
+                        if (subtitle != null)
+                          Text(subtitle!,
+                              key: const Key('top-bar-chapter'),
+                              style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                      ],
+                    ),
                   ),
                 ),
               ),
-              IconButton(tooltip: S.contents, icon: const Icon(Icons.toc_rounded), onPressed: onContents),
+              IconButton(tooltip: l10n.contents, icon: const Icon(Icons.toc_rounded), onPressed: onContents),
               IconButton(
-                  tooltip: S.textAppearance, icon: const Icon(Icons.text_fields_rounded), onPressed: onAppearance),
+                  tooltip: l10n.textAppearance, icon: const Icon(Icons.text_fields_rounded), onPressed: onAppearance),
             ],
           ),
         ),
@@ -609,15 +623,26 @@ class _TopBar extends StatelessWidget {
 }
 
 class _BottomPanel extends StatelessWidget {
-  const _BottomPanel({required this.slider, required this.onListen, required this.bottomInset});
+  const _BottomPanel({
+    required this.slider,
+    required this.download,
+    required this.voiceName,
+    required this.onVoice,
+    required this.onListen,
+    required this.bottomInset,
+  });
 
   final Widget slider;
+  final Widget? download;
+  final String voiceName;
+  final VoidCallback onVoice;
   final VoidCallback onListen;
   final double bottomInset;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return Material(
       key: const Key('reader-bottom-panel'),
       color: scheme.surfaceContainer,
@@ -631,14 +656,28 @@ class _BottomPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             slider,
+            if (download != null) Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 4), child: download),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  // Голос книги — и до первого прослушивания (FR-V2).
+                  VoiceChip(key: const Key('voice-chip-idle'), voiceName: voiceName, onPressed: onVoice),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
               child: FilledButton.icon(
                 key: const Key('listen'),
-                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56), textStyle: Theme.of(context).textTheme.titleMedium),
+                style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(56), textStyle: Theme.of(context).textTheme.titleMedium),
                 onPressed: onListen,
                 icon: const Icon(Icons.headphones_rounded),
-                label: const Text(S.listen),
+                label: Text(l10n.listen),
               ),
             ),
           ],
@@ -649,40 +688,40 @@ class _BottomPanel extends StatelessWidget {
 }
 
 /// Пока идёт «Скачать главу» — короткая строка с долей готового и «Стоп» (решение владельца 2026-11-14, FR-D2).
-class _DownloadStrip extends StatelessWidget {
-  const _DownloadStrip({required this.task, required this.onStop, required this.bottomInset});
+/// Видна всегда: в подвале страницы, в нижней панели и в панели плеера.
+class DownloadLine extends StatelessWidget {
+  const DownloadLine({super.key, required this.task, required this.onStop});
 
   final ChapterDownloadTask task;
   final VoidCallback onStop;
-  final double bottomInset;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, bottomInset + 8),
-      child: Material(
-        key: const Key('download-strip'),
-        color: scheme.surfaceContainerHigh,
-        shape: const StadiumBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 2, 4, 2),
-          child: Row(children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(value: task.fraction, strokeWidth: 3, backgroundColor: scheme.outlineVariant),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(S.downloadStrip((task.fraction * 100).round()),
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyMedium),
-            ),
-            TextButton(onPressed: onStop, child: const Text(S.stopShort)),
-          ]),
-        ),
+    return Material(
+      key: const Key('download-strip'),
+      color: scheme.surfaceContainerHigh,
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 4, 0),
+        child: Row(children: [
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(value: task.fraction, strokeWidth: 3, backgroundColor: scheme.outlineVariant),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(context.l10n.downloadStrip(task.fraction), style: theme.textTheme.bodyMedium),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: onStop,
+            child: Text(context.l10n.stopShort),
+          ),
+        ]),
       ),
     );
   }

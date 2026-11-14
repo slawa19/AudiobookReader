@@ -1,12 +1,13 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../playback/tariffs.dart';
 import '../tts/voices.dart';
+import 'common.dart';
 import 'services.dart';
-import 'strings.dart';
 import 'voice_screen.dart';
 
-/// Настройки — один экран (CONCEPT §3): ключ, голос, модель, потрачено, место под озвучку.
+/// Настройки — один экран (CONCEPT §3): ключ, голос, модель, язык интерфейса, потрачено, место под озвучку.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, required this.services, this.focusKey = false, this.openModel = false});
 
@@ -45,10 +46,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _chooseModel() async {
-    final picked = await showModalBottomSheet<TtsModel>(
-      context: context,
-      useSafeArea: true,
-      builder: (context) => _ModelSheet(current: TtsModel.byId(s.settings.modelId)),
+    final picked = await showScrollableSheet<TtsModel>(
+      context,
+      (context) => _ModelSheet(current: TtsModel.byId(s.settings.modelId), tariffs: s.tariffs),
     );
     if (picked != null) {
       s.settings.modelId = picked.id;
@@ -56,32 +56,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _chooseLanguage() async {
+    final picked = await showScrollableSheet<String>(context, (context) => _LanguageSheet(current: s.settings.language));
+    // Пустая строка — «Как в системе».
+    if (picked != null) s.settings.language = picked.isEmpty ? null : picked;
+  }
+
   Future<void> _clear() async {
-    final size = S.mb(s.audio.totalBytes);
+    final l10n = context.l10n;
+    final size = formatBytes(l10n, s.audio.totalBytes);
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) {
         final scheme = Theme.of(context).colorScheme;
         return AlertDialog(
           icon: const Icon(Icons.music_off_rounded),
-          title: const Text(S.clearTitle),
-          content: Text(S.clearBody(size)),
+          title: Text(l10n.clearTitle),
+          content: Text(l10n.clearBody(size)),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text(S.cancel)),
+            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)),
             FilledButton(
               key: const Key('clear-confirm'),
               style: FilledButton.styleFrom(backgroundColor: scheme.error, foregroundColor: scheme.onError),
               onPressed: () => Navigator.pop(context, true),
-              child: const Text(S.clear),
+              child: Text(l10n.clear),
             ),
           ],
         );
       },
     );
-    if (ok ?? false) {
-      s.clearNarration();
-      setState(() {});
-    }
+    // Одна команда контроллера: сеанс, «Скачать главу», готовность глав, пробы и звук (FR-M3, А§4).
+    if (ok ?? false) s.narration.clearAllNarration();
   }
 
   void _saveKey() {
@@ -94,17 +99,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = context.l10n;
     return Scaffold(
       body: ListenableBuilder(
-        listenable: s.settings,
+        listenable: Listenable.merge([s.settings, s.audio]),
         builder: (context, _) {
           final settings = s.settings;
           final showKeyField = !settings.hasApiKey || _editingKey;
           final voice = voiceByName(settings.voice);
           final model = TtsModel.byId(settings.modelId);
           final spent = s.spentByMonth();
+          final languageName = settings.language == null
+              ? l10n.asSystem
+              : interfaceLanguages(l10n).firstWhere((e) => e.$1 == settings.language, orElse: () => ('', l10n.asSystem)).$2;
           return CustomScrollView(slivers: [
-            const SliverAppBar.large(title: Text(S.settingsTitle)),
+            SliverAppBar.large(title: Text(l10n.settings)),
             SliverPadding(
               padding: EdgeInsets.fromLTRB(16, 0, 16, 32 + MediaQuery.paddingOf(context).bottom),
               sliver: SliverList.list(children: [
@@ -118,7 +127,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Icon(Icons.key_rounded, color: scheme.primary),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(S.needKey,
+                        child: Text(l10n.needKey,
                             style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onPrimaryContainer)),
                       ),
                     ]),
@@ -134,8 +143,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         autofocus: widget.focusKey || _editingKey,
                         obscureText: true,
                         decoration: InputDecoration(
-                          labelText: S.geminiKey,
-                          hintText: S.pasteKey,
+                          labelText: l10n.geminiKey,
+                          hintText: l10n.pasteKey,
                           prefixIcon: const Icon(Icons.key_rounded),
                           suffixIcon: Padding(
                             padding: const EdgeInsets.only(right: 4),
@@ -145,7 +154,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 if (data?.text != null) _keyController.text = data!.text!;
                                 if (_keyController.text.isNotEmpty) _saveKey();
                               },
-                              child: const Text(S.paste),
+                              child: Text(l10n.paste),
                             ),
                           ),
                         ),
@@ -155,19 +164,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   else
                     ListTile(
                       leading: const Icon(Icons.key_rounded),
-                      title: const Text(S.geminiKey),
+                      title: Text(l10n.geminiKey),
                       subtitle: Text('•••• ${settings.apiKeyTail}'),
                       trailing: IconButton(
                         key: const Key('key-change'),
-                        tooltip: S.change,
+                        tooltip: l10n.change,
                         icon: const Icon(Icons.edit_outlined),
                         onPressed: () => setState(() => _editingKey = true),
                       ),
                     ),
                   ListTile(
                     leading: const Icon(Icons.open_in_new_rounded),
-                    title: Text(S.whereKey, style: TextStyle(color: scheme.primary)),
-                    onTap: () => s.openUrl(context, S.keyUrl),
+                    title: Text(l10n.whereKey, style: TextStyle(color: scheme.primary)),
+                    onTap: () => s.openUrl(context, keyUrl),
                   ),
                 ]),
                 const SizedBox(height: 12),
@@ -175,8 +184,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ListTile(
                     key: const Key('settings-voice'),
                     leading: const Icon(Icons.record_voice_over_rounded),
-                    title: const Text(S.voice),
-                    subtitle: Text('${voice.name} — ${voice.character}'),
+                    title: Text(l10n.voice),
+                    subtitle: Text('${voice.name} — ${voiceCharacter(l10n, voice.character)}'),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => Navigator.of(context)
                         .push(MaterialPageRoute<void>(builder: (_) => VoiceScreen(services: s))),
@@ -184,28 +193,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ListTile(
                     key: const Key('settings-model'),
                     leading: const Icon(Icons.graphic_eq_rounded),
-                    title: const Text(S.model),
-                    subtitle: Text('${model.label} · ${S.perHour(S.dollars(model.dollarsPerHourAt(DateTime(2026, 11, 14))))}'),
+                    title: Text(l10n.model),
+                    subtitle: Text('${model.label} · ${l10n.perHour(s.tariffs.dollarsPerHour(model))}'),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: _chooseModel,
+                  ),
+                  ListTile(
+                    key: const Key('settings-language'),
+                    leading: const Icon(Icons.translate_rounded),
+                    title: Text(l10n.language),
+                    subtitle: Text(languageName),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: _chooseLanguage,
                   ),
                 ]),
                 const SizedBox(height: 12),
                 _Group(children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                    child: Text(S.spent, style: theme.textTheme.titleSmall?.copyWith(color: scheme.primary)),
+                    child: Text(l10n.spent, style: theme.textTheme.titleSmall?.copyWith(color: scheme.primary)),
                   ),
                   for (var i = 0; i < spent.length; i++)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: Row(children: [
                         Expanded(
-                          child: Text(S.months[spent[i].month.month - 1],
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                  color: i == 0 ? scheme.onSurface : scheme.onSurfaceVariant)),
+                          child: Text(monthName(l10n, spent[i].month),
+                              style: theme.textTheme.bodyLarge
+                                  ?.copyWith(color: i == 0 ? scheme.onSurface : scheme.onSurfaceVariant)),
                         ),
-                        Text(S.dollars(spent[i].dollars),
+                        Text(l10n.money(spent[i].dollars),
                             style: (i == 0 ? theme.textTheme.titleMedium : theme.textTheme.bodyLarge)
                                 ?.copyWith(color: i == 0 ? scheme.onSurface : scheme.onSurfaceVariant)),
                       ]),
@@ -216,16 +233,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _Group(children: [
                   ListTile(
                     leading: const Icon(Icons.download_done_rounded),
-                    title: const Text(S.storage),
-                    subtitle: Text(S.mb(s.audio.totalBytes), key: const Key('storage-size')),
+                    title: Text(l10n.storage),
+                    subtitle: Text(formatBytes(l10n, s.audio.totalBytes), key: const Key('storage-size')),
                     trailing: s.audio.totalBytes > 0
-                        ? TextButton(key: const Key('clear'), onPressed: _clear, child: const Text(S.clear))
+                        ? TextButton(key: const Key('clear'), onPressed: _clear, child: Text(l10n.clear))
                         : null,
                   ),
                 ]),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: Text(S.storageNote, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                  child: Text(l10n.storageNote, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
                 ),
               ]),
             ),
@@ -255,48 +272,79 @@ class _Group extends StatelessWidget {
 }
 
 class _ModelSheet extends StatelessWidget {
-  const _ModelSheet({required this.current});
+  const _ModelSheet({required this.current, required this.tariffs});
 
   final TtsModel current;
+  final Tariffs tariffs;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final today = DateTime(2026, 11, 14);
-    String note(TtsModel m) => m == TtsModel.flash ? S.byDefault : S.thirdCheaper;
-    return SafeArea(
-      top: false,
-      child: RadioGroup<TtsModel>(
-        groupValue: current,
-        onChanged: (m) => Navigator.pop(context, m),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    final l10n = context.l10n;
+    String note(TtsModel m) => m == TtsModel.flash ? l10n.byDefault : l10n.thirdCheaper;
+    return RadioGroup<TtsModel>(
+      groupValue: current,
+      onChanged: (m) => Navigator.pop(context, m),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        sheetTitle(context, l10n.model),
+        for (final m in TtsModel.values)
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-            child: Text(S.model, style: theme.textTheme.titleLarge),
-          ),
-          for (final m in TtsModel.values)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: ListTile(
-                key: Key('model-${m.name}'),
-                selected: m == current,
-                leading: Radio<TtsModel>(value: m),
-                title: Text(m.label),
-                subtitle: Text('${S.perHour(S.dollars(m.dollarsPerHourAt(today)))} · ${note(m)}',
-                    style: m == current ? TextStyle(color: scheme.onSurface) : null),
-                onTap: () => Navigator.pop(context, m),
-              ),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: ListTile(
+              key: Key('model-${m.name}'),
+              selected: m == current,
+              leading: Radio<TtsModel>(value: m),
+              title: Text(m.label),
+              subtitle: Text('${l10n.perHour(tariffs.dollarsPerHour(m))} · ${note(m)}',
+                  style: m == current ? TextStyle(color: scheme.onSurface) : null),
+              onTap: () => Navigator.pop(context, m),
             ),
+          ),
+        if (tariffs.beforePriceChange)
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
             child: Text(
-              S.price2027(S.dollars(TtsModel.flash.dollarsPerHourFrom2027), S.dollars(TtsModel.flashLite.dollarsPerHourFrom2027)),
+              l10n.price2027(TtsModel.flash.dollarsPerHourFrom2027, TtsModel.flashLite.dollarsPerHourFrom2027),
               style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
+          )
+        else
+          const SizedBox(height: 24),
+      ]),
+    );
+  }
+}
+
+/// «Язык»: «Как в системе» и четыре языка интерфейса, каждый назван на самом себе. Возвращает код языка или
+/// пустую строку для «Как в системе».
+class _LanguageSheet extends StatelessWidget {
+  const _LanguageSheet({required this.current});
+
+  final String? current;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    return RadioGroup<String>(
+      groupValue: current ?? '',
+      onChanged: (v) => Navigator.pop(context, v),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        sheetTitle(context, l10n.language),
+        for (final (code, name) in [('', l10n.asSystem), ...interfaceLanguages(l10n)])
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: ListTile(
+              key: Key('language-${code.isEmpty ? 'system' : code}'),
+              selected: (current ?? '') == code,
+              leading: Radio<String>(value: code),
+              title: Text(name, style: (current ?? '') == code ? TextStyle(color: scheme.onSurface) : null),
+              onTap: () => Navigator.pop(context, code),
+            ),
           ),
-        ]),
-      ),
+        const SizedBox(height: 16),
+      ]),
     );
   }
 }
