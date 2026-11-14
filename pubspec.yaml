@@ -1,0 +1,49 @@
+name: audiobook_reader
+description: "Читалка книг с озвучкой Gemini TTS. Сейчас — кликабельный прототип интерфейса на подставных данных."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.14.0
+  flutter: 3.50.0
+
+# Версии закреплены точно. Flutter — scripts/env.sh.
+dependencies:
+  flutter:
+    sdk: flutter
+  material_ui: 1.11.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: 6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/demo/
+    - assets/demo/images/
+    - assets/demo/covers/
+
+  fonts:
+    # Текст книги и названия книг. OFL, источник — assets/fonts/SOURCES.txt.
+    - family: Merriweather
+      fonts:
+        - asset: assets/fonts/Merriweather-Regular.ttf
+        - asset: assets/fonts/Merriweather-Italic.ttf
+          style: italic
+        - asset: assets/fonts/Merriweather-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Merriweather-BoldItalic.ttf
+          weight: 700
+          style: italic
+    # Интерфейс. На Android это системный шрифт; встроен, чтобы веб-прототип и снимки тестов
+    # выглядели как на телефоне и не ходили за шрифтом в сеть.
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700

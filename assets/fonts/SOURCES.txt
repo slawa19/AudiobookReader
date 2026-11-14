@@ -1,0 +1,24 @@
+Встроенные шрифты. Скачаны 2026-11-14. Кириллица проверена по таблице cmap: А–Я, а–я, Ё/ё, «», —, –, …,
+№, ударение U+0301, неразрывный пробел — все есть. Палитра и шрифты взяты из прежнего макета
+(docs/mockup/NOTES.md) по решению владельца 2026-11-14.
+
+Merriweather (текст книги, названия книг)
+  Лицензия: SIL Open Font License 1.1 — Merriweather-OFL.txt
+  Источник: https://github.com/SorkinType/Merriweather, коммит 4481226b336843648b5b2ee64f75737f262ded15,
+            каталог fonts/ttf (статические начертания)
+  sha256:
+    10ec10d1f7a9b5f0eb1a964e06348ce20587d478c661ea36728cce7b57f3de1c  Merriweather-Regular.ttf
+    1f73096441117e56bd867a437188e98bcf8ae7dcc7f676980da2ed2b6b51554d  Merriweather-Italic.ttf
+    a2fa4f57946c62036f79d9e8b4b642515001d65af1e6a98afc0b94bf669e3f11  Merriweather-Bold.ttf
+    f9bf9c32fc1297711b7d309cee9c9ba10ebb00148f4ceda21760f4b1b7e3e8ef  Merriweather-BoldItalic.ttf
+
+Roboto (интерфейс)
+  На Android это системный шрифт. Встроен, чтобы веб-прототип и снимки тестов выглядели как на телефоне
+  и не загружали шрифт из сети. В настоящем приложении его можно убрать из pubspec.yaml — решение за владельцем.
+  Лицензия: SIL Open Font License 1.1 — Roboto-OFL.txt (из google/fonts, ofl/roboto)
+  Источник: https://github.com/googlefonts/roboto-3-classic/releases/tag/v3.016, Roboto_v3.016.zip,
+            каталог android/static
+  sha256:
+    e688a215e0841b6e4edb1207c93f88f4c609f82e870884349a7257e449eb9355  Roboto-Regular.ttf
+    3e4dca65eead6ff95f6963ab1f489d055086bcc5a62b2afed5d72e62b0c04ba5  Roboto-Medium.ttf
+    9aa793ad5e12c3b2486464ec6f047f16ac6d30bb06c8b4d162ba313459794968  Roboto-Bold.ttf
