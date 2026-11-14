@@ -19,7 +19,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get addBook => 'Dodaj książkę';
 
   @override
-  String get continueReading => 'Kontynuuj';
+  String get continueReading => 'Czytaj dalej';
 
   @override
   String get progressNew => 'nowa';
@@ -35,7 +35,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get emptyBody =>
-      'Dodaj książkę FB2 lub EPUB przyciskiem „+” albo otwórz plik z innej aplikacji przez „Otwórz za pomocą”.';
+      'Dodaj książkę w formacie FB2 lub EPUB przyciskiem „+” albo otwórz plik z innej aplikacji przez „Otwórz za pomocą”.';
 
   @override
   String get addFailedUnsupported => 'Ten format nie jest obsługiwany';
@@ -58,7 +58,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String deleteBookBody(String title, String size) {
-    return '„$title” i jej nagranie zostaną usunięte z telefonu. Zwolni się $size.';
+    return 'Książka „$title” i jej nagranie zostaną usunięte z telefonu, co zwolni $size miejsca.';
   }
 
   @override
@@ -66,7 +66,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String deleteNarrationBody(String title, String size) {
-    return 'Dźwięk „$title” zostanie usunięty, zwolni się $size. Aby posłuchać ponownie, trzeba go nagrać i opłacić od nowa.';
+    return 'Dźwięk „$title” zostanie usunięty, co zwolni $size miejsca. Aby posłuchać ponownie, trzeba go nagrać i opłacić od nowa.';
   }
 
   @override
@@ -98,7 +98,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get readFromHere => 'Czytaj stąd';
 
   @override
-  String get toReadingPlace => 'Wróć do lektora';
+  String get toReadingPlace => 'Do bieżącego miejsca';
 
   @override
   String percent(double value) {
@@ -202,7 +202,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get endOfBookBody => 'Aby czytać samodzielnie, zamknij panel.';
 
   @override
-  String get error402Title => 'Środki na koncie Gemini się skończyły';
+  String get error402Title => 'Na koncie Gemini zabrakło środków';
 
   @override
   String get error402Body =>
@@ -377,7 +377,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String probeNote(String phrase) {
-    return 'Próbka czyta to samo zdanie w języku książki: „$phrase” Kosztuje mniej niż cent i jest płatna raz.';
+    return 'Próbka czyta to samo zdanie w języku książki: „$phrase” Kosztuje mniej niż cent, a płaci się za nią tylko raz.';
   }
 
   @override
@@ -438,7 +438,7 @@ class AppLocalizationsPl extends AppLocalizations {
     );
     final String bString = bNumberFormat.format(b);
 
-    return 'Od 1 stycznia 2027 roku Google pobiera dwa razy więcej: $aString i $bString za godzinę. Dźwięk jednego modelu nie liczy się dla drugiego: po zmianie książki są nagrywane od nowa.';
+    return 'Od 1 stycznia 2027 roku Google będzie pobierać dwa razy więcej: $aString i $bString za godzinę. Dźwięk z jednego modelu nie zastępuje dźwięku z drugiego: po zmianie książki są nagrywane od nowa.';
   }
 
   @override

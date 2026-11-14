@@ -98,7 +98,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readFromHere => 'Read from here';
 
   @override
-  String get toReadingPlace => 'Back to narration';
+  String get toReadingPlace => 'To current spot';
 
   @override
   String percent(double value) {
@@ -196,10 +196,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get endOfBook => 'The book has ended';
+  String get endOfBook => 'End of the book';
 
   @override
-  String get endOfBookBody => 'To read on your own, close the panel.';
+  String get endOfBookBody => 'To read it yourself, close the panel.';
 
   @override
   String get error402Title => 'Your Gemini balance is empty';
@@ -344,7 +344,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceForApp => 'for all books';
 
   @override
-  String get voiceAsSettings => 'As in settings';
+  String get voiceAsSettings => 'Same as in Settings';
 
   @override
   String voiceNow(String name) {
@@ -374,7 +374,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String probeNote(String phrase) {
-    return 'The sample reads the same phrase in the book’s language: “$phrase” It costs less than a cent and is paid once.';
+    return 'The sample reads the same phrase in the book’s language: “$phrase” It costs less than a cent, and you pay for it only once.';
   }
 
   @override
@@ -435,7 +435,7 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     final String bString = bNumberFormat.format(b);
 
-    return 'From 1 January 2027 Google charges twice as much: $aString and $bString per hour. Audio of one model does not count for the other: after switching, books are narrated anew.';
+    return 'Starting January 1, 2027, Google charges twice as much: $aString and $bString per hour. Audio narrated with one model can’t be reused with the other, so after switching, books are narrated again.';
   }
 
   @override

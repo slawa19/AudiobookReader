@@ -35,7 +35,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get emptyBody =>
-      'Fügen Sie ein Buch als FB2 oder EPUB mit „+“ hinzu oder öffnen Sie eine Datei aus einer anderen App über „Öffnen mit“.';
+      'Mit „+“ ein Buch als FB2 oder EPUB hinzufügen – oder eine Datei aus einer anderen App über „Öffnen mit“ öffnen.';
 
   @override
   String get addFailedUnsupported => 'Dieses Format wird nicht unterstützt';
@@ -58,7 +58,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String deleteBookBody(String title, String size) {
-    return '„$title“ und die Vertonung werden vom Telefon gelöscht. Frei werden $size.';
+    return '„$title“ und die Vertonung werden vom Telefon gelöscht. Das gibt $size frei.';
   }
 
   @override
@@ -66,7 +66,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String deleteNarrationBody(String title, String size) {
-    return 'Der Ton von „$title“ wird gelöscht, frei werden $size. Zum erneuten Anhören muss er neu vertont und bezahlt werden.';
+    return 'Der Ton von „$title“ wird gelöscht und gibt $size frei. Zum erneuten Anhören muss er neu vertont und bezahlt werden.';
   }
 
   @override
@@ -80,13 +80,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get pickerNote =>
-      'Im Prototyp eine Nachbildung der Dateiauswahl des Systems.';
+      'Im Prototyp wird die Dateiauswahl des Systems nachgebildet.';
 
   @override
   String get back => 'Zurück';
 
   @override
-  String get contents => 'Inhalt';
+  String get contents => 'Inhaltsverzeichnis';
 
   @override
   String get textAppearance => 'Textdarstellung';
@@ -98,7 +98,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get readFromHere => 'Ab hier lesen';
 
   @override
-  String get toReadingPlace => 'Zur Vorlesestelle';
+  String get toReadingPlace => 'Zur aktuellen Stelle';
 
   @override
   String percent(double value) {
@@ -136,7 +136,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get theme => 'Design';
 
   @override
-  String get asSystem => 'Wie im System';
+  String get asSystem => 'Systemstandard';
 
   @override
   String get themeLight => 'Hell';
@@ -151,7 +151,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get preparing => 'Stimme wird vorbereitet…';
 
   @override
-  String get waiting => 'Warte auf Verbindung…';
+  String get waiting => 'Warten auf Verbindung…';
 
   @override
   String get close => 'Schließen';
@@ -199,14 +199,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get endOfBook => 'Das Buch ist zu Ende';
 
   @override
-  String get endOfBookBody => 'Zum Selberlesen schließen Sie das Bedienfeld.';
+  String get endOfBookBody => 'Um selbst zu lesen, das Bedienfeld schließen.';
 
   @override
-  String get error402Title => 'Ihr Gemini-Guthaben ist aufgebraucht';
+  String get error402Title => 'Das Gemini-Guthaben ist aufgebraucht';
 
   @override
   String get error402Body =>
-      'Laden Sie Ihr Guthaben auf und tippen Sie auf „Anhören“ – es geht ab diesem Absatz weiter.';
+      'Guthaben aufladen und auf „Anhören“ tippen – dann geht es ab diesem Absatz weiter.';
 
   @override
   String error404Title(String model) {
@@ -214,7 +214,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get error404Body => 'Wählen Sie ein anderes Modell.';
+  String get error404Body => 'Anderes Modell wählen.';
 
   @override
   String get errorKeyTitle =>
@@ -222,7 +222,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get errorKeyBody =>
-      'Prüfen Sie den Schlüssel in den Einstellungen und tippen Sie auf „Anhören“.';
+      'Schlüssel in den Einstellungen prüfen und auf „Anhören“ tippen.';
 
   @override
   String get changeKey => 'Schlüssel ändern';
@@ -313,7 +313,7 @@ class AppLocalizationsDe extends AppLocalizations {
         intl.NumberFormat.decimalPattern(localeName);
     final String totalString = totalNumberFormat.format(total);
 
-    return 'Vertone: $readyString von $totalString Min. fertig';
+    return 'Wird vertont: $readyString von $totalString Min. fertig';
   }
 
   @override
@@ -389,11 +389,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get change => 'Ändern';
 
   @override
-  String get whereKey => 'Schlüssel erhalten: aistudio.google.com';
+  String get whereKey => 'Schlüssel holen: aistudio.google.com';
 
   @override
   String get needKey =>
-      'Zum Anhören brauchen Sie einen Gemini-Schlüssel. Er wird einmal eingegeben und nur auf dem Telefon gespeichert.';
+      'Zum Anhören ist ein Gemini-Schlüssel nötig. Er wird einmal eingegeben und nur auf dem Telefon gespeichert.';
 
   @override
   String get pasteKey => 'Schlüssel einfügen';
@@ -437,7 +437,7 @@ class AppLocalizationsDe extends AppLocalizations {
     );
     final String bString = bNumberFormat.format(b);
 
-    return 'Ab 1. Januar 2027 verlangt Google das Doppelte: $aString und $bString pro Stunde. Ton des einen Modells zählt nicht für das andere: Nach einem Wechsel werden Bücher neu vertont.';
+    return 'Ab 1. Januar 2027 verlangt Google das Doppelte: $aString und $bString pro Stunde. Ton, der mit einem Modell vertont wurde, lässt sich beim anderen nicht wiederverwenden: Nach einem Wechsel werden Bücher neu vertont.';
   }
 
   @override
@@ -568,7 +568,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get voiceCharLively => 'lebhaft';
 
   @override
-  String get voiceCharKnowledgeable => 'kundig';
+  String get voiceCharKnowledgeable => 'sachkundig';
 
   @override
   String get voiceCharEven => 'gleichmäßig';

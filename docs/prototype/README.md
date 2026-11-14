@@ -128,7 +128,8 @@ EPUB с защитой.
 генерации кода», А§8). Множественные формы — ICU plural («1 минута / 2 минуты / 5 минут», польские «minuta / minuty /
 minut»); деньги, проценты, мегабайты и скорость — форматом по локали с неразрывным пробелом. Системные подписи
 Material — делегаты `material_ui`. Тексты Google не переводятся. Названия книг, авторов и глав — текст книги, не
-интерфейса. Переводы en, pl, de сделаны исполнителем и приняты как есть (решение владельца 2026-11-14).
+интерфейса. Переводы en, pl, de сделаны исполнителем и приняты как есть (решение владельца 2026-11-14), затем
+вычитаны редактором в тот же день: правки точечные, термины глоссария ниже — после вычитки.
 
 Фраза «Пробы» и стиль чтения зависят от языка **книги** (`lib/tts/book_language.dart`, FR-T7): ru, en, pl, de,
 для прочих — английские; стиль без рода. Для голоса приложения из настроек (книги нет) фраза — на языке интерфейса.
@@ -142,7 +143,7 @@ Material — делегаты `material_ui`. Тексты Google не перев
 | Проба | Sample | Próbka | Hörprobe |
 | Озвучка | Narration | Nagranie / nagrania | Vertonung |
 | озвучена (глава) | narrated | nagrany | vertont |
-| Оглавление | Contents | Spis treści | Inhalt |
+| Оглавление | Contents | Spis treści | Inhaltsverzeichnis |
 | Голос | Voice | Głos | Stimme |
 | Глава | Chapter | Rozdział | Kapitel |
 | Скачать главу | Download chapter | Pobierz rozdział | Kapitel herunterladen |
@@ -150,10 +151,11 @@ Material — делегаты `material_ui`. Тексты Google не перев
 | Таймер сна | Sleep timer | Wyłącznik czasowy | Schlaftimer |
 | Скорость | Speed | Prędkość | Tempo |
 | Читать отсюда | Read from here | Czytaj stąd | Ab hier lesen |
-| К месту чтения | Back to narration | Wróć do lektora | Zur Vorlesestelle |
+| Продолжить (карточка книги) | Continue | Czytaj dalej | Weiterlesen |
+| К месту чтения | To current spot | Do bieżącego miejsca | Zur aktuellen Stelle |
 | Ключ Gemini | Gemini key | Klucz Gemini | Gemini-Schlüssel |
 | Потрачено | Spent | Wydano | Ausgegeben |
-| Как в системе | System default | Jak w systemie | Wie im System |
+| Как в системе | System default | Jak w systemie | Systemstandard |
 
 ## Палитра
 
@@ -273,8 +275,10 @@ Material — делегаты `material_ui`. Тексты Google не перев
     помещается; «Проба» становится кнопкой-значком 48 × 48 с подсказкой — иначе имена голосов рвались посреди слова.
 18. **Roboto встроен**; `applicationId` из `flutter create` — `io.github.slawa19.audiobook_reader`.
 19. Иконки — встроенный набор Material Icons, варианты `_rounded` (Material Symbols требуют стороннего пакета).
-20. **Переводы** en, pl, de и глоссарий — исполнителя, приняты как есть: «Вид текста» = «Text appearance / Wygląd
-    tekstu / Textdarstellung», «К месту чтения» = «Back to narration / Wróć do lektora / Zur Vorlesestelle».
+20. **Переводы** en, pl, de и глоссарий — исполнителя, приняты как есть и вычитаны редактором 2026-11-14: «Вид
+    текста» = «Text appearance / Wygląd tekstu / Textdarstellung», «К месту чтения» = «To current spot / Do bieżącego
+    miejsca / Zur aktuellen Stelle» (было «Back to narration / Wróć do lektora / Zur Vorlesestelle»: правило о месте
+    в тексте, а не об озвучке и не о человеке-лекторе).
 21. **Стиль чтения без рода** («в манере профессиональной аудиокниги») — на слух не проверен.
 22. **Место старта «Слушать»** — правило владельца 2026-11-14 (FR-P3, А§5), заменившее прежнее «с первого видимого
     места, включая хвост абзаца» (находка №11). Там, где правило молчит: «Слушать» из остановки (панель ошибки) — с
