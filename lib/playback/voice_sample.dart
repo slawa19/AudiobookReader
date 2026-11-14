@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../audio/audio_store.dart';
 import '../tts/book_language.dart';
+import '../tts/voices.dart';
 
 enum SampleState { idle, loading, playing, failed }
 
@@ -22,8 +24,10 @@ abstract class VoiceSampler extends ChangeNotifier {
   /// Фраза пробы для языка книги (`tts`, таблица по языку книги).
   String phraseFor(String bookLanguage) => samplePhraseFor(bookLanguage);
 
-  /// Проба голоса [voice] фразой на языке книги [bookLanguage]. Звук кэшируется по голосу и фразе.
-  void play(String voice, {required String bookLanguage});
+  /// Проба полного профиля [profile] (голос и модель) фразой и стилем на языке книги [bookLanguage] (FR-T7). Звук
+  /// кэшируется по всему, что влияет на звук: голос, модель, язык (фраза и стиль) — другой профиль озвучивается
+  /// заново (А§6.8, №10 ревью логики).
+  void play(VoiceProfile profile, {required String bookLanguage});
   void stop();
 
   /// Пробы удалены «Очисткой озвучки» (А§4): следующая проба озвучивается заново. Зовёт только
@@ -33,10 +37,20 @@ abstract class VoiceSampler extends ChangeNotifier {
 
 /// Подставная проба: первый раз «готовится» чуть меньше секунды, потом «играет» три секунды. Звука нет.
 class FakeVoiceSampler extends VoiceSampler {
-  FakeVoiceSampler({this.loading = const Duration(milliseconds: 900), this.length = const Duration(seconds: 3)});
+  FakeVoiceSampler({
+    this.loading = const Duration(milliseconds: 900),
+    this.length = const Duration(seconds: 3),
+    this.audio,
+  });
 
   final Duration loading;
   final Duration length;
+
+  /// Подставное хранилище: новая проба занимает место в `samples/`.
+  final FakeAudioStore? audio;
+
+  /// Байт одной пробы (≈ 3 с сжатого звука).
+  static const sampleBytes = 12000;
   final Set<String> _cached = {};
   String? _voice;
   SampleState _state = SampleState.idle;
@@ -57,12 +71,13 @@ class FakeVoiceSampler extends VoiceSampler {
   String? get errorMessage => _error;
 
   @override
-  void play(String voice, {required String bookLanguage}) {
+  void play(VoiceProfile profile, {required String bookLanguage}) {
+    final voice = profile.voice;
     _timer?.cancel();
     _voice = voice;
     _progress = 0;
     _error = null;
-    final key = '$voice|${phraseFor(bookLanguage)}';
+    final key = '${profile.key}|$bookLanguage|${phraseFor(bookLanguage)}';
     if (_cached.contains(key)) {
       _playNow();
     } else {
@@ -76,6 +91,7 @@ class FakeVoiceSampler extends VoiceSampler {
           return;
         }
         _cached.add(key);
+        audio?.addSamples(sampleBytes);
         _playNow();
       });
     }

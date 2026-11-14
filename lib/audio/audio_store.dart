@@ -32,6 +32,20 @@ class FakeAudioStore extends AudioStore {
   @override
   int get totalBytes => _bytes.values.fold(0, (a, b) => a + b) + samplesBytes;
 
+  /// Подставное «записано на диск»: скачанный звук главы занимает место (настоящее хранилище считает файлы).
+  void addBook(String bookId, int bytes) {
+    if (bytes <= 0) return;
+    _bytes[bookId] = (_bytes[bookId] ?? 0) + bytes;
+    notifyListeners();
+  }
+
+  /// Подставное «записано на диск» для пробы голоса.
+  void addSamples(int bytes) {
+    if (bytes <= 0) return;
+    samplesBytes += bytes;
+    notifyListeners();
+  }
+
   @override
   void removeBook(String bookId) {
     _bytes.remove(bookId);

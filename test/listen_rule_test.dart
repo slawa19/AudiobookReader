@@ -17,6 +17,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'support/flows.dart';
 import 'support/harness.dart';
+import 'support/sentence_oracle.dart';
 
 /// Контроллер на подставной библиотеке, без экрана.
 FakeNarrationController controller(FakeLibrary library) {
@@ -44,8 +45,9 @@ Book bookOf(List<String> paragraphs) => Book(
 void main() {
   group('границы предложений (А§6.1, правило 2)', () {
     test('знак конца и пробел; закрывающие кавычки и скобки не мешают', () {
+      // «пять» после многоточия — со строчной: продолжение предложения (правило (ii)).
       const t = 'Раз. Два! «Три?» Четыре… пять (шесть.) Семь';
-      expect(sentenceStarts(t), [0, 5, 10, 17, 25, 39]);
+      expect(sentenceStarts(t), [0, 5, 10, 17, 39]);
       expect(sentenceStartAt(t, 12), 10);
       expect(sentenceStartAt(t, 0), 0);
     });
@@ -53,6 +55,50 @@ void main() {
     test('без пробела после знака — не граница (числа, сокращения слитно)', () {
       expect(sentenceStarts('Версия 3.8 вышла.'), [0]);
       expect(sentenceStarts('Ответ:да,нет'), [0]);
+    });
+
+    // Правило (i): точка после слова из одной буквы — не конец предложения. Пары «молчит / срабатывает».
+    test('(i) молчит: «г. Москве», инициалы «А. С. Пушкин», «т. е.»', () {
+      const a = 'Он жил в г. Москве. Потом уехал.';
+      expect(sentenceStarts(a), [0, a.indexOf('Потом')]);
+      const b = 'А. С. Пушкин вошёл. Все встали.';
+      expect(sentenceStarts(b), [0, b.indexOf('Все')]);
+      const c = 'Дома, т. е. в Москве. Дальше.';
+      expect(sentenceStarts(c), [0, c.indexOf('Дальше')]);
+    });
+
+    test('(i) срабатывает: точка после слова из двух и более букв', () {
+      const t = 'Он жил в Москве. Потом уехал.';
+      expect(sentenceStarts(t), [0, t.indexOf('Потом')]);
+    });
+
+    // Правило (ii): после знака конца новое предложение начинается с прописной, цифры или открывающей кавычки.
+    test('(ii) молчит: строчная после многоточия; авторская ремарка после «!» и тире', () {
+      expect(sentenceStarts('Он молчал... потом заговорил.'), [0]);
+      const t = '— Стой! — крикнул он. — Подожди.';
+      expect(sentenceStarts(t), [0, t.lastIndexOf('—')]);
+    });
+
+    test('(ii) срабатывает: прописная, цифра, кавычка, реплика с тире и прописной', () {
+      const a = 'Он молчал... Потом заговорил.';
+      expect(sentenceStarts(a), [0, a.indexOf('Потом')]);
+      const b = 'Итог таков. 1920 год был трудным.';
+      expect(sentenceStarts(b), [0, b.indexOf('1920')]);
+      const c = 'Он сказал. «Нет», — ответила она.';
+      expect(sentenceStarts(c), [0, c.indexOf('«')]);
+      const d = 'Он ушёл. — Куда? — спросила она.';
+      expect(sentenceStarts(d), [0, d.indexOf('—')]);
+    });
+
+    test('(ii) не применяется к письменностям без регистра', () {
+      const t = 'שלום. עולם.';
+      expect(sentenceStarts(t), [0, t.indexOf('עולם')]);
+    });
+
+    test('принятое ограничение: сокращение длиннее одной буквы считается концом', () {
+      const t = 'См. рис. 3 ниже.';
+      // «рис.» и «3» — граница по форме; старт возможен чуть позже, текст не теряется.
+      expect(sentenceStarts(t), [0, t.indexOf('3')]);
     });
   });
 
@@ -146,15 +192,9 @@ void main() {
     final page = st.layout.pages[st.page];
     final book = st.widget.book;
     expect(page.contains(23, 0), isFalse, reason: 'место прослушивания не на экране');
-    ReadingPosition? expected;
-    for (final f in page.fragments) {
-      if (f.isImage || !book.blocks[f.block].isSpoken) continue;
-      final s = sentenceStarts(book.blocks[f.block].text).where((s) => s >= f.start && s < f.end).firstOrNull;
-      if (s != null) {
-        expected = ReadingPosition(f.block, s);
-        break;
-      }
-    }
+    // Ожидание — независимой проверкой по тексту правил, а не той же `sentenceStarts` (ревью логики 2026-11-14).
+    final expected = firstSentenceStartOnPage(book, page);
+    expect(expected, isNotNull);
     await tapCenter(tester);
     await advance(tester, const Duration(milliseconds: 400));
     await tester.tap(find.byKey(const Key('listen')));

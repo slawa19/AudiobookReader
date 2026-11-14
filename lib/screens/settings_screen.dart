@@ -52,7 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context,
       (context) => _ModelSheet(current: TtsModel.byId(s.settings.modelId), tariffs: s.tariffs),
     );
-    // Касание уже выбранной модели ничего не меняет и сеанс не перезапускает (решение j).
+    // Касание уже выбранной модели ничего не меняет и сеанс не перезапускает (правило j).
     if (picked != null && picked.id != s.settings.modelId) {
       s.settings.modelId = picked.id;
       s.narration.restartSession();
@@ -93,7 +93,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _saveKey() {
-    // «Готово» на пустом поле ключ не трогает: удаления ключа в интерфейсе нет (решение j).
+    // «Готово» на пустом поле ключ не трогает: удаления ключа в интерфейсе нет (правило j).
     if (_keyController.text.trim().isNotEmpty) s.settings.apiKey = _keyController.text;
     _keyController.clear();
     setState(() => _editingKey = false);

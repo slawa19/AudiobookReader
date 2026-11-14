@@ -52,7 +52,7 @@ class _TocScreenState extends State<TocScreen> {
       body: ListenableBuilder(
         listenable: Listenable.merge([downloads, widget.services.settings, widget.services.library]),
         builder: (context, _) {
-          // Готовность и оценка — для действующего профиля голоса книги (FR-D2, решение g).
+          // Готовность и оценка — для действующего профиля голоса книги (FR-D2, правило g).
           final profile = downloads.profileFor(book.id);
           final task = downloads.task;
           final running = task != null && task.status == DownloadStatus.running;

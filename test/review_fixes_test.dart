@@ -3,12 +3,13 @@
 
 import 'package:audiobook_reader/library/library.dart';
 import 'package:audiobook_reader/playback/narration.dart';
-import 'package:audiobook_reader/tts/sentences.dart';
+import 'package:audiobook_reader/tts/voices.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'support/flows.dart';
 import 'support/harness.dart';
+import 'support/sentence_oracle.dart';
 
 void main() {
   testWidgets('№1: короткий ключ не роняет настройки', (tester) async {
@@ -59,7 +60,8 @@ void main() {
     expect(p.downloads.isVoiced('dama', 1, p.downloads.profileFor('dama')), isTrue);
     final book = await p.library.loadBook('dama');
     p.downloads.demoShow(book, 3, failed: false);
-    p.sampler.play('Kore', bookLanguage: 'ru');
+    const kore = VoiceProfile(voice: 'Kore', modelId: 'gemini-3.8-flash-tts');
+    p.sampler.play(kore, bookLanguage: 'ru');
     await advance(tester, const Duration(seconds: 5));
     p.sampler.stop();
     await tester.tap(find.byTooltip('Настройки'));
@@ -71,7 +73,7 @@ void main() {
     expect(p.audio.totalBytes, 0);
     expect(p.downloads.isVoiced('dama', 1, p.downloads.profileFor('dama')), isFalse, reason: 'готовность глав сброшена');
     expect(p.downloads.task, isNull, reason: 'скачивание остановлено');
-    p.sampler.play('Kore', bookLanguage: 'ru');
+    p.sampler.play(kore, bookLanguage: 'ru');
     await tester.pump();
     expect(p.sampler.state.name, 'loading', reason: 'проба после очистки озвучивается заново');
   });
@@ -85,16 +87,9 @@ void main() {
     final page = st.layout.pages[st.page];
     expect(page.firstOffset, greaterThan(0), reason: 'страница начинается хвостом абзаца');
     final book = st.widget.book;
-    // Ожидаемое место — первое начало предложения на странице (по правилу А§6.1, правило 2).
-    ReadingPosition? expected;
-    for (final f in page.fragments) {
-      if (f.isImage || !book.blocks[f.block].isSpoken) continue;
-      final s = sentenceStarts(book.blocks[f.block].text).where((s) => s >= f.start && s < f.end).firstOrNull;
-      if (s != null) {
-        expected = ReadingPosition(f.block, s);
-        break;
-      }
-    }
+    // Ожидаемое место — первое начало предложения на странице, найденное независимой проверкой по тексту правил
+    // А§6.1, а не той же `sentenceStarts` (ревью логики 2026-11-14).
+    final expected = firstSentenceStartOnPage(book, page);
     expect(expected, isNotNull);
     expect(expected, isNot(ReadingPosition(page.firstBlock, page.firstOffset)),
         reason: 'тест не вакуумный: страница начинается не с начала предложения');

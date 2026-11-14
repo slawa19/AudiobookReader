@@ -4,6 +4,7 @@ import 'package:audiobook_reader/library/library.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'journey_support.dart';
 import 'support/flows.dart';
 import 'support/harness.dart';
 
@@ -48,11 +49,22 @@ void main() {
     await openKapitanskaya(tester, p); // глава II, не озвучена
     await openToc(tester);
     final full = estimateText(tester);
+    final book = p.library.cachedBook('kapitanskaya')!;
+    final chapter = book.chapterOf(39);
+    final profile = p.downloads.profileFor('kapitanskaya');
+    final total = p.downloads.estimate(book, chapter, profile);
     await tester.tap(find.byKey(const Key('download-start')));
     await advance(tester, const Duration(seconds: 20));
-    expect(p.downloads.task!.fraction, greaterThan(0.4), reason: 'предусловие: больше трети готово');
+    final task = p.downloads.task!;
+    expect(task.fraction, greaterThan(0.4), reason: 'предусловие: больше трети готово');
+    final ready = task.readySeconds;
     await tester.tap(find.byKey(const Key('download-stop')));
     await tester.pumpAndSettle();
     expect(estimateText(tester), isNot(full), reason: 'оценка после остановки — остаток, а не прежняя цена главы');
+    // Усилено по ревью логики: остаток — ровно неготовое (не ноль и не больше главы), цена — пропорционально.
+    final rest = p.downloads.estimate(book, chapter, profile);
+    expect(rest.seconds, closeTo(total.seconds - ready, 0.5));
+    expect(rest.dollars, closeTo(total.dollars * rest.seconds / total.seconds, 0.0001));
+    expect(estimateText(tester), ru.notVoicedEstimate((rest.seconds / 60).ceil(), rest.dollars));
   });
 }

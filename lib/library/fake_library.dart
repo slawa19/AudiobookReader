@@ -13,6 +13,7 @@ class FakeLibrary extends Library {
     _entries.addAll(_demoEntries(_now));
     _positions['kapitanskaya'] = const ReadingPosition(39, 0);
     _positions['dama'] = const ReadingPosition(40, 0);
+    _finished.add('dushi');
   }
 
   final DateTime _now;
@@ -87,28 +88,38 @@ class FakeLibrary extends Library {
   @override
   void saveListeningPosition(String bookId, ReadingPosition position) => _listening[bookId] = position;
 
-  /// С какого места книга считается дочитанной (FR-L4): начало последней страницы или конец прослушивания.
-  final Map<String, ReadingPosition> _finishedFrom = {};
-
-  static bool _before(ReadingPosition a, ReadingPosition b) => a.block < b.block || (a.block == b.block && a.offset < b.offset);
+  /// Дочитанные книги (FR-L4) — отдельный факт; в приложении — в `state.json`.
+  final Set<String> _finished = {};
 
   @override
-  void savePosition(String bookId, ReadingPosition position,
-      {double? fraction, String? chapterTitle, bool atEnd = false}) {
-    final finished = _finishedFrom[bookId];
-    if (atEnd) {
-      if (finished == null || _before(position, finished)) _finishedFrom[bookId] = position;
-    } else if (finished != null && _before(position, finished)) {
-      _finishedFrom.remove(bookId);
+  bool isFinished(String bookId) => _finished.contains(bookId);
+
+  @override
+  void setFinished(String bookId, bool finished) {
+    if (_finished.contains(bookId) == finished) return;
+    finished ? _finished.add(bookId) : _finished.remove(bookId);
+    final e = _entries.where((e) => e.id == bookId).firstOrNull;
+    final book = _books[bookId];
+    final pos = _positions[bookId];
+    if (e != null) {
+      if (finished) {
+        e.fraction = 1;
+      } else if (book != null && pos != null) {
+        e.fraction = book.fractionAt(pos.block, pos.offset);
+      }
     }
-    final done = _finishedFrom.containsKey(bookId);
-    if (_positions[bookId] == position && !atEnd) return;
+    notifyListeners();
+  }
+
+  @override
+  void savePosition(String bookId, ReadingPosition position, {double? fraction, String? chapterTitle}) {
+    if (_positions[bookId] == position) return;
     _positions[bookId] = position;
     final e = _entries.where((e) => e.id == bookId).firstOrNull;
     final book = _books[bookId];
     if (e != null) {
       final f = fraction ?? book?.fractionAt(position.block, position.offset);
-      if (done) {
+      if (_finished.contains(bookId)) {
         e.fraction = 1;
       } else if (f != null) {
         e.fraction = f;
@@ -143,7 +154,7 @@ class FakeLibrary extends Library {
     _entries.removeWhere((e) => e.id == bookId);
     _positions.remove(bookId);
     _listening.remove(bookId);
-    _finishedFrom.remove(bookId);
+    _finished.remove(bookId);
     _bookVoices.remove(bookId);
     notifyListeners();
   }

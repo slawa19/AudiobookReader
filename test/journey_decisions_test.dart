@@ -1,12 +1,13 @@
-// Решения оркестратора a–k по пробелам документов, найденным проверкой путей пользователя 2026-11-14
-// (docs/reviews/JOURNEY_AUDIT_2026-11-14.md), и две непроверенные проверяющим гипотезы. Находки проверяющего —
-// в journey_listening_test.dart, journey_shelf_test.dart, journey_download_test.dart.
+// Правила a–k (приняты владельцем 2026-11-14) по пробелам документов, найденным проверкой путей пользователя
+// 2026-11-14 (docs/reviews/JOURNEY_AUDIT_2026-11-14.md), и две непроверенные проверяющим гипотезы. Находки
+// проверяющего — в journey_listening_test.dart, journey_shelf_test.dart, journey_download_test.dart.
 
 import 'package:audiobook_reader/library/library.dart';
 import 'package:audiobook_reader/playback/narration.dart';
 import 'package:audiobook_reader/screens/common.dart';
 import 'package:audiobook_reader/screens/reader_screen.dart';
 import 'package:audiobook_reader/screens/settings_screen.dart';
+import 'package:audiobook_reader/tts/voices.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -49,6 +50,14 @@ void main() {
       await listenFromPanel(tester);
       expect(p.narration.speed, 1.5);
       expect(find.text('1,5×'), findsOneWidget);
+      // Не только подпись: голос и движется со скоростью 1,5 (№8 ревью логики).
+      final block = p.narration.block!;
+      final before = p.narration.blockProgress;
+      await advance(tester, const Duration(milliseconds: 500));
+      if (p.narration.block == block) {
+        final seconds = currentBook(tester).blocks[block].text.length * secondsPerChar / 1.5;
+        expect(p.narration.blockProgress - before, closeTo(0.5 / (seconds < 1.6 ? 1.6 : seconds), 0.003));
+      }
     });
   });
 
@@ -100,10 +109,14 @@ void main() {
       p.narration.demoShow('error402');
       await advance(tester, const Duration(milliseconds: 600));
       await flingNext(tester);
+      // Не вакуумно: листание при открытой панели ошибки следование выключило (№1 ревью логики).
+      expect(reader(tester).following, isFalse, reason: 'предусловие: листал сам после остановки');
       await tester.tap(find.byKey(const Key('error-listen')));
       await advance(tester, const Duration(seconds: 2));
       expect(p.narration.isActive, isTrue);
       expect(reader(tester).following, isTrue);
+      final at = reader(tester).soundingPosition!;
+      expect(onScreen(tester, at.block, at.offset), isTrue, reason: 'экран вернулся к голосу');
     });
 
     testWidgets('оглавление во время прослушивания: та же глава — голос к её началу', (tester) async {
@@ -151,6 +164,47 @@ void main() {
       await advance(tester, const Duration(milliseconds: 500));
       expect(p.narration.sleepTimer, isNotNull);
       await toShelf(tester);
+      expect(p.narration.sleepTimer, isNull);
+      // Снова в книгу и «Слушать»: звук идёт, на панели нет таймера.
+      await openKapitanskaya(tester, p);
+      await listenFromPanel(tester);
+      await advance(tester, const Duration(seconds: 1));
+      expect(p.narration.state, NarrationState.playing);
+      expect(p.narration.sleepTimer, isNull);
+      expect(find.byIcon(Icons.bedtime_rounded), findsNothing, reason: 'значок включённого таймера не горит');
+    });
+
+    testWidgets('«до конца главы» из листа: пауза на первом абзаце следующей главы, таймер снят', (tester) async {
+      final p = await pumpPrototype(tester, demoAcceleration: 40);
+      await openKapitanskaya(tester, p);
+      final book = currentBook(tester);
+      final chapter = book.chapterOf(39);
+      await listenFromPanel(tester);
+      await tester.tap(find.byKey(const Key('sleep')));
+      await advance(tester, const Duration(milliseconds: 500));
+      await tester.tap(find.byKey(const Key('sleep-chapter')));
+      await advance(tester, const Duration(milliseconds: 500));
+      expect(p.narration.sleepTimer?.kind, SleepKind.endOfChapter);
+      var guard = 0;
+      while (p.narration.state != NarrationState.paused && guard++ < 1200) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(p.narration.state, NarrationState.paused);
+      expect(book.chapterOf(p.narration.block!), chapter + 1, reason: 'остановился на начале следующей главы');
+      expect(p.narration.sleepTimer, isNull);
+    });
+
+    testWidgets('срок истёк в «Жду связь…» — пауза, таймер снят', (tester) async {
+      final clock = TestClock();
+      final p = await pumpWithClock(tester, clock);
+      await openKapitanskaya(tester, p);
+      await listenFromPanel(tester);
+      p.narration.setSleepTimer(SleepTimer.minutes(15, p.narration.now()));
+      p.narration.demoShow('waiting');
+      await advance(tester, const Duration(milliseconds: 300));
+      clock.forward(const Duration(minutes: 16));
+      await advance(tester, const Duration(milliseconds: 300));
+      expect(p.narration.state, NarrationState.paused);
       expect(p.narration.sleepTimer, isNull);
     });
 

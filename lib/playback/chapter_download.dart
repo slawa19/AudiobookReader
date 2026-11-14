@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
+import '../audio/audio_store.dart';
 import '../book/model.dart';
 import '../library/settings.dart';
 import '../tts/voices.dart';
@@ -73,6 +74,7 @@ class FakeChapterDownloads extends ChapterDownloads {
     required this.settings,
     required this.tariffs,
     this.bookVoice,
+    this.audio,
     this.tick = const Duration(milliseconds: 250),
     this.demoSeconds = 40,
   }) {
@@ -87,6 +89,13 @@ class FakeChapterDownloads extends ChapterDownloads {
 
   /// Свой голос книги (`null` — как в настройках); даёт корень сборки из библиотеки.
   final String? Function(String bookId)? bookVoice;
+
+  /// Подставное хранилище: готовый звук занимает место, иначе после «Очистить озвучку» новая озвучка не видна
+  /// ни в «Удалить озвучку», ни в настройках (№9 ревью логики).
+  final FakeAudioStore? audio;
+
+  /// Байт сжатого звука на секунду (≈ 32 кбит/с).
+  static const bytesPerSecond = 4000;
   final Duration tick;
 
   /// За сколько секунд прототип «озвучивает» главу.
@@ -109,7 +118,7 @@ class FakeChapterDownloads extends ChapterDownloads {
       VoiceProfile(voice: bookVoice?.call(bookId) ?? settings.voice, modelId: settings.modelId);
 
   /// Голос книги или модель могли смениться: задача чужого теперь профиля останавливается, готовое остаётся
-  /// (решение оркестратора 2026-11-14, FR-D2).
+  /// (правило g, принято владельцем 2026-11-14; FR-D2).
   void profileChanged() {
     final t = _task;
     if (t != null && t.profile != profileFor(t.bookId)) stop();
@@ -154,8 +163,10 @@ class FakeChapterDownloads extends ChapterDownloads {
       final t = _task;
       if (t == null || t.status != DownloadStatus.running) return;
       final key = _key(t.bookId, t.chapter, t.profile);
+      final before = t.readySeconds;
       t.readySeconds = math.min(t.totalSeconds, t.readySeconds + t.totalSeconds * tick.inMilliseconds / (demoSeconds * 1000));
       _ready[key] = t.readySeconds;
+      audio?.addBook(t.bookId, ((t.readySeconds - before) * bytesPerSecond).round());
       if (t.readySeconds >= t.totalSeconds) {
         _voiced.add(key);
         _task = null;

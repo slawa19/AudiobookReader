@@ -31,7 +31,7 @@ class _ShelfScreenState extends State<ShelfScreen> {
       builder: (context, _) {
         final books = library.shelf;
         // «Продолжить» — только у книги, которую открывали (последняя открытая). Ни разу не открытые — первыми
-        // под карточкой, новые сверху; остальные — по времени последнего открытия (FR-L4, решение e).
+        // под карточкой, новые сверху; остальные — по времени последнего открытия (FR-L4, правило e).
         final continued = books.where((e) => e.opened).firstOrNull;
         final rows = [
           ...books.where((e) => !e.opened),

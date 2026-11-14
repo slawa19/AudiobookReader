@@ -118,6 +118,12 @@ void main() {
     await advance(tester, const Duration(seconds: 3));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+    // Не только «не упало»: книга снова на полке, новая, и открывается (усилено по ревью логики).
+    expect(p.library.shelf.where((e) => e.id == 'zapiski').length, 1, reason: 'книга добавлена заново');
+    expect(p.library.entry('zapiski').opened, isFalse, reason: 'добавленная заново — новая');
+    await openBook(tester, 'Записки охотника');
+    expect(find.byType(ReaderScreen), findsOneWidget);
+    expect(currentBook(tester).id, 'zapiski');
   });
 
   testWidgets('«+» → «Повести Белкина» дважды: книга на полке одна (FR-L3)', (tester) async {

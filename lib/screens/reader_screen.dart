@@ -66,6 +66,16 @@ class ReaderScreenState extends State<ReaderScreen> {
   int? _animatingTo;
   bool _userDragging = false;
 
+  /// Страница, с которой начался жест пальцем; `null` — жеста нет. Следование выключает только жест, который
+  /// действительно сменил страницу (решение по ревью логики 2026-11-14).
+  int? _dragStartPage;
+
+  /// Место выбранного абзаца на странице, где его выбрали: перераскладка держит его на экране (№3 ревью логики).
+  ReadingPosition? _selectedAt;
+
+  /// Последний увиденный счётчик явных команд контроллера (А§5): изменился — следование включается.
+  int _seenCommands = 0;
+
   /// Для тестов: номер страницы и раскладка.
   int get page => _page;
   BookLayout get layout => _layout!;
@@ -87,6 +97,7 @@ class ReaderScreenState extends State<ReaderScreen> {
         ? ReadingPosition(narration.block!, 0)
         : s.library.positionOf(book.id) ?? const ReadingPosition(0, 0);
     _lastState = narration.state;
+    _seenCommands = narration.commandRevision;
     narration.addListener(_onNarration);
     s.downloads.addListener(_rebuild);
     s.settings.addListener(_rebuild);
@@ -122,17 +133,26 @@ class ReaderScreenState extends State<ReaderScreen> {
     // Пока экран следует за голосом, новая раскладка (появилась или изменилась панель плеера) ставится сразу на
     // звучащее место, а не на прежний якорь: иначе звучащее оказалось бы на другой странице, и экран догонял бы его
     // анимацией поверх смены раскладки (замечание владельца 2026-11-14).
+    // Удержанный выбор абзаца важнее следования: страница с ним остаётся на экране (№3 ревью логики).
     final at = soundingPosition;
     final follow = _following && at != null && narration.state != NarrationState.idle;
     _layoutForPlayer = _mine;
-    _page = follow ? _layout!.pageOf(at.block, at.offset) : _layout!.pageOf(_anchor.block, _anchor.offset);
+    final place = _selectedAt ?? (follow ? at : _anchor);
+    _page = _layout!.pageOf(place.block, place.offset);
     final old = _pc;
     _pc = PageController(initialPage: _page);
     _generation++;
     _navOp++;
     _programmatic = false;
     _animatingTo = null;
+    // Жест по прежней раскладке потерян вместе с ней.
+    _dragStartPage = null;
+    _userDragging = false;
     if (old != null) WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+    // Первая раскладка (и любая другая), оказавшаяся на последней странице, — книга показана до конца (FR-L4).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _onLastPage) s.library.setFinished(book.id, true);
+    });
   }
 
   BookPageLayout get _current => _layout!.pages[_page];
@@ -141,7 +161,7 @@ class ReaderScreenState extends State<ReaderScreen> {
 
   bool get _onLastPage => _page == _layout!.pages.length - 1;
 
-  /// Доля книги на экране; на последней странице книга дочитана — 100 % (FR-L4, решение d).
+  /// Доля книги на экране; на последней странице книга дочитана — 100 % (FR-L4, правило d).
   double get _fraction => _onLastPage ? 1 : book.fractionAt(_current.firstBlock, _current.firstOffset);
 
   // --- листание -----------------------------------------------------------------------------------------
@@ -200,26 +220,54 @@ class ReaderScreenState extends State<ReaderScreen> {
   }
 
   void _onPageChanged(int i, {bool? programmatic}) {
+    // Жест пальцем ещё идёт: что он сделал, решается, когда страница встанет (_onScroll).
+    final gesture = _dragStartPage != null;
     final auto = (programmatic ?? _programmatic) && !_userDragging;
     setState(() {
       _page = i;
       _anchor = _pagePosition;
-      if (!auto && narration.isActive && narration.bookId == book.id) _following = false;
+      if (!auto && !gesture) _userMoved();
     });
-    if (!auto) _saveScreenPosition();
+    _reportShownPage();
+    if (!auto && !gesture) _saveScreenPosition();
+  }
+
+  /// Пользователь сам сменил страницу. При открытой панели этой книги — в том числе в `stopped` — следование
+  /// выключается: место на экране теперь выбрал он (А§5, №1 ревью логики).
+  void _userMoved() {
+    if (_mine) _following = false;
+  }
+
+  /// «Дочитана» (FR-L4) — отдельный факт: показ последней страницы его ставит, показ страницы раньше — снимает.
+  /// Перераскладка (шрифт, панель) его не снимает: это не уход назад.
+  void _reportShownPage() {
+    s.library.setFinished(book.id, _onLastPage);
   }
 
   bool _onScroll(ScrollNotification n) {
     if (n is ScrollStartNotification && n.dragDetails != null) {
-      // Палец на странице: автоматический переход отменяется, следование за голосом — тоже.
+      // Палец на странице: автоматический переход отменяется. Следование выключится, только если жест в итоге
+      // сменит страницу: малое перетаскивание с возвратом и отменённый жест ничего не меняют.
       _userDragging = true;
+      _dragStartPage ??= _page;
       _flipTarget = null;
       _navOp++;
       _programmatic = false;
       _animatingTo = null;
-      if (narration.isActive && narration.bookId == book.id && _following) setState(() => _following = false);
     } else if (n is ScrollEndNotification) {
-      _userDragging = false;
+      final start = _dragStartPage;
+      final pc = _pc;
+      final settled = pc != null && pc.hasClients && pc.page != null && (pc.page! - pc.page!.round()).abs() < 0.001;
+      if (start != null && settled) {
+        _dragStartPage = null;
+        _userDragging = false;
+        if (_page != start) {
+          setState(_userMoved);
+          _saveScreenPosition();
+        }
+      } else if (start == null) {
+        _userDragging = false;
+      }
     }
     return false;
   }
@@ -227,8 +275,7 @@ class ReaderScreenState extends State<ReaderScreen> {
   /// Позицию пишет экран, только пока прослушивание не активно (А§5).
   void _saveScreenPosition() {
     if (narration.bookId == book.id && narration.isActive) return;
-    s.library.savePosition(book.id, _pagePosition,
-        fraction: _fraction, chapterTitle: chapterLabel(book, _current.chapter), atEnd: _onLastPage);
+    s.library.savePosition(book.id, _pagePosition, fraction: _fraction, chapterTitle: chapterLabel(book, _current.chapter));
   }
 
   // --- следование за голосом (А§5, FR-P4) ---------------------------------------------------------------
@@ -245,6 +292,12 @@ class ReaderScreenState extends State<ReaderScreen> {
   void _onNarration() {
     if (!mounted) return;
     final state = narration.state;
+    // Явная команда пользователя — откуда бы ни пришла (экран, уведомление, гарнитура) — включает следование
+    // (А§5, №5 ревью логики). Автоматические переходы счётчик не меняют.
+    if (narration.commandRevision != _seenCommands) {
+      _seenCommands = narration.commandRevision;
+      if (narration.bookId == book.id) _following = true;
+    }
     if (narration.bookId == book.id) {
       if (state == NarrationState.stopped && _lastState != NarrationState.stopped) _following = true;
       final at = soundingPosition;
@@ -254,7 +307,10 @@ class ReaderScreenState extends State<ReaderScreen> {
       // Пока выбран абзац для «Читать отсюда», страница под пальцем не уходит за голосом (№8 проверки путей):
       // иначе кнопка исчезает, не дождавшись нажатия. Снят выбор — экран догоняет голос.
       final choosing = _selectedBlock != null;
-      if (!layoutStale && !choosing && _following && at != null && _layout != null && state != NarrationState.idle) {
+      // Пока идёт жест пальцем (и страница после него не встала), голос страницу не листает.
+      final gesture = _dragStartPage != null;
+      if (!layoutStale && !choosing && !gesture && _following && at != null && _layout != null &&
+          state != NarrationState.idle) {
         final target = _layout!.pageOf(at.block, at.offset);
         if (target != _page) goToPage(target, user: false);
       }
@@ -271,7 +327,10 @@ class ReaderScreenState extends State<ReaderScreen> {
   // --- жесты ---------------------------------------------------------------------------------------------
 
   void _clearSelection() {
-    setState(() => _selectedBlock = null);
+    setState(() {
+      _selectedBlock = null;
+      _selectedAt = null;
+    });
     _onNarration();
   }
 
@@ -307,7 +366,11 @@ class ReaderScreenState extends State<ReaderScreen> {
     final b = hit.block;
     if (b == null || !book.blocks[b].isSpoken) return;
     _setPanels(false);
-    setState(() => _selectedBlock = b);
+    final frag = _current.fragments.firstWhere((f) => f.block == b);
+    setState(() {
+      _selectedBlock = b;
+      _selectedAt = ReadingPosition(b, frag.start);
+    });
   }
 
   void _setPanels(bool v) {
@@ -346,33 +409,26 @@ class ReaderScreenState extends State<ReaderScreen> {
     if (!_requireKey()) return;
     setState(() {
       _selectedBlock = null;
-      _following = true;
+      _selectedAt = null;
     });
     narration.readFrom(book, block);
   }
 
-  /// Действия, которыми пользователь сам запускает или меняет место звука, включают следование за голосом
-  /// (решение a): «Слушать» из паузы и из панели ошибки, «назад», «вперёд». Выключают его только ручное листание
-  /// и ползунок.
-  void _withFollowing(VoidCallback command) {
-    setState(() => _following = true);
-    command();
-    _onNarration();
-  }
-
-  void _play() => _withFollowing(narration.resume);
-  void _previous() => _withFollowing(narration.previous);
-  void _next() => _withFollowing(narration.next);
+  // «Слушать» из паузы и из панели ошибки, «назад», «вперёд» — команды контроллера; следование включает его
+  // счётчик явных команд (_onNarration), одинаково для экрана, уведомления и гарнитуры (правило a, А§5).
+  void _play() => narration.resume();
+  void _previous() => narration.previous();
+  void _next() => narration.next();
 
   void _closeNarration() {
     // «Закрыть» — одна команда контроллера: сеанс завершён, затем позиция чтения — место на экране — отдана
     // писателю (FR-P8). Панель уходит, страница становится длиннее и пересчитывается так, чтобы это место
     // осталось на экране: если экран следовал за голосом — звучавшее место, иначе — начало страницы, которую
     // пользователь листал сам. Прежде бралось начало страницы, и пересчёт уводил экран назад, туда, где звучавшего
-    // абзаца уже не было (замечание владельца 2026-11-14). На последней странице книга остаётся дочитанной.
+    // абзаца уже не было (замечание владельца 2026-11-14). «Дочитана» — отдельный факт и здесь не меняется.
     final place = (_following ? soundingPosition : null) ?? _pagePosition;
     _anchor = place;
-    narration.close(screenPosition: place, screenAtEnd: _onLastPage);
+    narration.close(screenPosition: place);
     setState(() => _following = true);
   }
 
@@ -384,8 +440,8 @@ class ReaderScreenState extends State<ReaderScreen> {
         (narration.isActive || narration.state == NarrationState.paused);
     if (listening) {
       // Во время прослушивания выбор главы — новое место звука: голос к началу главы (и текущей тоже), следование
-      // включено, страницу ведёт голос — переход не считается ручным листанием (№1 проверки путей, решение a).
-      _withFollowing(() => narration.moveIfListening(book, book.chapters[chapter].firstBlock));
+      // включает команда контроллера, страницу ведёт голос — переход не ручное листание (№1 проверки путей, a).
+      narration.moveIfListening(book, book.chapters[chapter].firstBlock);
     } else {
       await goToPage(_layout!.chapterFirstPage[chapter]);
     }
@@ -409,7 +465,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     final downloading = task != null && task.bookId == book.id && task.status == DownloadStatus.running;
     final downloadLine = downloading ? DownloadLine(task: task, onStop: s.downloads.stop) : null;
     // Системная «Назад» сначала закрывает временное — выбор абзаца, панели чтения (листы и диалоги — свои
-    // маршруты, их закрывает навигатор), и только потом книгу (решение f, А§8.1).
+    // маршруты, их закрывает навигатор), и только потом книгу (правило f, А§8.1).
     return PopScope(
       canPop: _selectedBlock == null && !_panels,
       onPopInvokedWithResult: (didPop, _) {
@@ -589,7 +645,11 @@ class ReaderScreenState extends State<ReaderScreen> {
             onChanged: (v) => setState(() => _sliderDrag = v),
             onChangeEnd: (v) {
               final (b, o) = book.placeAt(v);
-              setState(() => _sliderDrag = null);
+              // Ползунок — ручное перемещение: следование выключается, даже если страница та же (FR-R5).
+              setState(() {
+                _sliderDrag = null;
+                _userMoved();
+              });
               goToPage(_layout!.pageOf(b, o));
             },
           ),

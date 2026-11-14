@@ -130,7 +130,9 @@ void main() {
       await advance(tester, const Duration(seconds: 3));
       await snapshot(tester, '14-listening');
       await tester.fling(find.byKey(const Key('page-area')), const Offset(-300, 0), 1000);
-      await advance(tester, const Duration(milliseconds: 600));
+      // «К месту чтения» появляется, когда страница после жеста встала (следование выключает смена страницы).
+      await advance(tester, const Duration(milliseconds: 1200));
+      await settle(tester, animations: false); // картинка на новой странице
       await snapshot(tester, '15-listening-own-page');
       await tester.tap(find.byKey(const Key('to-reading-place')));
       await advance(tester, const Duration(milliseconds: 600));

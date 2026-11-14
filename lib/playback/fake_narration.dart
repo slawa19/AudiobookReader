@@ -87,8 +87,21 @@ class FakeNarrationController extends NarrationController {
 
   // --- команды контракта ---------------------------------------------------------------------------------
 
+  int _commands = 0;
+
+  @override
+  int get commandRevision => _commands;
+
+  /// Явная команда пользователя (А§5, А§6.6): счётчик для экрана, и истёкший таймер сна не наследуется новым
+  /// стартом (FR-D1, №7 ревью логики).
+  void _userCommand() {
+    _commands++;
+    _dropExpiredSleep();
+  }
+
   @override
   void listen(Book book, PageRange page) {
+    _userCommand();
     _enterBook(book);
     final saved = library.listeningPositionOf(book.id);
     // 1. Место прослушивания на этой странице — продолжаем с него.
@@ -96,13 +109,13 @@ class FakeNarrationController extends NarrationController {
       _startAt(book, saved);
       return;
     }
-    // 2. Первое предложение, которое начинается на странице.
+    // 2. Первое предложение, которое начинается на странице. Границы — по тексту для речи (без знаков сносок).
     for (var b = page.start.block; b <= page.end.block && b < book.blocks.length; b++) {
       final block = book.blocks[b];
       if (!block.isSpoken || block.text.trim().isEmpty) continue;
       final from = b == page.start.block ? page.start.offset : 0;
       final to = b == page.end.block ? page.end.offset : block.text.length;
-      for (final s in sentenceStarts(block.text)) {
+      for (final s in blockSentenceStarts(block)) {
         if (s >= from && s < to) {
           _startAt(book, ReadingPosition(b, s));
           return;
@@ -113,13 +126,13 @@ class FakeNarrationController extends NarrationController {
     // начинается).
     final first = book.blocks[page.start.block];
     if (first.isSpoken) {
-      _startAt(book, ReadingPosition(page.start.block, sentenceStartAt(first.text, page.start.offset)));
+      _startAt(book, ReadingPosition(page.start.block, blockSentenceStartAt(first, page.start.offset)));
     } else {
       _startAt(book, ReadingPosition(page.start.block, 0));
     }
   }
 
-  /// Сеанс переходит к книге [book]; другая книга — таймер сна снимается (решение c).
+  /// Сеанс переходит к книге [book]; другая книга — таймер сна снимается (правило c).
   void _enterBook(Book book) {
     if (_book != null && _book!.id != book.id) _sleep = null;
     _book = book;
@@ -136,8 +149,8 @@ class FakeNarrationController extends NarrationController {
   void resume() {
     final book = _book;
     if (book == null) return;
-    // Срок таймера истёк, пока звука не было: ему нечего останавливать — снят, «Слушать» звучит (решение c).
-    _expireSleep();
+    // Срок таймера истёк, пока звука не было: ему нечего останавливать — снят, «Слушать» звучит (правило c).
+    _userCommand();
     if (_state == NarrationState.stopped) {
       // Новый сеанс с актуальной сохранённой позиции: после остановки её мог переписать экран (А§5).
       final saved = library.positionOf(book.id) ?? ReadingPosition(_block ?? 0, 0);
@@ -161,6 +174,7 @@ class FakeNarrationController extends NarrationController {
 
   @override
   void readFrom(Book book, int block) {
+    _userCommand();
     if (_book?.id == book.id && (_state == NarrationState.paused || isActive)) {
       _moveKeepingIntent(block);
     } else {
@@ -171,7 +185,10 @@ class FakeNarrationController extends NarrationController {
 
   @override
   void moveIfListening(Book book, int block) {
-    if (_book?.id == book.id && (_state == NarrationState.paused || isActive)) _moveKeepingIntent(block);
+    if (_book?.id == book.id && (_state == NarrationState.paused || isActive)) {
+      _userCommand();
+      _moveKeepingIntent(block);
+    }
   }
 
   @override
@@ -182,19 +199,23 @@ class FakeNarrationController extends NarrationController {
 
   void _step({required bool forward}) {
     if (_book == null || _block == null) return;
+    if (_state != NarrationState.paused && !isActive) return;
     final target = forward ? _spokenFrom(_block! + 1, forward: true) : _spokenFrom(_block! - 1, forward: false);
     if (target == null) return;
+    _userCommand();
     _moveKeepingIntent(target);
   }
 
-  /// Смена места внутри сеанса: новый сеанс, намерение прежнее (А§6.6). Пауза остаётся паузой.
-  void _moveKeepingIntent(int block) {
+  /// Смена места внутри сеанса: новый сеанс, намерение прежнее (А§6.6). Пауза остаётся паузой. [offset] — начало
+  /// единицы внутри блока (стартовый отрезок с предложения).
+  void _moveKeepingIntent(int block, {int offset = 0}) {
     final target = _spokenFrom(block, forward: true) ?? block;
     _session++;
     _prepare?.cancel();
+    final len = _book!.blocks[target].text.length;
     _block = target;
-    _progress = 0;
-    _unitStart = 0;
+    _unitStart = target == block ? offset.clamp(0, math.max(0, len - 1)) : 0;
+    _progress = len == 0 ? 0 : _unitStart / len;
     _held = false;
     _savePosition();
     if (_state == NarrationState.paused) {
@@ -206,14 +227,13 @@ class FakeNarrationController extends NarrationController {
   }
 
   @override
-  void close({ReadingPosition? screenPosition, bool screenAtEnd = false}) {
+  void close({ReadingPosition? screenPosition}) {
     final book = _book;
     _endSession();
     // Сначала сеанс завершён — потом позиция экрана уходит писателю. Позднее ни одна запись контроллера её не
     // перепишет: номер сеанса уже сменился (А§5).
     if (book != null && screenPosition != null) {
-      library.savePosition(book.id, screenPosition,
-          fraction: book.fractionAt(screenPosition.block, screenPosition.offset), atEnd: screenAtEnd);
+      library.savePosition(book.id, screenPosition, fraction: book.fractionAt(screenPosition.block, screenPosition.offset));
     }
     notifyListeners();
   }
@@ -222,7 +242,7 @@ class FakeNarrationController extends NarrationController {
     _session++;
     _timer?.cancel();
     _prepare?.cancel();
-    // Таймер сна принадлежит прослушиванию: «Закрыть» и закрытие книги его снимают (решение c).
+    // Таймер сна принадлежит прослушиванию: «Закрыть» и закрытие книги его снимают (правило c).
     _sleep = null;
     _held = false;
     _book = null;
@@ -249,7 +269,8 @@ class FakeNarrationController extends NarrationController {
   @override
   void restartSession() {
     if (_book == null || _block == null) return;
-    if (_state == NarrationState.paused || isActive) _moveKeepingIntent(_block!);
+    // С начала текущей единицы, включая стартовую с предложения внутри блока (№2 ревью логики).
+    if (_state == NarrationState.paused || isActive) _moveKeepingIntent(_block!, offset: _unitStart);
   }
 
   @override
@@ -323,7 +344,7 @@ class FakeNarrationController extends NarrationController {
         _progress = 1;
         _stopReason = StopReason.endOfBook;
         _enter(NarrationState.stopped);
-        _savePosition(atEnd: true);
+        library.setFinished(_book!.id, true);
     }
   }
 
@@ -362,7 +383,7 @@ class FakeNarrationController extends NarrationController {
         if (session == _session) _advance();
       });
     } else if (s == NarrationState.preparing || s == NarrationState.waiting || s == NarrationState.paused) {
-      // Звука нет, но срок таймера сна может истечь и сейчас (решение c).
+      // Звука нет, но срок таймера сна может истечь и сейчас (правило c).
       final session = _session;
       _timer = Timer.periodic(tick, (_) {
         if (session == _session) _expireSleep();
@@ -372,8 +393,14 @@ class FakeNarrationController extends NarrationController {
     notifyListeners();
   }
 
+  /// Перед явным стартом: истёкший срок таймера просто снимается — новому старту он ничего не останавливает.
+  void _dropExpiredSleep() {
+    final sleep = _sleep;
+    if (sleep != null && sleep.kind == SleepKind.minutes && sleep.remaining(now()) == Duration.zero) _sleep = null;
+  }
+
   /// Срок таймера сна по минутам истёк: во время звука и в `preparing`/`waiting` — пауза; на паузе таймер просто
-  /// снимается. В любом случае таймер снят и больше ничего не останавливает (решение c, FR-D1).
+  /// снимается. В любом случае таймер снят и больше ничего не останавливает (правило c, FR-D1).
   bool _expireSleep() {
     final sleep = _sleep;
     if (sleep == null || sleep.kind != SleepKind.minutes || sleep.remaining(now()) > Duration.zero) return false;
@@ -389,7 +416,8 @@ class FakeNarrationController extends NarrationController {
   }
 
   Duration _duration(Block b) {
-    final secs = b.text.length * secondsPerChar / _speed / demoAcceleration;
+    // Скорость — одна: та же, что показывает панель (№8 ревью логики).
+    final secs = b.text.length * secondsPerChar / speed / demoAcceleration;
     return Duration(milliseconds: (math.max(1.6, secs) * 1000).round());
   }
 
@@ -407,9 +435,11 @@ class FakeNarrationController extends NarrationController {
     if (nextBlock == null) {
       _progress = 1;
       _stopReason = StopReason.endOfBook;
+      // Кончилась и последняя глава: таймер «до конца главы» сработал и снимается (№7 ревью логики).
+      if (_sleep?.kind == SleepKind.endOfChapter) _sleep = null;
       _enter(NarrationState.stopped);
-      // Прослушивание дошло до конца книги — книга дочитана (FR-L4, решение d).
-      _savePosition(atEnd: true);
+      // Прослушивание дошло до конца книги — книга дочитана (FR-L4, правило d).
+      library.setFinished(book.id, true);
       return;
     }
     final chapterEnds = book.chapterOf(nextBlock) != book.chapterOf(block);
@@ -440,7 +470,7 @@ class FakeNarrationController extends NarrationController {
 
   /// Пока сеанс активен, позицию чтения пишет контроллер: звучащее место (А§5). Место прослушивания — начало
   /// звучащей единицы — пишется всегда и не стирается ни паузой, ни остановкой, ни «Закрыть» (А§4).
-  void _savePosition({bool atEnd = false}) {
+  void _savePosition() {
     final book = _book;
     final block = _block;
     if (book == null || block == null) return;
@@ -448,7 +478,7 @@ class FakeNarrationController extends NarrationController {
     final offset = math.min((_progress * len).floor(), math.max(0, len - 1));
     // Название главы для полки библиотека считает сама по позиции: смена главы оглавлением не оставит на полке
     // прежнюю (находка №2 проверки путей).
-    library.savePosition(book.id, ReadingPosition(block, offset), fraction: book.fractionAt(block, offset), atEnd: atEnd);
+    library.savePosition(book.id, ReadingPosition(block, offset), fraction: book.fractionAt(block, offset));
     library.saveListeningPosition(book.id, ReadingPosition(block, _unitStart));
   }
 

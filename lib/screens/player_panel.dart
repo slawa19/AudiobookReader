@@ -50,8 +50,8 @@ class PlayerPanel extends StatelessWidget {
   final VoidCallback onChangeKey;
 
   /// «Слушать» (из паузы и из панели ошибки), «назад» и «вперёд»: действия, которыми пользователь сам запускает
-  /// или меняет место звука. Экран при них включает следование за голосом (решение a) и передаёт команду
-  /// контроллеру.
+  /// или меняет место звука. Это команды контроллера; следование экран включает по счётчику явных команд
+  /// контроллера (правило a, А§5) — так же, как для команд из уведомления и с гарнитуры.
   final VoidCallback onPlay;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
@@ -84,7 +84,7 @@ class PlayerPanel extends StatelessWidget {
         onChangeKey: onChangeKey,
       );
     } else if (state == NarrationState.stopped) {
-      // «Книга закончилась» — только «Закрыть»: ни «назад/вперёд», ни «Слушать» (решение i).
+      // «Книга закончилась» — только «Закрыть»: ни «назад/вперёд», ни «Слушать» (правило i).
       content = _MessageContent(
           title: context.l10n.endOfBook, body: context.l10n.endOfBookBody, onClose: onClose);
     } else {
@@ -173,7 +173,7 @@ class _Controls extends StatelessWidget {
             ? l10n.endOfChapterShort
             : l10n.minutesShort((sleep.remaining(narration.now()).inSeconds / 60).ceil());
 
-    // Чип голоса и «К месту чтения» есть во всех состояниях со звуком и без (решение k): «Жду связь…» может
+    // Чип голоса и «К месту чтения» есть во всех состояниях со звуком и без (правило k): «Жду связь…» может
     // длиться долго, а вернуться к месту и сменить голос нужно и тогда.
     final Widget chips = Wrap(
       spacing: 8,

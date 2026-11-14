@@ -51,7 +51,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
   }
 
   void _select(String? v) {
-    // Касание уже выбранной строки ничего не меняет и сеанс не перезапускает (решение j).
+    // Касание уже выбранной строки ничего не меняет и сеанс не перезапускает (правило j).
     if (v == null || v == _value) return;
     final before = _effectiveVoice();
     final book = widget.book;
@@ -154,7 +154,8 @@ class _VoiceScreenState extends State<VoiceScreen> {
                 progress: s.sampler.progress,
                 onPressed: () => sampling == SampleState.loading || sampling == SampleState.playing
                     ? s.sampler.stop()
-                    : s.sampler.play(v.name, bookLanguage: _language(context)),
+                    : s.sampler.play(VoiceProfile(voice: v.name, modelId: s.settings.modelId),
+                        bookLanguage: _language(context)),
               ),
             );
           },

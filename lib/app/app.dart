@@ -58,15 +58,16 @@ class Prototype {
     await library.preload();
     final settings = AppSettings(voice: defaultVoiceName, modelId: TtsModel.flash.id, apiKey: 'AIzaSyD-prototype-key-a1f3');
     final tariffs = Tariffs(today: now);
-    final downloads = FakeChapterDownloads(settings: settings, tariffs: tariffs, bookVoice: library.bookVoice);
-    // Свой голос книги сменился — задача «Скачать главу» прежнего профиля останавливается (FR-D2).
-    library.addListener(downloads.profileChanged);
-    final sampler = FakeVoiceSampler();
     final audio = FakeAudioStore({
       'kapitanskaya': 96 * 1024 * 1024,
       'dama': 274 * 1024 * 1024,
       'voyna': 38 * 1024 * 1024,
     });
+    final downloads =
+        FakeChapterDownloads(settings: settings, tariffs: tariffs, bookVoice: library.bookVoice, audio: audio);
+    // Свой голос книги сменился — задача «Скачать главу» прежнего профиля останавливается (FR-D2).
+    library.addListener(downloads.profileChanged);
+    final sampler = FakeVoiceSampler(audio: audio);
     final p = Prototype._(
       library: library,
       settings: settings,
