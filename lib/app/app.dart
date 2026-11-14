@@ -115,7 +115,7 @@ class Prototype {
   }
 }
 
-class AudiobookApp extends StatelessWidget {
+class AudiobookApp extends StatefulWidget {
   const AudiobookApp({super.key, required this.prototype, this.phoneChrome = false});
 
   final Prototype prototype;
@@ -124,7 +124,21 @@ class AudiobookApp extends StatelessWidget {
   final bool phoneChrome;
 
   @override
+  State<AudiobookApp> createState() => _AudiobookAppState();
+}
+
+class _AudiobookAppState extends State<AudiobookApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Первая версия — только портретная ориентация (решение F проверки жестов, А§7); то же в манифесте.
+    lockPortrait();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final prototype = widget.prototype;
+    final phoneChrome = widget.phoneChrome;
     final settings = prototype.settings;
     return ListenableBuilder(
       listenable: settings,

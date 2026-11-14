@@ -288,7 +288,8 @@ void main() {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       p.narration.demoShow('error402', book: currentBook(tester), fromBlock: 39);
-      await advance(tester, const Duration(milliseconds: 400));
+      // Панель ошибки — новый слой: первые 350 мс касания не принимаются (защита от касания вдогонку).
+      await advance(tester, const Duration(milliseconds: 600));
       await tester.tap(find.byKey(const Key('error-listen')));
       await tester.pump();
       expect(p.narration.state, NarrationState.preparing);
@@ -331,7 +332,8 @@ void main() {
       await openKapitanskaya(tester, p);
       final book = currentBook(tester);
       p.downloads.demoShow(book, 1, failed: false);
-      await advance(tester, const Duration(milliseconds: 400));
+      // Строка скачивания — новый слой: первые 350 мс касания не принимаются (защита от касания вдогонку).
+      await advance(tester, const Duration(milliseconds: 600));
       expect(find.byKey(const Key('download-strip')), findsOneWidget);
       await tester.tap(find.text('Стоп'));
       await advance(tester, const Duration(milliseconds: 400));

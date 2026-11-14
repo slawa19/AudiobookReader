@@ -164,7 +164,8 @@ void main() {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       p.narration.demoShow('paused', book: currentBook(tester), fromBlock: 39);
-      await advance(tester, const Duration(milliseconds: 400));
+      // Панель плеера — новый слой: первые 350 мс касания не принимаются (защита от касания вдогонку).
+      await advance(tester, const Duration(milliseconds: 600));
       await tester.tap(find.byKey(const Key('speed')));
       await advance(tester, const Duration(milliseconds: 600));
       await snapshot(tester, '19-speed');
@@ -179,7 +180,8 @@ void main() {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       p.narration.demoShow('paused', book: currentBook(tester), fromBlock: 39);
-      await advance(tester, const Duration(milliseconds: 400));
+      // Панель плеера — новый слой: первые 350 мс касания не принимаются (защита от касания вдогонку).
+      await advance(tester, const Duration(milliseconds: 600));
       await tester.tap(find.byKey(const Key('voice-chip')));
       await settle(tester);
       await tester.tap(find.byKey(const Key('probe-Callirrhoe')));

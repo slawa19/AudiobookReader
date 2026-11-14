@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../playback/tariffs.dart';
 import '../tts/voices.dart';
 import 'common.dart';
+import 'l10n/app_localizations.dart';
 import 'services.dart';
 import 'voice_screen.dart';
 
@@ -35,6 +36,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _editingKey = widget.focusKey;
+    // Ушли с поля (касание мимо, другой пункт) — непустой ключ сохраняется (решение E проверки жестов, FR-P7).
+    _keyFocus.addListener(() {
+      if (!_keyFocus.hasFocus) _keepTypedKey();
+    });
     if (widget.openModel) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _chooseModel());
     }
@@ -99,11 +104,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _editingKey = false);
   }
 
+  /// Введённое в поле, но не подтверждённое кнопкой: при уходе с поля или с экрана непустое значение сохраняется,
+  /// пустое ключ не трогает (решение E проверки жестов, FR-P7).
+  void _keepTypedKey() {
+    if (_keyController.text.trim().isEmpty) return;
+    s.settings.apiKey = _keyController.text;
+    _keyController.clear();
+    if (mounted) setState(() => _editingKey = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final l10n = context.l10n;
+    // Уход с экрана — стрелкой «Назад» или системной «Назад» — сохраняет введённый ключ.
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) _keepTypedKey();
+      },
+      child: _scaffold(context, theme, scheme, l10n),
+    );
+  }
+
+  Widget _scaffold(BuildContext context, ThemeData theme, ColorScheme scheme, AppLocalizations l10n) {
     return Scaffold(
       body: ListenableBuilder(
         listenable: Listenable.merge([s.settings, s.audio]),

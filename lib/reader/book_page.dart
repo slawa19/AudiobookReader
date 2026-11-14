@@ -157,6 +157,10 @@ PageHit hitTestPage({
   for (final f in page.fragments) {
     if (p.dy >= f.top - 4 && p.dy <= f.top + f.height + 4) block = f.block;
   }
+  // Области 48 × 48 соседних знаков перекрываются: открывается знак, ближайший к точке касания, а не первый по
+  // порядку (решение G проверки жестов).
+  PageHit? best;
+  var bestDistance = double.infinity;
   for (final f in page.fragments) {
     final b = book.blocks[f.block];
     if (b.kind != BlockKind.paragraph && b.kind != BlockKind.verse && b.kind != BlockKind.cite) continue;
@@ -176,13 +180,14 @@ PageHit hitTestPage({
           width: math.max(noteTarget, glyph.width + 16),
           height: math.max(noteTarget, glyph.height + 16),
         );
-        if (target.contains(p)) {
-          tp.dispose();
-          return PageHit(block: f.block, noteId: r.noteId);
+        final distance = (glyph.center - p).distance;
+        if (target.contains(p) && distance < bestDistance) {
+          bestDistance = distance;
+          best = PageHit(block: f.block, noteId: r.noteId);
         }
       }
     }
     tp.dispose();
   }
-  return PageHit(block: block);
+  return best ?? PageHit(block: block);
 }

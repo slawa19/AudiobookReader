@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
@@ -28,6 +30,54 @@ TextStyle bookTitleStyle(BuildContext context, double size, {FontWeight weight =
       fontWeight: weight,
       color: Theme.of(context).colorScheme.onSurface,
     );
+
+/// Защита от касания вдогонку (решение A проверки жестов 2026-11-14, А§8.1): после того как слой под пальцем
+/// сменился — панели чтения ↔ панель плеера, открылся или закрылся лист или диалог, исчезла панель плеера или
+/// строка скачивания, сменился экран, — новые элементы управления и страница под ними столько времени не принимают
+/// касаний. Второе касание двойного нажатия приходит через 100–250 мс; два осмысленных нажатия — реже.
+const layerSettleTime = Duration(milliseconds: 350);
+
+/// Свежий слой (лист, диалог): первые [layerSettleTime] касания поглощаются — второе касание двойного нажатия,
+/// открывшего лист, не нажимает то, что встало под палец, и не закрывает лист через затемнение.
+class FreshLayerGuard extends StatefulWidget {
+  const FreshLayerGuard({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<FreshLayerGuard> createState() => _FreshLayerGuardState();
+}
+
+class _FreshLayerGuardState extends State<FreshLayerGuard> {
+  bool _absorbing = true;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(layerSettleTime, () {
+      if (mounted) setState(() => _absorbing = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AbsorbPointer(absorbing: _absorbing, child: widget.child);
+}
+
+/// Первая версия — только портретная ориентация (решение F проверки жестов; спека 001, «Не делаем»). Закреплено и
+/// в манифесте Android (`android:screenOrientation="portrait"`).
+const allowedOrientations = [DeviceOrientation.portraitUp];
+
+void lockPortrait() {
+  if (kIsWeb) return;
+  SystemChrome.setPreferredOrientations(allowedOrientations);
+}
 
 /// Скрыты ли системные панели (экран чтения без панелей). Рамка прототипа в браузере рисует по нему строку
 /// состояния; на телефоне то же делает система.
@@ -262,9 +312,11 @@ Future<T?> showScrollableSheet<T>(BuildContext context, WidgetBuilder builder, {
     useSafeArea: true,
     isScrollControlled: true,
     barrierColor: barrierColor,
-    builder: (context) => ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.9),
-      child: SingleChildScrollView(child: SafeArea(top: false, child: builder(context))),
+    builder: (context) => FreshLayerGuard(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.9),
+        child: SingleChildScrollView(child: SafeArea(top: false, child: builder(context))),
+      ),
     ),
   );
 }

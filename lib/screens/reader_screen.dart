@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../book/model.dart';
@@ -76,6 +77,16 @@ class ReaderScreenState extends State<ReaderScreen> {
   /// Последний увиденный счётчик явных команд контроллера (А§5): изменился — следование включается.
   int _seenCommands = 0;
 
+  /// Палец схватил страницу во время автоматического переворота за голосом: следование выключается, даже если
+  /// страница вернулась (решение C проверки жестов).
+  bool _grabbedAuto = false;
+
+  /// Защита от касания вдогонку (решение A проверки жестов, А§8.1): после смены слоя под пальцем экран
+  /// [layerSettleTime] не принимает касаний.
+  bool _guarded = true;
+  Timer? _guardTimer;
+  Object? _layerSignature;
+
   /// Для тестов: номер страницы и раскладка.
   int get page => _page;
   BookLayout get layout => _layout!;
@@ -115,12 +126,30 @@ class ReaderScreenState extends State<ReaderScreen> {
     if (narration.bookId == book.id && narration.state != NarrationState.idle) narration.close();
     setImmersive(false);
     _flipTimer?.cancel();
+    _guardTimer?.cancel();
     _pc?.dispose();
     super.dispose();
   }
 
   void _rebuild() {
     if (mounted) setState(() {});
+  }
+
+  /// Слой под пальцем сменился: [layerSettleTime] касания не принимаются. Вызывается из build (смена панелей) и
+  /// после закрытия листа, диалога или экрана поверх чтения.
+  void _guardLayer() {
+    _guarded = true;
+    _guardTimer?.cancel();
+    _guardTimer = Timer(layerSettleTime, () {
+      if (mounted) setState(() => _guarded = false);
+    });
+  }
+
+  /// Лист, диалог или экран поверх чтения закрылся — то, что было под ним, получает защиту от касания вдогонку.
+  Future<T?> _afterLayer<T>(Future<T?> layer) async {
+    final result = await layer;
+    if (mounted) setState(_guardLayer);
+    return result;
   }
 
   // --- раскладка --------------------------------------------------------------------------------------
@@ -227,6 +256,10 @@ class ReaderScreenState extends State<ReaderScreen> {
       _page = i;
       _anchor = _pagePosition;
       if (!auto && !gesture) _userMoved();
+      // Выбор абзаца снимается при любой смене страницы — жестом, касанием, ползунком, оглавлением, голосом:
+      // невидимого выбора не бывает (решение B проверки жестов).
+      _selectedBlock = null;
+      _selectedAt = null;
     });
     _reportShownPage();
     if (!auto && !gesture) _saveScreenPosition();
@@ -261,7 +294,9 @@ class ReaderScreenState extends State<ReaderScreen> {
       if (start != null && settled) {
         _dragStartPage = null;
         _userDragging = false;
-        if (_page != start) {
+        final grabbed = _grabbedAuto;
+        _grabbedAuto = false;
+        if (_page != start || grabbed) {
           setState(_userMoved);
           _saveScreenPosition();
         }
@@ -343,7 +378,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     final local = d.localPosition - Offset(_pad.left, _pad.top);
     final hit = hitTestPage(book: book, page: _current, style: _style, columnWidth: _column.width, p: local);
     if (hit.noteId != null) {
-      showNoteSheet(context, book: book, noteId: hit.noteId!, style: _style);
+      _afterLayer(showNoteSheet(context, book: book, noteId: hit.noteId!, style: _style));
       return;
     }
     if (_panels) {
@@ -383,7 +418,7 @@ class ReaderScreenState extends State<ReaderScreen> {
   /// Переход на другой экран: строка состояния там нужна, иммерсивный режим — только у чтения.
   Future<T?> _push<T>(Widget screen) async {
     setImmersive(false);
-    final result = await Navigator.of(context).push<T>(MaterialPageRoute<T>(builder: (_) => screen));
+    final result = await _afterLayer(Navigator.of(context).push<T>(MaterialPageRoute<T>(builder: (_) => screen)));
     if (mounted) setImmersive(!_panels);
     return result;
   }
@@ -464,19 +499,39 @@ class ReaderScreenState extends State<ReaderScreen> {
     final task = s.downloads.task;
     final downloading = task != null && task.bookId == book.id && task.status == DownloadStatus.running;
     final downloadLine = downloading ? DownloadLine(task: task, onStop: s.downloads.stop) : null;
-    // Системная «Назад» сначала закрывает временное — выбор абзаца, панели чтения (листы и диалоги — свои
-    // маршруты, их закрывает навигатор), и только потом книгу (правило f, А§8.1).
+    // Смена слоя под пальцем — нижняя панель чтения ↔ панель плеера, вид панели плеера (управление, ошибка,
+    // конец книги), строка скачивания — защита от касания вдогонку (решение A проверки жестов, А§8.1). Показ и
+    // скрытие панелей чтения касанием центра слоем под пальцем не считается: они встают у краёв, а не под палец.
+    final playerKind = !_mine
+        ? 'none'
+        : narration.state != NarrationState.stopped
+            ? 'controls'
+            : narration.stopReason == StopReason.error
+                ? 'error'
+                : 'end';
+    final signature = (playerKind, downloading);
+    if (signature != _layerSignature) {
+      _layerSignature = signature;
+      _guardLayer();
+    }
+    // Системная «Назад» (решение J проверки жестов, А§8.1): 1) снять выбор абзаца; 2) лист, диалог, сноску
+    // закрывает навигатор — это свои маршруты; 3) панели чтения скрыты — показать их, книга не закрывается;
+    // 4) панели показаны — закрыть книгу. Краевой жест Android — это «Назад»: случайное смахивание от края в
+    // иммерсивном чтении только показывает панели. Стрелка «Назад» в шапке закрывает книгу сразу.
     return PopScope(
-      canPop: _selectedBlock == null && !_panels,
+      canPop: _selectedBlock == null && _panels,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (_selectedBlock != null) {
           _clearSelection();
-        } else if (_panels) {
-          _setPanels(false);
+        } else if (!_panels) {
+          _setPanels(true);
         }
       },
-      child: _scaffold(context, downloadLine, downloading: downloading),
+      child: AbsorbPointer(
+        absorbing: _guarded,
+        child: _scaffold(context, downloadLine, downloading: downloading),
+      ),
     );
   }
 
@@ -513,7 +568,11 @@ class ReaderScreenState extends State<ReaderScreen> {
         return Stack(
           children: [
             Positioned.fill(
-              child: GestureDetector(
+              child: Listener(
+                // Палец лёг на страницу посреди автоматического переворота за голосом — схватил её (решение C).
+                // Проверяется в момент касания: к началу перетаскивания переворот уже остановлен.
+                onPointerDown: (_) => _grabbedAuto = _programmatic && _animatingTo != null,
+                child: GestureDetector(
                 key: const Key('page-area'),
                 behavior: HitTestBehavior.opaque,
                 onTapUp: (d) => _onTapUp(d, area),
@@ -525,7 +584,21 @@ class ReaderScreenState extends State<ReaderScreen> {
                     controller: _pc,
                     onPageChanged: (i) => _onPageChangedFrom(generation, i),
                     itemCount: _layout!.pages.length,
-                    itemBuilder: (context, i) => ColoredBox(
+                    // Преимущественно вертикальный жест (угол к горизонтали больше 45° на момент распознавания) не
+                    // листает и не делает ничего (решение D, FR-R2). Распознаватель стоит внутри страницы, глубже
+                    // распознавателя листания, и первым видит каждое движение пальца: он забирает жест, когда палец
+                    // ушёл вверх или вниз дальше порога и дальше, чем вбок.
+                    itemBuilder: (context, i) => RawGestureDetector(
+                      gestures: {
+                        MostlyVerticalDragRecognizer: GestureRecognizerFactoryWithHandlers<MostlyVerticalDragRecognizer>(
+                          MostlyVerticalDragRecognizer.new,
+                          (r) => r
+                            ..onStart = (_) {}
+                            ..onUpdate = (_) {}
+                            ..onEnd = (_) {},
+                        ),
+                      },
+                      child: ColoredBox(
                       color: scheme.surface,
                       child: Padding(
                         padding: _pad,
@@ -540,8 +613,10 @@ class ReaderScreenState extends State<ReaderScreen> {
                         ),
                       ),
                     ),
+                    ),
                   ),
                 ),
+              ),
               ),
             ),
             if (!_panels && !playerVisible)
@@ -567,10 +642,10 @@ class ReaderScreenState extends State<ReaderScreen> {
               child: _TopBar(
                 title: book.title,
                 subtitle: book.chapters[previewChapter].title.isEmpty ? null : chapterLabel(book, previewChapter),
-                // Кнопка «Назад» в шапке закрывает книгу сразу; системная «Назад» сначала убирает временное (f).
+                // Стрелка «Назад» в шапке закрывает книгу сразу; системная «Назад» — по порядку решения J.
                 onBack: () => Navigator.of(context).pop(),
                 onContents: _openContents,
-                onAppearance: () => showTextAppearanceSheet(context, s.settings, s.themePreviews),
+                onAppearance: () => _afterLayer(showTextAppearanceSheet(context, s.settings, s.themePreviews)),
                 onTitleLongPress: s.openDemoStates == null ? null : () => s.openDemoStates!(context),
               ),
             ),
@@ -599,8 +674,8 @@ class ReaderScreenState extends State<ReaderScreen> {
                   onBackToReading: _backToReadingPlace,
                   onClose: _closeNarration,
                   onVoice: _openVoice,
-                  onSpeed: () => showSpeedSheet(context, s.settings, narration),
-                  onSleep: () => showSleepSheet(context, narration),
+                  onSpeed: () => _afterLayer(showSpeedSheet(context, s.settings, narration)),
+                  onSleep: () => _afterLayer(showSleepSheet(context, narration)),
                   onTopUp: () => s.openUrl(context, billingUrl),
                   onChooseModel: () => _push<void>(SettingsScreen(services: s, openModel: true)),
                   onChangeKey: _changeKey,
@@ -645,12 +720,14 @@ class ReaderScreenState extends State<ReaderScreen> {
             onChanged: (v) => setState(() => _sliderDrag = v),
             onChangeEnd: (v) {
               final (b, o) = book.placeAt(v);
-              // Ползунок — ручное перемещение: следование выключается, даже если страница та же (FR-R5).
+              final target = _layout!.pageOf(b, o);
+              // Ползунок отпущен на другой странице — ручное перемещение, следование выключается. Касание без
+              // сдвига (та же страница) ничего не меняет (решение H, FR-P4, FR-R5).
               setState(() {
                 _sliderDrag = null;
-                _userMoved();
+                if (target != _page) _userMoved();
               });
-              goToPage(_layout!.pageOf(b, o));
+              goToPage(target);
             },
           ),
         ],
@@ -751,7 +828,9 @@ class _TopBar extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+          // 8 dp сбоку: области 48 × 48 крайних кнопок не заходят в скругление нижних углов шапки (касание у угла
+          // «Назад» не срезано, проверка жестов 2026-11-14).
+          padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -853,6 +932,36 @@ class _BottomPanel extends StatelessWidget {
   }
 }
 
+/// Вертикальный распознаватель, который забирает жест только преимущественно вертикальный: палец ушёл вверх или
+/// вниз дальше порога касания и дальше, чем вбок (угол к горизонтали больше 45°). Тогда листание страниц спор
+/// проигрывает и жест не делает ничего (решение D проверки жестов, FR-R2). Преимущественно горизонтальный жест он
+/// не трогает — его забирает листание.
+class MostlyVerticalDragRecognizer extends VerticalDragGestureRecognizer {
+  MostlyVerticalDragRecognizer({super.debugOwner});
+
+  final Map<int, Offset> _origin = {};
+  Offset _moved = Offset.zero;
+
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    _origin[event.pointer] = event.position;
+    _moved = Offset.zero;
+    super.addAllowedPointer(event);
+  }
+
+  @override
+  void handleEvent(PointerEvent event) {
+    final origin = _origin[event.pointer];
+    if (origin != null && event is PointerMoveEvent) _moved = event.position - origin;
+    if (event is PointerUpEvent || event is PointerCancelEvent) _origin.remove(event.pointer);
+    super.handleEvent(event);
+  }
+
+  @override
+  bool hasSufficientGlobalDistanceToAccept(PointerDeviceKind pointerDeviceKind, double? deviceTouchSlop) =>
+      super.hasSufficientGlobalDistanceToAccept(pointerDeviceKind, deviceTouchSlop) && _moved.dy.abs() > _moved.dx.abs();
+}
+
 /// Пока идёт «Скачать главу» — короткая строка с долей готового и «Стоп» (решение владельца 2026-11-14, FR-D2).
 /// Видна всегда: в подвале страницы, в нижней панели и в панели плеера.
 class DownloadLine extends StatelessWidget {
@@ -865,11 +974,11 @@ class DownloadLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    return Material(
+    // Форма строки только рисуется (ShapeDecoration), а не обрезает касания: у Material со скруглённой формой
+    // попадание считается по форме, и углы области «Стоп» 48 × 48 срезались (решение I проверки жестов, FR-R8).
+    return DecoratedBox(
       key: const Key('download-strip'),
-      color: scheme.surfaceContainerHigh,
-      shape: const StadiumBorder(),
-      clipBehavior: Clip.antiAlias,
+      decoration: ShapeDecoration(color: scheme.surfaceContainerHigh, shape: const StadiumBorder()),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 4, 0),
         child: Row(children: [

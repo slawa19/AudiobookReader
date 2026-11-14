@@ -277,15 +277,16 @@ void main() {
   });
 
   group('f. системная «Назад»', () {
-    testWidgets('панели открыты → «Назад» прячет панели; второе «Назад» закрывает книгу', (tester) async {
+    // Правило f заменено решением J проверки жестов 2026-11-14 (краевой жест Android — это «Назад»): панели скрыты —
+    // «Назад» их показывает; показаны — закрывает книгу. Было: «панели открыты → прячет; второе — закрывает».
+    testWidgets('панели скрыты → «Назад» показывает панели; панели показаны → «Назад» закрывает книгу', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
-      await tapCenter(tester);
-      expect(reader(tester).panelsVisible, isTrue);
+      expect(reader(tester).panelsVisible, isFalse);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(find.byType(ReaderScreen), findsOneWidget);
-      expect(reader(tester).panelsVisible, isFalse);
+      expect(find.byType(ReaderScreen), findsOneWidget, reason: 'случайный краевой жест книгу не закрывает');
+      expect(reader(tester).panelsVisible, isTrue);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(find.byType(ReaderScreen), findsNothing);
