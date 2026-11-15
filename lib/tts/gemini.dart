@@ -10,8 +10,6 @@ import 'voices.dart';
 
 const ttsRequestTimeout = Duration(seconds: 90);
 const maximumRequestChars = 4000;
-const maximumInputTokens = 8192;
-const maximumOutputAudioTokens = 16384;
 const defaultSampleRate = 24000;
 const defaultBillingUrl = 'https://aistudio.google.com/billing';
 
@@ -37,6 +35,9 @@ class GeminiTtsEngine implements TtsEngine {
     text = text.replaceAll('\u0301', '');
     if (text.isEmpty || _apiKey.isEmpty) {
       throw const TtsError('Пустой текст или ключ', reason: TtsErrorReason.invalidRequest);
+    }
+    if (!RegExp(r'^[\x20-\x7e]+$').hasMatch(_apiKey)) {
+      throw const TtsError('Недопустимые знаки в ключе', reason: TtsErrorReason.invalidKey);
     }
     final bytes = BytesBuilder(copy: false);
     TtsUsage? usage;
@@ -106,9 +107,10 @@ class GeminiTtsEngine implements TtsEngine {
           )
           .timeout(timeout);
     } on TimeoutException catch (e) {
-      throw TemporaryTtsError(_clean(e.toString()), reason: TtsErrorReason.timeout);
-    } on http.ClientException catch (e) {
-      throw TemporaryTtsError(_clean(e.message), reason: TtsErrorReason.network);
+      throw TemporaryTtsError('Истекло время запроса (${e.runtimeType})', reason: TtsErrorReason.timeout);
+    } catch (e) {
+      // post включает отправку и чтение тела. Чужой текст может содержать ключ, даже в экранированном виде.
+      throw TemporaryTtsError('Ошибка сети (${e.runtimeType})', reason: TtsErrorReason.network);
     }
     final body = utf8.decode(response.bodyBytes, allowMalformed: true);
     Map<String, dynamic>? json;
@@ -128,8 +130,11 @@ class GeminiTtsEngine implements TtsEngine {
         throw TemporaryTtsError(message, statusCode: status, usage: usage);
       }
       final keyDenied =
+          status == 401 ||
           (status == 400 || status == 403) &&
-          RegExp(r'API_KEY_|api[ _-]?key|invalid key', caseSensitive: false).hasMatch('$error $body');
+              error is Map &&
+              RegExp(r'API_KEY_|api[ _-]?key|invalid key', caseSensitive: false)
+                  .hasMatch('${error['message']} ${error['status']}');
       final reason = status == 402
           ? TtsErrorReason.paymentRequired
           : status == 404
@@ -137,14 +142,13 @@ class GeminiTtsEngine implements TtsEngine {
           : keyDenied
           ? TtsErrorReason.invalidKey
           : TtsErrorReason.other;
-      final url = RegExp(r'https://[^\s"<>]+').firstMatch(message)?.group(0);
       throw TtsError(
         message,
         reason: reason,
         statusCode: status,
         usage: usage,
         model: status == 404 ? _clean(profile.model) : null,
-        billingUrl: status == 402 ? url ?? defaultBillingUrl : null,
+        billingUrl: status == 402 ? defaultBillingUrl : null,
       );
     }
     try {
@@ -232,8 +236,10 @@ TtsUsage _usage(Map<dynamic, dynamic> raw, {double seconds = 0}) {
   Uint8List? pcm;
   var at = 12;
   while (at + 8 <= bytes.length) {
-    final size = data.getUint32(at + 4, Endian.little);
+    var size = data.getUint32(at + 4, Endian.little);
     final start = at + 8;
+    // Потоковый WAV не знает длину data заранее: оба маркера означают звук до конца файла.
+    if (tag(at, 'data') && (size == 0 || size == 0xffffffff)) size = bytes.length - start;
     if (start + size > bytes.length) {
       throw const FormatException('Обрезанный WAV');
     }

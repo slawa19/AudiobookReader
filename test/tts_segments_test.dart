@@ -16,6 +16,53 @@ List<List<int>> maps(SpeechSegment s) => [
 ];
 
 void main() {
+  test('без букв и цифр: нет отрезка, группа не прерывается; Unicode речь сохраняется', () {
+    for (final text in ['', ' ', '* * *', '…', '— § 😀 \u0301']) {
+      for (final kind in [BlockKind.paragraph, BlockKind.heading, BlockKind.verse, BlockKind.cite]) {
+        expect(chapterSegments([b(0, text, kind: kind)]), isEmpty);
+        final grouped = chapterSegments([b(0, 'До'), b(1, text, kind: kind), b(2, 'После')]);
+        expect(texts(grouped), ['До\nПосле']);
+        expect(maps(grouped.single), [[0, 2, 0, 0, 2], [3, 8, 2, 0, 5]]);
+      }
+    }
+    final notes = b(1, '1 2', spans: [
+      const TextSpanRange(start: 0, end: 1, style: SpanStyle.noteRef),
+      const TextSpanRange(start: 2, end: 3, style: SpanStyle.noteRef),
+    ]);
+    expect(chapterSegments([notes]), isEmpty);
+    expect(texts(chapterSegments([b(0, 'До'), notes, b(2, 'После')])), ['До\nПосле']);
+    for (final text in ['1.', '— Да.', '§ 5', 'А', '中', 'ع', '४', '٢', 'Ⅳ', '𐐀', '𝟙']) {
+      expect(texts(chapterSegments([b(0, text)])), [text]);
+    }
+    expect(texts(chapterSegments([b(0, 'До'), b(1, 'А', kind: BlockKind.heading), b(2, 'После')])),
+        ['До', 'А', 'После']);
+  });
+
+  test('первая часть: минимум 80 целыми предложениями, максимум 200, без потери соответствий', () {
+    for (final opening in ['— Да. ', '1. ']) {
+      final second = '${'Б' * (80 - opening.length - 2)}. ';
+      final first = '$opening$second';
+      expect(first.length, 80);
+      final text = '$firstТретье предложение.';
+      final segment = chapterSegments([b(7, text)]).single;
+      final parts = segmentParts(segment);
+      expect(texts(parts), [first, 'Третье предложение.']);
+      expect(maps(parts.first), [[0, 80, 7, 0, 80]]);
+      expect(maps(parts.last), [[0, 19, 7, 80, 99]]);
+    }
+    final first = '${'Б' * 118}. ';
+    expect(texts(segmentParts(SpeechSegment('$firstДалее.', []))), [first, 'Далее.']);
+    for (final n in [79, 80]) {
+      final text = 'Да. ${'Б' * (n - 5)}.';
+      expect(text.length, n);
+      expect(texts(segmentParts(SpeechSegment(text, []))), [text]);
+    }
+    final sentences = 'Да. ' * 25;
+    expect(texts(segmentParts(SpeechSegment(sentences, []))), ['Да. ' * 20, 'Да. ' * 5]);
+    final long = '${'Б' * 120} ${'В' * 100}. Далее.';
+    expect(segmentParts(SpeechSegment(long, [])).first.text, '${'Б' * 120} ');
+  });
+
   test('правило 1: заголовок отдельно; соседние обычные короткие блоки объединяются', () {
     expect(texts(chapterSegments([b(0, 'До'), b(1, 'Глава', kind: BlockKind.heading), b(2, 'После')])), [
       'До',
@@ -92,9 +139,9 @@ void main() {
     ]);
   });
 
-  test('части: первое предложение, максимум 200; остаток один; пустого остатка нет', () {
+  test('части: короткий отрезок целиком, максимум 200; остаток один; пустого остатка нет', () {
     SpeechSegment s(String t) => SpeechSegment(t, []);
-    expect(texts(segmentParts(s('Первое. Второе. Третье.'))), ['Первое. ', 'Второе. Третье.']);
+    expect(texts(segmentParts(s('Первое. Второе. Третье.'))), ['Первое. Второе. Третье.']);
     expect(texts(segmentParts(s('Первое.'))), ['Первое.']);
     expect(texts(segmentParts(s('я' * 201))), ['я' * 200, 'я']);
     expect(texts(segmentParts(s('я' * 200))), ['я' * 200]);
@@ -102,7 +149,7 @@ void main() {
   });
 
   test('готовность: целый приоритетен; обе части готовы; одна готова — только недостающая (SC-2.1)', () {
-    final s = chapterSegments([b(0, 'Первое. Второе.')]).single;
+    final s = chapterSegments([b(0, '${'Б' * 118}. Второе.')]).single;
     String fp(SpeechSegment s) => fingerprint(s.text, p, 'aac');
     final parts = segmentParts(s);
     final cases = <(Set<String>, bool, List<String>)>[
@@ -162,7 +209,7 @@ void main() {
     final from = segmentsFrom(blocks, block: 0, offset: 8);
     expect(from.first.text, 'Два. Три.\nЧетыре.');
     expect(from.first.mappings.first.blockStart, 6);
-    expect(texts(segmentParts(from.first)), ['Два. ', 'Три.\nЧетыре.']);
+    expect(texts(segmentParts(from.first)), ['Два. Три.\nЧетыре.']);
     expect(from.last.text, 'я' * 200);
     final long = [b(0, 'Раз. Два. Три. Четыре.')];
     expect(texts(segmentsFrom(long, block: 0, offset: 11, l: 10)), ['Три. ', 'Четыре.']);
@@ -224,7 +271,9 @@ void main() {
           expect(parts.first.text.length, lessThanOrEqualTo(200));
         }
         for (final source in blocks) {
-          expect(rebuilt[source.index]?.toString() ?? '', source.isSpoken ? speechText(source).text : '');
+          final speech = speechText(source).text;
+          final spoken = source.isSpoken && RegExp(r'[\p{L}\p{N}]', unicode: true).hasMatch(speech);
+          expect(rebuilt[source.index]?.toString() ?? '', spoken ? speech : '');
         }
       }
     }
