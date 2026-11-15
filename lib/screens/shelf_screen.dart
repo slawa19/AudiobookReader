@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../book/model.dart';
 import '../library/library.dart';
 import 'common.dart';
 import 'reader_screen.dart';
@@ -88,7 +89,7 @@ class _ShelfScreenState extends State<ShelfScreen> {
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                       child: _ContinueCard(
-                          entry: continued, onOpen: () => _open(continued), onMenu: () => _menu(continued)),
+                          library: library, entry: continued, onOpen: () => _open(continued), onMenu: () => _menu(continued)),
                     ),
                   ),
                 SliverList.builder(
@@ -181,8 +182,9 @@ Future<bool> _confirm(BuildContext context,
 }
 
 class _ContinueCard extends StatelessWidget {
-  const _ContinueCard({required this.entry, required this.onOpen, required this.onMenu});
+  const _ContinueCard({required this.library, required this.entry, required this.onOpen, required this.onMenu});
 
+  final Library library;
   final ShelfEntry entry;
   final VoidCallback onOpen;
   final VoidCallback onMenu;
@@ -223,10 +225,7 @@ class _ContinueCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(entry.author, style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
                     const SizedBox(height: 14),
-                    // Название главы переносится, а не обрезается (FR-R8).
-                    if (entry.chapterTitle != null)
-                      Text(entry.chapterTitle!,
-                          style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                    _ContinueChapter(library: library, entry: entry),
                     const SizedBox(height: 6),
                     Row(children: [
                       Expanded(
@@ -252,6 +251,52 @@ class _ContinueCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Только последняя открытая книга нужна для начала текста безымянной главы.
+/// Загрузка сохраняется между перестроениями полки; подпись не записывается в модель.
+class _ContinueChapter extends StatefulWidget {
+  const _ContinueChapter({required this.library, required this.entry});
+
+  final Library library;
+  final ShelfEntry entry;
+
+  @override
+  State<_ContinueChapter> createState() => _ContinueChapterState();
+}
+
+class _ContinueChapterState extends State<_ContinueChapter> {
+  late Future<Book> _book;
+
+  @override
+  void initState() {
+    super.initState();
+    _book = widget.library.loadBook(widget.entry.id);
+  }
+
+  @override
+  void didUpdateWidget(_ContinueChapter oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.entry.id != widget.entry.id || oldWidget.library != widget.library) {
+      _book = widget.library.loadBook(widget.entry.id);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<Book>(
+    future: _book,
+    builder: (context, snapshot) {
+      final book = snapshot.connectionState == ConnectionState.done ? snapshot.data : null;
+      final chapter = book?.chapterOf(widget.library.positionOf(widget.entry.id)?.block ?? 0);
+      final label = book == null ? widget.entry.chapterTitle : chapterLabel(book, chapter!);
+      if (label == null || label.isEmpty) return const SizedBox.shrink();
+      final excerpt = book != null && book.chapters[chapter!].title.trim().isEmpty;
+      return Text(label,
+          maxLines: excerpt ? 1 : null,
+          overflow: excerpt ? TextOverflow.ellipsis : null,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant));
+    },
+  );
 }
 
 class _BookRow extends StatelessWidget {

@@ -941,7 +941,7 @@ class ReaderScreenState extends State<ReaderScreen> {
                 child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   if (downloadLine != null) ...[downloadLine, const SizedBox(height: 12)],
                   IgnorePointer(
-                    child: Text(l10n.percent(_fraction),
+                    child: Text(shelfProgress(l10n, _fraction),
                         key: const Key('footer-percent'),
                         textAlign: TextAlign.center,
                         style: theme.textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
@@ -955,7 +955,8 @@ class ReaderScreenState extends State<ReaderScreen> {
               alignment: Alignment.topCenter,
               child: _TopBar(
                 title: book.title,
-                subtitle: book.chapters[previewChapter].title.isEmpty ? null : chapterLabel(book, previewChapter),
+                subtitle: chapterLabel(book, previewChapter),
+                chapterExcerpt: book.chapters[previewChapter].title.trim().isEmpty,
                 // Стрелка «Назад» в шапке закрывает книгу сразу; системная «Назад» — по порядку решения J.
                 onBack: () => Navigator.of(context).pop(),
                 onContents: _openContents,
@@ -1022,7 +1023,7 @@ class ReaderScreenState extends State<ReaderScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(context.l10n.ofBook(value),
+            child: Text(context.l10n.ofBook(progressForDisplay(value)),
                 textAlign: TextAlign.end, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.onSurface)),
           ),
           Slider(
@@ -1115,6 +1116,7 @@ class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.title,
     required this.subtitle,
+    required this.chapterExcerpt,
     required this.onBack,
     required this.onContents,
     required this.onAppearance,
@@ -1123,6 +1125,7 @@ class _TopBar extends StatelessWidget {
 
   final String title;
   final String? subtitle;
+  final bool chapterExcerpt;
   final VoidCallback onBack;
   final VoidCallback onContents;
   final VoidCallback onAppearance;
@@ -1159,11 +1162,13 @@ class _TopBar extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Название книги может сокращаться (исключение FR-R8), название главы — переносится.
+                          // Название главы переносится; начало текста безымянной главы — одной строкой.
                         Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleMedium),
-                        if (subtitle != null)
+                        if (subtitle != null && subtitle!.isNotEmpty)
                           Text(subtitle!,
                               key: const Key('top-bar-chapter'),
+                              maxLines: chapterExcerpt ? 1 : null,
+                              overflow: chapterExcerpt ? TextOverflow.ellipsis : null,
                               style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
                       ],
                     ),

@@ -129,153 +129,156 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _scaffold(BuildContext context, ThemeData theme, ColorScheme scheme, AppLocalizations l10n) {
     return Scaffold(
-      body: ListenableBuilder(
-        listenable: Listenable.merge([s.settings, s.audio]),
-        builder: (context, _) {
-          final settings = s.settings;
-          final showKeyField = !settings.hasApiKey || _editingKey;
-          final voice = voiceByName(settings.voice);
-          final model = TtsModel.byId(settings.modelId);
-          final spent = s.spentByMonth();
-          final languageName = settings.language == null
-              ? l10n.asSystem
-              : interfaceLanguages(l10n).firstWhere((e) => e.$1 == settings.language, orElse: () => ('', l10n.asSystem)).$2;
-          return CustomScrollView(slivers: [
-            SliverAppBar.large(title: Text(l10n.settings)),
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 32 + MediaQuery.paddingOf(context).bottom),
-              sliver: SliverList.list(children: [
-                if (!settings.hasApiKey)
-                  Container(
-                    key: const Key('need-key'),
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(20)),
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Icon(Icons.key_rounded, color: scheme.primary),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(l10n.needKey,
-                            style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onPrimaryContainer)),
-                      ),
-                    ]),
-                  ),
-                _Group(children: [
-                  if (showKeyField)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                      child: TextField(
-                        key: const Key('key-field'),
-                        controller: _keyController,
-                        focusNode: _keyFocus,
-                        autofocus: widget.focusKey || _editingKey,
-                        obscureText: true,
-                        decoration: InputDecoration(
-                          labelText: l10n.geminiKey,
-                          hintText: l10n.pasteKey,
-                          prefixIcon: const Icon(Icons.key_rounded),
-                          suffixIcon: Padding(
-                            padding: const EdgeInsets.only(right: 4),
-                            child: TextButton(
-                              onPressed: () async {
-                                final data = await Clipboard.getData(Clipboard.kTextPlain);
-                                if (data?.text != null) _keyController.text = data!.text!;
-                                if (_keyController.text.isNotEmpty) _saveKey();
-                              },
-                              child: Text(l10n.paste),
-                            ),
-                          ),
-                        ),
-                        onSubmitted: (_) => _saveKey(),
-                      ),
-                    )
-                  else
-                    ListTile(
-                      leading: const Icon(Icons.key_rounded),
-                      title: Text(l10n.geminiKey),
-                      subtitle: Text('•••• ${settings.apiKeyTail}'),
-                      trailing: IconButton(
-                        key: const Key('key-change'),
-                        tooltip: l10n.change,
-                        icon: const Icon(Icons.edit_outlined),
-                        onPressed: () => setState(() => _editingKey = true),
-                      ),
-                    ),
-                  ListTile(
-                    leading: const Icon(Icons.open_in_new_rounded),
-                    title: Text(l10n.whereKey, style: TextStyle(color: scheme.primary)),
-                    onTap: () => s.openUrl(context, keyUrl),
-                  ),
-                ]),
-                const SizedBox(height: 12),
-                _Group(children: [
-                  ListTile(
-                    key: const Key('settings-voice'),
-                    leading: const Icon(Icons.record_voice_over_rounded),
-                    title: Text(l10n.voice),
-                    subtitle: Text('${voice.name} — ${voiceCharacter(l10n, voice.character)}'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => Navigator.of(context)
-                        .push(MaterialPageRoute<void>(builder: (_) => VoiceScreen(services: s))),
-                  ),
-                  ListTile(
-                    key: const Key('settings-model'),
-                    leading: const Icon(Icons.graphic_eq_rounded),
-                    title: Text(l10n.model),
-                    subtitle: Text('${model.label} · ${l10n.perHour(s.tariffs.dollarsPerHour(model))}'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: _chooseModel,
-                  ),
-                  ListTile(
-                    key: const Key('settings-language'),
-                    leading: const Icon(Icons.translate_rounded),
-                    title: Text(l10n.language),
-                    subtitle: Text(languageName),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: _chooseLanguage,
-                  ),
-                ]),
-                const SizedBox(height: 12),
-                _Group(children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                    child: Text(l10n.spent, style: theme.textTheme.titleSmall?.copyWith(color: scheme.primary)),
-                  ),
-                  for (var i = 0; i < spent.length; i++)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Row(children: [
+      body: SafeArea(
+        top: false,
+        child: ListenableBuilder(
+          listenable: Listenable.merge([s.settings, s.audio]),
+          builder: (context, _) {
+            final settings = s.settings;
+            final showKeyField = !settings.hasApiKey || _editingKey;
+            final voice = voiceByName(settings.voice);
+            final model = TtsModel.byId(settings.modelId);
+            final spent = s.spentByMonth();
+            final languageName = settings.language == null
+                ? l10n.asSystem
+                : interfaceLanguages(l10n).firstWhere((e) => e.$1 == settings.language, orElse: () => ('', l10n.asSystem)).$2;
+            return CustomScrollView(slivers: [
+              SliverAppBar.large(title: Text(l10n.settings)),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                sliver: SliverList.list(children: [
+                  if (!settings.hasApiKey)
+                    Container(
+                      key: const Key('need-key'),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(20)),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Icon(Icons.key_rounded, color: scheme.primary),
+                        const SizedBox(width: 12),
                         Expanded(
-                          child: Text(monthName(l10n, spent[i].month),
-                              style: theme.textTheme.bodyLarge
-                                  ?.copyWith(color: i == 0 ? scheme.onSurface : scheme.onSurfaceVariant)),
+                          child: Text(l10n.needKey,
+                              style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onPrimaryContainer)),
                         ),
-                        Text(l10n.money(spent[i].dollars),
-                            style: (i == 0 ? theme.textTheme.titleMedium : theme.textTheme.bodyLarge)
-                                ?.copyWith(color: i == 0 ? scheme.onSurface : scheme.onSurfaceVariant)),
                       ]),
                     ),
-                  const SizedBox(height: 8),
-                ]),
-                const SizedBox(height: 12),
-                _Group(children: [
-                  ListTile(
-                    leading: const Icon(Icons.download_done_rounded),
-                    title: Text(l10n.storage),
-                    subtitle: Text(formatBytes(l10n, s.audio.totalBytes), key: const Key('storage-size')),
-                    trailing: s.audio.totalBytes > 0
-                        ? TextButton(key: const Key('clear'), onPressed: _clear, child: Text(l10n.clear))
-                        : null,
+                  _Group(children: [
+                    if (showKeyField)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        child: TextField(
+                          key: const Key('key-field'),
+                          controller: _keyController,
+                          focusNode: _keyFocus,
+                          autofocus: widget.focusKey || _editingKey,
+                          obscureText: true,
+                          decoration: InputDecoration(
+                            labelText: l10n.geminiKey,
+                            hintText: l10n.pasteKey,
+                            prefixIcon: const Icon(Icons.key_rounded),
+                            suffixIcon: Padding(
+                              padding: const EdgeInsets.only(right: 4),
+                              child: TextButton(
+                                onPressed: () async {
+                                  final data = await Clipboard.getData(Clipboard.kTextPlain);
+                                  if (data?.text != null) _keyController.text = data!.text!;
+                                  if (_keyController.text.isNotEmpty) _saveKey();
+                                },
+                                child: Text(l10n.paste),
+                              ),
+                            ),
+                          ),
+                          onSubmitted: (_) => _saveKey(),
+                        ),
+                      )
+                    else
+                      ListTile(
+                        leading: const Icon(Icons.key_rounded),
+                        title: Text(l10n.geminiKey),
+                        subtitle: Text('•••• ${settings.apiKeyTail}'),
+                        trailing: IconButton(
+                          key: const Key('key-change'),
+                          tooltip: l10n.change,
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: () => setState(() => _editingKey = true),
+                        ),
+                      ),
+                    ListTile(
+                      leading: const Icon(Icons.open_in_new_rounded),
+                      title: Text(l10n.whereKey, style: TextStyle(color: scheme.primary)),
+                      onTap: () => s.openUrl(context, keyUrl),
+                    ),
+                  ]),
+                  const SizedBox(height: 12),
+                  _Group(children: [
+                    ListTile(
+                      key: const Key('settings-voice'),
+                      leading: const Icon(Icons.record_voice_over_rounded),
+                      title: Text(l10n.voice),
+                      subtitle: Text('${voice.name} — ${voiceCharacter(l10n, voice.character)}'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => Navigator.of(context)
+                          .push(MaterialPageRoute<void>(builder: (_) => VoiceScreen(services: s))),
+                    ),
+                    ListTile(
+                      key: const Key('settings-model'),
+                      leading: const Icon(Icons.graphic_eq_rounded),
+                      title: Text(l10n.model),
+                      subtitle: Text('${model.label} · ${l10n.perHour(s.tariffs.dollarsPerHour(model))}'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: _chooseModel,
+                    ),
+                    ListTile(
+                      key: const Key('settings-language'),
+                      leading: const Icon(Icons.translate_rounded),
+                      title: Text(l10n.language),
+                      subtitle: Text(languageName),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: _chooseLanguage,
+                    ),
+                  ]),
+                  const SizedBox(height: 12),
+                  _Group(children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                      child: Text(l10n.spent, style: theme.textTheme.titleSmall?.copyWith(color: scheme.primary)),
+                    ),
+                    for (var i = 0; i < spent.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Row(children: [
+                          Expanded(
+                            child: Text(monthName(l10n, spent[i].month),
+                                style: theme.textTheme.bodyLarge
+                                    ?.copyWith(color: i == 0 ? scheme.onSurface : scheme.onSurfaceVariant)),
+                          ),
+                          Text(l10n.money(spent[i].dollars),
+                              style: (i == 0 ? theme.textTheme.titleMedium : theme.textTheme.bodyLarge)
+                                  ?.copyWith(color: i == 0 ? scheme.onSurface : scheme.onSurfaceVariant)),
+                        ]),
+                      ),
+                    const SizedBox(height: 8),
+                  ]),
+                  const SizedBox(height: 12),
+                  _Group(children: [
+                    ListTile(
+                      leading: const Icon(Icons.download_done_rounded),
+                      title: Text(l10n.storage),
+                      subtitle: Text(formatBytes(l10n, s.audio.totalBytes), key: const Key('storage-size')),
+                      trailing: s.audio.totalBytes > 0
+                          ? TextButton(key: const Key('clear'), onPressed: _clear, child: Text(l10n.clear))
+                          : null,
+                    ),
+                  ]),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Text(l10n.storageNote, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
                   ),
                 ]),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: Text(l10n.storageNote, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
-                ),
-              ]),
-            ),
-          ]);
-        },
+              ),
+            ]);
+          },
+        ),
       ),
     );
   }
