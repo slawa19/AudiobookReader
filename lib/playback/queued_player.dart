@@ -18,6 +18,12 @@ class EnginePlayback {
   final bool playing, ready, completed, progress;
 }
 
+/// Ошибка движка сообщает только исходный элемент, без сообщения и путей.
+class EngineFailure {
+  const EngineFailure(this.item);
+  final PlayerItem? item;
+}
+
 /// play принимает команду сразу; его завершение не означает конец файла.
 /// Остальные Future завершаются после применения операции к платформе.
 abstract interface class PlaylistEngine {
@@ -25,7 +31,7 @@ abstract interface class PlaylistEngine {
   EnginePlayback get snapshot;
   Future<void> load(PlayerItem item);
   Future<void> append(PlayerItem item);
-  Future<void> seek(int index);
+  Future<void> seek(int index, {Duration position = Duration.zero});
   Future<void> retain(int count);
   Future<void> setSpeed(double speed);
   void play();
@@ -41,6 +47,9 @@ class _Playlist {
   StreamSubscription<EnginePlayback>? subscription;
   int loaded = 0, finished = 0, index = 0, revision = 0;
   bool intent = false, playing = false, exhausted = false, drained = false, seeking = false;
+  bool failed = false, frozen = false;
+  bool playRequested = false;
+  Duration frozenPosition = Duration.zero;
   double speed;
   PlayerItem? started;
   PlayerItem? get current => index < items.length ? items[index] : null;
@@ -58,16 +67,21 @@ class QueuedPlayer implements PlayerPort {
   Future<void> _operations = Future.value();
   bool _disposed = false;
 
-  /// Диагностика остаётся локальной до нового контракта ошибок порта (третий круг).
-  Object? playbackFailure;
-  StackTrace? playbackFailureStack;
-  Future<void> get settled => _operations;
+  Future<void> get settled async {
+    Future<void> pending;
+    do {
+      pending = _operations;
+      await pending;
+    } while (!identical(pending, _operations));
+  }
+
   @override
   Stream<PlayerEvent> get events => _events.stream;
   @override
   PlayerItem? get current => _list.current;
   @override
   Duration get position {
+    if (_list.frozen) return _list.frozenPosition;
     final state = _list.engine?.snapshot;
     return state != null && identical(state.item, current) && !_list.exhausted ? state.position : Duration.zero;
   }
@@ -85,28 +99,33 @@ class QueuedPlayer implements PlayerPort {
   }
 
   void _enqueue(Future<void> Function() operation) {
-    _operations = _operations.then((_) => operation()).catchError((Object error, StackTrace stack) {
-      playbackFailure = error;
-      playbackFailureStack = stack;
-    });
+    _operations = _operations.then((_) => operation());
   }
 
-  void _command(_Playlist list, Future<void> Function() operation) {
+  void _command(_Playlist list, Future<void> Function() operation, {PlayerItem? failureItem}) {
     _enqueue(() async {
-      if (!_active(list)) return;
+      if (!_active(list) || list.failed) return;
       try {
         await operation();
-      } catch (error, stack) {
-        _recordFailure(list, error, stack);
-        // Ошибку воспроизведения подключим к контроллеру с новым контрактом порта.
+      } catch (_) {
+        _fail(list, failureItem ?? list.current);
       }
     });
   }
 
-  void _recordFailure(_Playlist list, Object error, StackTrace stack) {
-    if (!_active(list)) return;
-    playbackFailure = error;
-    playbackFailureStack = stack;
+  void _fail(_Playlist list, PlayerItem? item) {
+    if (!_active(list) || list.failed || item == null) return;
+    list.frozenPosition = position;
+    list.frozen = list.failed = true;
+    list.intent = list.playing = false;
+    list.playRequested = false;
+    // queued-команды уже видят failed и не запускают хвост. Само событие
+    // публикуется только после освобождения декодера и остановки звука.
+    _enqueue(() async {
+      if (!_active(list)) return;
+      await _disposeList(list);
+      if (_active(list)) _emit(list, PlayerEventKind.failed, item: item);
+    });
   }
 
   PlaylistEngine _engine(_Playlist list) {
@@ -114,13 +133,13 @@ class QueuedPlayer implements PlayerPort {
     final engine = list.engine = createEngine();
     list.subscription = engine.events.listen(
       (state) => _state(list, state),
-      onError: (Object error, StackTrace stack) => _recordFailure(list, error, stack),
+      onError: (Object error) => _fail(list, error is EngineFailure ? error.item ?? list.current : list.current),
     );
     return engine;
   }
 
   void _state(_Playlist list, EnginePlayback state) {
-    if (!_active(list) || list.seeking) return;
+    if (!_active(list) || list.seeking || list.failed || list.frozen) return;
     final item = state.item;
     if (item == null) return;
     final index = list.items.indexWhere((i) => identical(i, item));
@@ -133,6 +152,7 @@ class QueuedPlayer implements PlayerPort {
       list.finished = through;
       list.index = through;
       list.exhausted = true;
+      list.playRequested = false;
       list.playing = false;
       list.started = null;
       _drained(list);
@@ -157,18 +177,35 @@ class QueuedPlayer implements PlayerPort {
   }
 
   Future<void> _play(_Playlist list) async {
-    if (!_active(list) || !list.intent || list.current == null || list.finished >= list.loaded) return;
+    if (!_active(list) || list.failed || !list.intent || list.current == null || list.finished >= list.loaded) return;
     final engine = _engine(list);
-    if (engine.snapshot.playing && !list.exhausted) return;
+    if (list.playRequested && !list.exhausted && !list.frozen) return;
+    if (engine.snapshot.playing && !list.exhausted && !list.frozen) return;
     final revision = list.revision;
     final allowed = await beforePlay();
-    if (!_active(list) || revision != list.revision || !list.intent) return;
+    if (!_active(list) || list.failed || revision != list.revision || !list.intent) return;
     if (!allowed) {
       list.intent = list.playing = false;
       await engine.pause();
       _emit(list, PlayerEventKind.interrupted, item: list.current);
       return;
     }
+    if (list.frozen) {
+      final state = engine.snapshot;
+      if (!identical(state.item, list.current) || state.position != list.frozenPosition) {
+        await engine.pause();
+        if (!_active(list) || list.failed || revision != list.revision || !list.intent) return;
+        list.seeking = true;
+        try {
+          await engine.seek(list.index, position: list.frozenPosition);
+        } finally {
+          list.seeking = false;
+        }
+        if (!_active(list) || list.failed || revision != list.revision || !list.intent) return;
+      }
+      list.frozen = false;
+    }
+    list.playRequested = true;
     engine.play();
   }
 
@@ -192,7 +229,7 @@ class QueuedPlayer implements PlayerPort {
         await engine.append(item);
       }
       list.loaded++;
-      if (!_active(list)) return;
+      if (!_active(list) || list.failed) return;
       if (list.exhausted && list.finished < list.loaded && list.current != null) {
         await engine.pause();
         if (!_active(list)) return;
@@ -207,12 +244,13 @@ class QueuedPlayer implements PlayerPort {
         _state(list, engine.snapshot);
       }
       await _play(list);
-    });
+    }, failureItem: item);
   }
 
   @override
   void play() {
     final list = _list;
+    if (list.failed) return;
     list.intent = true;
     _command(list, () => _play(list));
   }
@@ -220,12 +258,18 @@ class QueuedPlayer implements PlayerPort {
   @override
   void pause() {
     final list = _list;
+    list.frozenPosition = position;
+    list.frozen = true;
     list.revision++;
     list.intent = list.playing = false;
+    list.playRequested = false;
     // Физическая пауза ждёт незавершённую операцию движка. Прерывать вставку
     // параллельной командой нельзя: все команды используют одну очередь.
     _command(list, () async {
       await list.engine?.pause();
+      // Пока вставка ждала, intent мог снова стать true и её завершение могло
+      // послать play. После фактической паузы следующая play-команда нужна заново.
+      list.playRequested = false;
     });
   }
 
@@ -242,8 +286,11 @@ class QueuedPlayer implements PlayerPort {
   @override
   void retainThrough(int segment) {
     final list = _list;
-    final first = list.items.indexWhere((i) => i.segment > segment);
-    if (first < 0) return;
+    final tail = list.items.indexWhere((i) => i.segment > segment);
+    if (tail < 0) return;
+    // Даже при границе перед current сам текущий элемент сохраняется.
+    final first = tail > list.index ? tail : list.index + 1;
+    if (first >= list.items.length) return;
     list.items.removeRange(first, list.items.length);
     _command(list, () async {
       if (list.loaded > first) {
@@ -266,6 +313,8 @@ class QueuedPlayer implements PlayerPort {
   Future<void> _disposeList(_Playlist list) async {
     await list.subscription?.cancel();
     await list.engine?.dispose();
+    list.subscription = null;
+    list.engine = null;
   }
 
   Future<void> dispose() async {

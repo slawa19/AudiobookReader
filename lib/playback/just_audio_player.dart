@@ -29,7 +29,9 @@ class _JustAudioEngine implements PlaylistEngine {
       _player.playbackEventStream.listen((event) => _emit(event: event)),
       _player.playingStream.listen((_) => _emit()),
       _player.positionStream.listen((_) => _emit(progress: true)),
-      _player.errorStream.listen((error) => _events.addError(error)),
+      _player.errorStream.listen(
+        (error) => _events.addError(EngineFailure(_itemAt(error.index ?? _player.currentIndex))),
+      ),
     ]);
   }
   final _player = audio.AudioPlayer(
@@ -43,6 +45,10 @@ class _JustAudioEngine implements PlaylistEngine {
   Stream<EnginePlayback> get events => _events.stream;
   @override
   EnginePlayback get snapshot => _snapshot();
+
+  PlayerItem? _itemAt(int? index) => index != null && index >= 0 && index < _player.sequence.length
+      ? _player.sequence[index].tag as PlayerItem?
+      : null;
 
   EnginePlayback _snapshot({audio.PlaybackEvent? event, bool progress = false}) {
     final index = event?.currentIndex ?? _player.currentIndex;
@@ -69,7 +75,7 @@ class _JustAudioEngine implements PlaylistEngine {
   @override
   Future<void> append(PlayerItem item) => _player.addAudioSource(audio.AudioSource.file(item.file.path, tag: item));
   @override
-  Future<void> seek(int index) => _player.seek(Duration.zero, index: index);
+  Future<void> seek(int index, {Duration position = Duration.zero}) => _player.seek(position, index: index);
   @override
   Future<void> retain(int count) => _player.removeAudioSourceRange(count, _player.sequence.length);
   @override
@@ -77,7 +83,7 @@ class _JustAudioEngine implements PlaylistEngine {
   @override
   void play() {
     // Future just_audio.play завершается в конце файла, очередь команд его не ждёт.
-    unawaited(_player.play().catchError((Object e, StackTrace s) => _events.addError(e, s)));
+    unawaited(_player.play().catchError((Object e, StackTrace s) => _events.addError(EngineFailure(snapshot.item))));
   }
 
   @override

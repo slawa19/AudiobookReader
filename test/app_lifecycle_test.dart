@@ -26,6 +26,9 @@ Future<String> openLongBook(AppHarness h) async {
   await h.deleted(file);
   final id = h.app.library.shelf.single.id;
   await h.until(() => h.diskState(id)['lastOpened'] != null);
+  // Дожидаемся записи открытия и первой раскладки. Она вправе уже сохранить
+  // начальную позицию; проверяем последующее движение на замороженных часах.
+  await h.finish(h.app.library.flush());
   return id;
 }
 
@@ -60,6 +63,7 @@ void main() {
     final h = AppHarness(tester);
     await h.start();
     final id = await openLongBook(h);
+    final before = h.diskState(id)['position'];
     await tapCenter(tester);
     await tester.tap(find.byTooltip('Вид текста'));
     await tester.pumpAndSettle();
@@ -76,13 +80,17 @@ void main() {
     expect(reader(tester).page, greaterThan(0));
     expect(at, isNot(const ReadingPosition(0, 0)));
     // Часы писателя заморожены: без flush новая позиция остаётся только в памяти.
-    expect(h.diskState(id)['position'], isNull);
+    expect(h.diskState(id)['position'], before);
+    expect(ReadingPosition.fromJson(before as Map<String, dynamic>), isNot(at));
     expect(h.time.activeTimers, greaterThan(0));
     await tapCenter(tester);
     await tester.tap(find.byTooltip('Назад'));
     await tester.pumpAndSettle();
-    await h.until(() => h.diskState(id)['position'] != null);
+    await h.until(() => ReadingPosition.fromJson(h.diskState(id)['position'] as Map<String, dynamic>) == at);
     expect(ReadingPosition.fromJson(h.diskState(id)['position'] as Map<String, dynamic>), at);
+    // Позиция уже проверена без ручного flush. Теперь завершаем весь flush
+    // закрытия (включая настройки), прежде чем начинать отдельную сцену языка.
+    await h.finish(h.app.flush());
     final config = File('${h.root.path}/settings.json');
     await h.until(config.existsSync);
 
@@ -118,13 +126,15 @@ void main() {
     final h = AppHarness(tester);
     await h.start();
     final id = await openLongBook(h);
+    final before = h.diskState(id)['position'];
     await tapRightThird(tester);
     await tapRightThird(tester);
     final at = shown(tester);
     expect(reader(tester).page, greaterThan(0));
-    expect(h.diskState(id)['position'], isNull);
+    expect(h.diskState(id)['position'], before);
+    expect(ReadingPosition.fromJson(before as Map<String, dynamic>), isNot(at));
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-    await h.until(() => h.diskState(id)['position'] != null);
+    await h.until(() => ReadingPosition.fromJson(h.diskState(id)['position'] as Map<String, dynamic>) == at);
     expect(ReadingPosition.fromJson(h.diskState(id)['position'] as Map<String, dynamic>), at);
     expect(h.time.activeTimers, 0);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);

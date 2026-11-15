@@ -10,6 +10,7 @@ import 'package:audiobook_reader/audio/wav_audio_encoder.dart';
 import 'package:audiobook_reader/playback/clock.dart';
 import 'package:audiobook_reader/playback/fake_player.dart';
 import 'package:audiobook_reader/playback/screen_awake.dart';
+import 'package:audiobook_reader/playback/player.dart';
 import 'package:audiobook_reader/tts/fake_engine.dart';
 import 'package:audiobook_reader/screens/reader_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -68,6 +69,7 @@ class AppHarness {
   final secretStore = TestSecretStore(null);
   final screenAwake = TestScreenAwake();
   FakeTtsEngine? _synthesis;
+  PlayerPort? _playerPort, _samplePort;
 
   Future<void> start({
     LibraryParser? parser,
@@ -75,9 +77,13 @@ class AppHarness {
     double textScale = 1,
     bool fakeTts = false,
     FakeTtsEngine? synthesis,
+    PlayerPort? playerPort,
+    PlayerPort? samplePort,
   }) async {
     this.fakeTts = fakeTts;
     _synthesis = synthesis;
+    _playerPort = playerPort;
+    _samplePort = samplePort;
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(360, 800);
     tester.view.padding = const FakeViewPadding(top: 32, bottom: 48);
@@ -118,8 +124,8 @@ class AppHarness {
       clock: time.call,
       timer: time.timer,
       encoder: const WavAudioEncoder(),
-      player: player,
-      samplePlayer: samplePlayer,
+      player: _playerPort ?? player,
+      samplePlayer: _samplePort ?? samplePlayer,
       engine: engine,
       playbackClock: playbackClock,
       fakeTts: fakeTts,
