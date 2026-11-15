@@ -75,43 +75,64 @@ const allVoices = <Voice>[
 Voice voiceByName(String name) => allVoices.firstWhere((v) => v.name == name, orElse: () => allVoices[1]);
 
 enum TtsModel {
-  flash('gemini-3.8-flash-tts', '3.8 Flash', 0.81, 1.62),
-  flashLite('gemini-3.8-flash-lite-tts', '3.8 Flash-Lite', 0.54, 1.08);
+  flash('gemini-3.8-flash-tts', '3.8 Flash', 9),
+  flashLite('gemini-3.8-flash-lite-tts', '3.8 Flash-Lite', 6);
 
-  const TtsModel(this.id, this.label, this.dollarsPerHourNow, this.dollarsPerHourFrom2027);
+  const TtsModel(this.id, this.label, this.audioDollarsPerMillionNow);
 
   static TtsModel byId(String id) => TtsModel.values.firstWhere((m) => m.id == id, orElse: () => TtsModel.flash);
 
   final String id;
   final String label;
-  final double dollarsPerHourNow;
-  final double dollarsPerHourFrom2027;
+  final double audioDollarsPerMillionNow;
+  double get dollarsPerHourNow => audioDollarsPerMillionNow * audioTokensPerSecond * 3600 / 1000000;
+  double get dollarsPerHourFrom2027 => dollarsPerHourNow * 2;
+
+  double audioDollarsPerMillionAt(DateTime date) => audioDollarsPerMillionNow * _tariffMultiplier(date);
+  double inputDollarsPerMillionAt(DateTime date) => 0.5 * _tariffMultiplier(date);
+
+  double dollarsForTokensAt({required int audioTokens, int inputTokens = 0, required DateTime date}) =>
+      (audioTokens * audioDollarsPerMillionAt(date) + inputTokens * inputDollarsPerMillionAt(date)) / 1000000;
 
   /// Тариф на дату (FR-M1): смена 01.01.2027.
-  double dollarsPerHourAt(DateTime date) =>
-      date.isBefore(DateTime(2027)) ? dollarsPerHourNow : dollarsPerHourFrom2027;
+  double dollarsPerHourAt(DateTime date) => dollarsPerHourNow * _tariffMultiplier(date);
 }
 
-/// Профиль голоса (А§6.2): то, от чего зависит звук. Готовность главы и оценка остатка считаются для
-/// действующего профиля: звук другим голосом или моделью для него не годится. Стиль в прототипе один — по языку
-/// книги, и он не меняется у книги, поэтому здесь его нет.
+/// Полный профиль звука. Старые имена параметров сохранены для потребителей прототипа.
 class VoiceProfile {
-  const VoiceProfile({required this.voice, required this.modelId});
+  const VoiceProfile({String? voiceId, String? model, String? voice, String? modelId, this.style = ''})
+    : assert(voiceId != null || voice != null),
+      assert(model != null || modelId != null),
+      assert(voiceId == null || voice == null || voiceId == voice),
+      assert(model == null || modelId == null || model == modelId),
+      voiceId = voiceId ?? voice ?? '',
+      model = model ?? modelId ?? '';
 
-  final String voice;
-  final String modelId;
+  final String voiceId;
+  final String model;
+  final String style;
+  String get voice => voiceId;
+  String get modelId => model;
 
-  String get key => '$voice/$modelId';
+  String get key => '${voiceId.length}:$voiceId${model.length}:$model${style.length}:$style';
 
   @override
-  bool operator ==(Object other) => other is VoiceProfile && other.voice == voice && other.modelId == modelId;
+  bool operator ==(Object other) =>
+      other is VoiceProfile && other.voiceId == voiceId && other.model == model && other.style == style;
 
   @override
-  int get hashCode => Object.hash(voice, modelId);
+  int get hashCode => Object.hash(voiceId, model, style);
 
   @override
-  String toString() => 'VoiceProfile($voice, $modelId)';
+  String toString() => 'VoiceProfile($voiceId, $model, $style)';
 }
+
+/// Даты тарифов из GEMINI_TTS.md; календарная дата в часовом поясе переданного значения.
+const tariffVerifiedOn = '2026-11-11';
+const tariffChangeYear = 2027;
+const tariffChangesOn = '$tariffChangeYear-01-01';
+double _tariffMultiplier(DateTime date) => date.year < tariffChangeYear ? 1 : 2;
+const audioTokensPerSecond = 25;
 
 /// Секунд звука на знак текста — верх замера (GEMINI_TTS.md, «Цена»).
 const secondsPerChar = 0.069;
