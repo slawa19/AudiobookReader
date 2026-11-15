@@ -35,7 +35,7 @@ void main() {
   }
 
   Future<String> add([List<int>? bytes]) async =>
-      (await library.addBytes(bytes ?? sample(), 'book.fb2'))!.id;
+      (await library.addTestBytes(bytes ?? sample(), 'book.fb2'))!.id;
 
   File stateFile(String id) => File('${root.path}/books/$id/state.json');
   Map<String, Object?> read(File file) =>
@@ -56,6 +56,84 @@ void main() {
     await library.flush();
     library.dispose();
     await root.delete(recursive: true);
+  });
+
+  for (final damaged in ['missing-meta', 'missing-state', 'empty', 'broken', 'empty-state', 'broken-state', 'empty-dir']) {
+    test('повреждённая книга $damaged не мешает здоровой и сохраняет исходник', () async {
+      final good = await add();
+      final bad = await add(sample('fb2_plain.xml'));
+      final dir = Directory('${root.path}/books/$bad');
+      library.dispose();
+      if (damaged == 'empty-dir') {
+        await dir.delete(recursive: true);
+        await dir.create();
+      } else {
+        final file = File('${dir.path}/${damaged.endsWith('state') ? 'state' : 'meta'}.json');
+        if (damaged.startsWith('missing')) {
+          await file.delete();
+        } else {
+          await file.writeAsString(damaged.startsWith('empty') ? '' : '{broken');
+        }
+      }
+      await start();
+      expect(library.shelf.map((e) => e.id), [good]);
+      expect(await dir.exists(), isTrue);
+      if (damaged != 'empty-dir') {
+        expect(await File('${dir.path}/original.fb2').readAsBytes(), sample('fb2_plain.xml'));
+      }
+    });
+  }
+
+  for (final config in ['', '{broken', '{}', '{"theme":"dark"}', '[]', 'null', '{"theme":"unknown","fontStep":"bad","speed":false,"voice":7}']) {
+    test('настройки с неполным или битым JSON: $config', () async {
+      library.dispose();
+      await File('${root.path}/settings.json').writeAsString(config);
+      await start();
+      expect(library.settings.theme, config.contains('dark') ? ThemeChoice.dark : ThemeChoice.system);
+      expect(library.settings.fontStep, defaultFontStep);
+      expect(library.settings.speed, 1);
+      expect(library.settings.voice, 'default');
+      expect(library.settings.modelId, 'model');
+    });
+  }
+
+  test('удаление сначала переносит в tmp: сбой переноса сохраняет живую книгу', () async {
+    final id = await add();
+    final tmp = Directory('${root.path}/tmp');
+    await tmp.delete(recursive: true);
+    await File(tmp.path).writeAsString('занято');
+    try {
+      await expectLater(library.deleteBook(id), throwsA(isA<FileSystemException>()));
+      expect(library.shelf.single.id, id);
+      expect(await File('${root.path}/books/$id/original.fb2').exists(), isTrue);
+    } finally {
+      await File(tmp.path).delete();
+      await tmp.create();
+    }
+    await library.deleteBook(id);
+    expect(library.shelf, isEmpty);
+    expect(await Directory('${root.path}/books/$id').exists(), isFalse);
+  });
+
+  test('ошибка записи отдаётся один раз, позиция и настройки дописываются без нового изменения', () async {
+    final id = await add();
+    await library.loadBook(id);
+    await library.flush();
+    final blocked = Directory('${stateFile(id).path}.new');
+    await blocked.create();
+    library.savePosition(id, const ReadingPosition(1, 1));
+    await expectLater(library.flush(), throwsA(isA<FileSystemException>()));
+    await blocked.delete();
+    await library.flush();
+    expect((read(stateFile(id))['position']! as Map)['block'], 1);
+    final blockedSettings = Directory('${root.path}/settings.json.new');
+    await blockedSettings.create();
+    library.settings.theme = ThemeChoice.dark;
+    await expectLater(library.flush(), throwsA(isA<FileSystemException>()));
+    await blockedSettings.delete();
+    await library.flush();
+    expect(read(File('${root.path}/settings.json'))['theme'], 'dark');
+    await library.flush();
   });
 
   test('FR-L1,L6: запуск чистит tmp, но сохраняет готовую книгу', () async {
@@ -83,7 +161,7 @@ void main() {
         },
       );
       final old = library;
-      final adding = library.addBytes(sample(), 'interrupted.fb2');
+      final adding = library.addTestBytes(sample(), 'interrupted.fb2');
       await entered.future;
       expect(library.addJobs.single.status, AddJobStatus.adding);
       expect(library.shelf, isEmpty);
@@ -120,9 +198,9 @@ void main() {
         return release.future;
       },
     );
-    final one = library.addBytes(sample(), 'one.fb2');
+    final one = library.addTestBytes(sample(), 'one.fb2');
     await entered.future;
-    final two = library.addBytes(sample(), 'renamed.bin');
+    final two = library.addTestBytes(sample(), 'renamed.bin');
     expect(library.addJobs.single.status, AddJobStatus.adding);
     expect(library.shelf, isEmpty);
     release.complete(parseBook(sample()));
@@ -131,21 +209,40 @@ void main() {
     expect(calls, 1);
     expect(library.shelf, hasLength(1));
     expect(library.addJobs, isEmpty);
-    expect((await library.addBytes(sample(), 'again.fb2'))!.id, results[0]!.id);
+    expect((await library.addTestBytes(sample(), 'again.fb2'))!.id, results[0]!.id);
     expect(calls, 1);
   });
 
-  test('добавление владеет копией байтов до первого await', () async {
-    final bytes = sample();
-    final original = List<int>.of(bytes);
-    final adding = library.addBytes(bytes, 'copy.fb2');
-    bytes.fillRange(0, bytes.length, 0);
-    final id = (await adding)!.id;
+  test('добавление по пути сохраняет свою копию и не удаляет источник', () async {
+    final source = await File('${root.path}/input.fb2').writeAsBytes(sample());
+    final id = (await library.addFile(source.path, 'copy.fb2'))!.id;
     expect(
       await File('${root.path}/books/$id/original.fb2').readAsBytes(),
-      original,
+      sample(),
     );
+    expect(await source.exists(), isTrue);
+    await source.delete();
     expect((await library.loadBook(id)).blocks, isNotEmpty);
+  });
+
+  test('слишком большой файл отклоняется до разбора; обычная книга принимается', () async {
+    var calls = 0;
+    library.dispose();
+    await start(parser: (path) async {
+      calls++;
+      return parseBook(await File(path).readAsBytes());
+    });
+    final source = File('${root.path}/huge.zip');
+    final handle = await source.open(mode: FileMode.write);
+    await handle.truncate(maxBookFileBytes + 1);
+    await handle.close();
+    expect(await library.addFile(source.path, 'huge.zip'), isNull);
+    expect(library.addJobs.single.failure, AddFailure.unsupported);
+    expect(calls, 0);
+    expect(library.shelf, isEmpty);
+    expect(await Directory('${root.path}/tmp').list().isEmpty, isTrue);
+    expect(await add(), isNotEmpty);
+    expect(calls, 1);
   });
 
   for (final (reason, bytes) in [
@@ -162,7 +259,7 @@ void main() {
         } on BookParseException catch (e) {
           expected = e;
         }
-        expect(await library.addBytes(bytes, 'bad.file'), isNull);
+        expect(await library.addTestBytes(bytes, 'bad.file'), isNull);
         expect(library.shelf, isEmpty);
         final job = library.addJobs.single;
         expect(job.status, AddJobStatus.failed);
@@ -178,7 +275,7 @@ void main() {
   }
 
   test(
-    'FR-L3,L5: объём всей папки, удаление и повторное добавление новой книгой',
+    'FR-L3,L5: удаление всей папки и повторное добавление новой книгой',
     () async {
       final id = await add();
       await library.loadBook(id);
@@ -187,13 +284,12 @@ void main() {
       library.setBookVoice(id, 'custom');
       await library.flush();
       final dir = Directory('${root.path}/books/$id');
-      final before = await library.deletionBytes(id);
       final extra = File('${dir.path}/nested/test.bin');
       await extra.create(recursive: true);
       await extra.writeAsBytes(List.filled(137, 1));
-      expect(await library.deletionBytes(id), before + 137);
       await library.deleteBook(id);
       expect(await dir.exists(), isFalse);
+      expect(await extra.exists(), isFalse);
       expect(library.shelf, isEmpty);
       expect(await add(), id);
       expect(library.entry(id).opened, isFalse);

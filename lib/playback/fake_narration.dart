@@ -292,8 +292,11 @@ class FakeNarrationController extends NarrationController {
 
   @override
   void deleteBook(String bookId) {
+    final title = library.entry(bookId).title;
     deleteBookNarration(bookId);
-    library.deleteBook(bookId);
+    unawaited(library.deleteBook(bookId).catchError((Object error) {
+      library.recordFileFailure(title, error);
+    }));
   }
 
   // --- только для показа: состояния, которые в жизни вызывает сеть -----------------------------------------

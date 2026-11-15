@@ -15,8 +15,27 @@ import 'support/book_samples.dart';
 import 'support/flows.dart';
 import 'support/harness.dart';
 import 'support/gated_file_library.dart';
+import 'support/library_time.dart';
 
 void main() {
+  testWidgets('+ доступен во время разбора предыдущего выбора', (tester) async {
+    final gate = Completer<ParsedBook>();
+    final h = AppHarness(tester);
+    await h.start(parser: (_) => gate.future);
+    final file = await h.copy(shortBook());
+    await h.pick(file);
+    await h.until(() => h.app.library.addJobs.isNotEmpty);
+    // Кнопка появляется вместе со строкой; дожидаемся её анимации, не spinner разбора.
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.byTooltip('Добавить книгу'));
+    await tester.pump();
+    final picks = h.files.picks;
+    gate.complete(parseBook(shortBook()));
+    await h.deleted(file);
+    expect(picks, 2);
+    expect(h.app.library.shelf, hasLength(1));
+  });
+
   testWidgets('FR-L2: + → Добавляется → полка → настоящий текст образца', (tester) async {
     final gate = Completer<ParsedBook>();
     final h = AppHarness(tester);
@@ -191,7 +210,7 @@ void main() {
             timer: h.time.timer,
           );
           await library.ready;
-          library.delayedId = (await library.addBytes(longBook(), 'first.fb2'))!.id;
+          library.delayedId = (await library.addTestBytes(longBook(), 'first.fb2'))!.id;
           return library;
         }))!;
         h.app = NativeApplication.fromLibrary(library, h.files);

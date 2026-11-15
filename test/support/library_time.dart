@@ -1,4 +1,21 @@
 import 'dart:async';
+import 'dart:io';
+
+import 'package:audiobook_reader/library/file_library.dart';
+import 'package:audiobook_reader/library/library.dart';
+
+/// Только тестовые образцы создаются из байтов; рабочий интерфейс получает путь.
+extension TestFileLibrary on FileLibrary {
+  Future<ShelfEntry?> addTestBytes(List<int> bytes, String name) async {
+    final temp = await Directory.systemTemp.createTemp('test-source-');
+    try {
+      final file = await File('${temp.path}/source').writeAsBytes(bytes);
+      return await addFile(file.path, name);
+    } finally {
+      await temp.delete(recursive: true);
+    }
+  }
+}
 
 /// Часы и одноразовые таймеры писателя без ожидания реальной секунды.
 class LibraryTime {

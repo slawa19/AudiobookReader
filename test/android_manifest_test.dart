@@ -18,8 +18,10 @@ void main() {
   const bookTypes = {
     'application/epub+zip',
     'application/x-fictionbook+xml',
+    'application/x-fictionbook',
     'application/x-fictionbook+zip',
     'application/fb2',
+    'application/fb2+zip',
   };
   const genericTypes = {
     'application/zip',
@@ -105,7 +107,8 @@ void main() {
   });
 
   test('Android: входящие URI не становятся маршрутами Flutter; разрешений памяти нет', () {
-    expect(manifest, contains('android:launchMode="singleTop"'));
+    expect(manifest, contains('android:launchMode="singleTask"'));
+    expect(manifest, isNot(contains('android:taskAffinity=""')));
     expect(manifest, contains('android:name="flutter_deeplinking_enabled" android:value="false"'));
     for (final permission in ['READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE', 'MANAGE_EXTERNAL_STORAGE']) {
       expect(manifest, isNot(contains(permission)));

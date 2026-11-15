@@ -106,16 +106,17 @@ class AddJob {
 /// Полка и хранение книг (А§2, `library`). Единственный писатель позиции и настроек книги.
 abstract class Library extends ChangeNotifier {
   /// Возвращает готовую или уже имеющуюся книгу; при отказе — null и строку в [addJobs].
-  Future<ShelfEntry?> addBytes(List<int> bytes, String fileName) async =>
+  /// Вызывающий сохраняет файл по [path] до завершения Future, затем удаляет свою копию.
+  Future<ShelfEntry?> addFile(String path, String fileName) async =>
       throw UnsupportedError(
-        'Добавление байтов в этой библиотеке не реализовано',
+        'Добавление файла в этой библиотеке не реализовано',
       );
+
+  /// Ошибка файловой операции видна на полке до явного закрытия строки пользователем.
+  void recordFileFailure(String fileName, Object error);
 
   /// Записывает последние изменения немедленно и дожидается писателя. Перед фоном, паузой и закрытием.
   Future<void> flush() async {}
-
-  /// Объём всей папки для подтверждения удаления, включая будущую озвучку.
-  Future<int> deletionBytes(String bookId) async => entry(bookId).bookBytes;
 
   /// Полка (FR-L4): сначала открывавшиеся книги по убыванию времени последнего открытия, затем ни разу не
   /// открытые — новые сверху. Экран ставит первую открывавшуюся в карточку «Продолжить», а неоткрытые — в
