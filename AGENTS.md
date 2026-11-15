@@ -70,6 +70,7 @@ wsl.exe -d Debian --cd "D:\Work\Projects\AudiobookReader" -- bash scripts/protot
 - `build-apk.sh` без флагов собирает release с ключом из `.env` (четыре `ANDROID_KEY*` из `.env.example`);
   без файла или параметров подписи останавливается. `--debug` использует отладочный ключ и не читает `.env`.
   APK — `build/app/outputs/flutter-apk/`.
+- `build-apk.sh --fake` включает `FAKE_TTS=true`, отдельные applicationId `.fake` и название; `--debug --fake` проверено 2026-11-15. Копии APK: `app-real-<режим>.apk` и `app-fake-<режим>.apk`; без `--debug` используется тот же постоянный ключ из `.env`.
 
 Сборка APK (обе команды запущены и отработали 2026-11-15; release — в главном дереве постоянным ключом, подпись
 проверена `apksigner verify --print-certs`):

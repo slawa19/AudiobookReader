@@ -2,6 +2,7 @@
   "@@locale": "en",
   "shelfTitle": "Books",
   "settings": "Settings",
+  "fakeVoice": "Fake voice",
   "addBook": "Add book",
   "continueReading": "Continue",
   "progressNew": "new",

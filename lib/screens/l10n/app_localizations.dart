@@ -114,6 +114,12 @@ abstract class AppLocalizations {
   /// **'Настройки'**
   String get settings;
 
+  /// No description provided for @fakeVoice.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подставной голос'**
+  String get fakeVoice;
+
   /// No description provided for @addBook.
   ///
   /// In ru, this message translates to:

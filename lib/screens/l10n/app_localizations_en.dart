@@ -16,6 +16,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settings => 'Settings';
 
   @override
+  String get fakeVoice => 'Fake voice';
+
+  @override
   String get addBook => 'Add book';
 
   @override

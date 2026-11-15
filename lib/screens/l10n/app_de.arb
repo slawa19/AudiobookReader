@@ -2,6 +2,7 @@
   "@@locale": "de",
   "shelfTitle": "Bücher",
   "settings": "Einstellungen",
+  "fakeVoice": "Teststimme",
   "addBook": "Buch hinzufügen",
   "continueReading": "Weiterlesen",
   "progressNew": "neu",

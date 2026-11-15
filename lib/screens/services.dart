@@ -27,6 +27,7 @@ class AppServices {
     this.openDemoStates,
     this.onFlush,
     this.openBook,
+    this.fakeTts = false,
   });
 
   /// Цвета тем для превью в «Виде текста»: палитры живут в `app`.
@@ -34,6 +35,9 @@ class AppServices {
 
   final Library library;
   final AppSettings settings;
+
+  /// Признак подставной сборки приходит из app, без обратного импорта screens → app.
+  final bool fakeTts;
   final NarrationController narration;
   final ChapterDownloads downloads;
   final VoiceSampler sampler;

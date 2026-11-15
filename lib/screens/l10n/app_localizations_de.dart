@@ -16,6 +16,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settings => 'Einstellungen';
 
   @override
+  String get fakeVoice => 'Teststimme';
+
+  @override
   String get addBook => 'Buch hinzufügen';
 
   @override

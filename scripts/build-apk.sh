@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Без флага — release с ключом из .env; --debug — отладочная подпись, в том числе для CI.
+# Без флага — release с ключом из .env; --debug — отладочная подпись, --fake — отдельная подставная сборка.
 # Пароли передаются Gradle только через окружение, без -P и временного key.properties.
 set +x
 set -euo pipefail
@@ -7,15 +7,14 @@ source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 cd "${PROJECT_ROOT}"
 
 mode=release
-case "${1:-}" in
-  --debug) mode=debug ;;
-  '') ;;
-  *) echo "Использование: bash scripts/build-apk.sh [--debug]" >&2; exit 2 ;;
-esac
-if (( $# > 1 )); then
-  echo "Использование: bash scripts/build-apk.sh [--debug]" >&2
-  exit 2
-fi
+fake=false
+for arg in "$@"; do
+  case "${arg}" in
+    --debug) mode=debug ;;
+    --fake) fake=true ;;
+    *) echo "Использование: bash scripts/build-apk.sh [--debug] [--fake]" >&2; exit 2 ;;
+  esac
+done
 
 if [[ "${mode}" == release ]]; then
   if [[ ! -f .env ]]; then
@@ -42,5 +41,15 @@ fi
 require_flutter
 require_android
 "${FLUTTER_BIN}" pub get --offline >/dev/null 2>&1 || "${FLUTTER_BIN}" pub get >/dev/null
-"${FLUTTER_BIN}" build apk "--${mode}"
-echo "APK: ${PROJECT_ROOT}/build/app/outputs/flutter-apk/app-${mode}.apk"
+# Один параметр выбирает и Dart-признак, и applicationId/название в Gradle.
+"${FLUTTER_BIN}" build apk "--${mode}" "--dart-define=FAKE_TTS=${fake}"
+apk="${PROJECT_ROOT}/build/app/outputs/flutter-apk/app-${mode}.apk"
+variant=real
+if [[ "${fake}" == true ]]; then
+  variant=fake
+fi
+# Flutter пишет оба варианта в app-${mode}.apk; копии с именем варианта сохраняют оба результата.
+variant_apk="${PROJECT_ROOT}/build/app/outputs/flutter-apk/app-${variant}-${mode}.apk"
+cp "${apk}" "${variant_apk}"
+apk="${variant_apk}"
+echo "APK: ${apk}"
