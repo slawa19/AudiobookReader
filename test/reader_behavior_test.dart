@@ -178,8 +178,7 @@ void main() {
       expect(p.narration.state, NarrationState.playing);
       expect(find.byKey(const Key('player-panel')), findsOneWidget);
       final block = p.narration.block!;
-      expect(find.byWidgetPredicate((w) => w.key is ValueKey<String> &&
-          (w.key! as ValueKey<String>).value.startsWith('hl-$block-')), findsWidgets);
+      expect(find.byKey(ValueKey('hl-$block-0')), findsOneWidget);
       final startPage = reader(tester).page;
       // Голос уходит вперёд — страница сама переворачивается следом.
       var guard = 0;

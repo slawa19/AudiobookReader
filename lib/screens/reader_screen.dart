@@ -51,6 +51,7 @@ class ReaderScreenState extends State<ReaderScreen> {
   double? _sliderDrag;
   NarrationState _lastState = NarrationState.idle;
   late ReadingPosition _anchor;
+  ReadingPosition? _heldAfterClose;
   double _topInset = 0;
   double _bottomInset = 0;
   late PageStyle _style;
@@ -174,18 +175,33 @@ class ReaderScreenState extends State<ReaderScreen> {
     final at = soundingPosition;
     final follow = _following && at != null && narration.state != NarrationState.idle;
     _layoutForPlayer = _mine;
-    _startLayout(_selectedAt ?? (follow ? at : _anchor));
+    final closing = _heldAfterClose != null;
+    final held = _selectedAt ?? (follow ? at : _heldAfterClose);
+    _heldAfterClose = null;
+    final visible = _layout == null ? null : _current;
+    final retain = held != null && visible != null && visible.contains(held.block, held.offset);
+    // Удерживаемое место задаёт видимость, а начало остаётся от уже показанной страницы.
+    final from = visible != null && (held == null || retain)
+        ? ReadingPosition(visible.firstBlock, visible.firstOffset)
+        : held ?? _anchor;
+    // «Закрыть» уже передал позицию контроллером (FR-P8); одна перераскладка её не перезаписывает.
+    _startLayout(from, retain: retain ? held : null, savePosition: !closing);
   }
 
   /// Каждая новая раскладка сразу имеет якорную страницу. Работа до якоря в этот расчёт не входит.
-  void _startLayout(ReadingPosition place) {
+  void _startLayout(ReadingPosition place, {ReadingPosition? retain, bool savePosition = true}) {
     _layout?.dispose();
     final next = ChapterPagination();
     next.start(book: book, style: _style, column: _column, block: place.block, offset: place.offset,
         throughBook: true, imageSizes: s.library.imageSizes(book.id));
+    // До удерживаемого места — не больше текста одной прежней страницы. Первую подходящую страницу
+    // показываем сразу, без промежуточного показа страницы, с которой голос уже ушёл.
+    while (retain != null && next.findPage(retain.block, retain.offset) == null && !next.isComplete) {
+      next.advancePage();
+    }
     _layout = next;
     _seenPrepend = 0;
-    _page = 0;
+    _page = retain == null ? 0 : next.findPage(retain.block, retain.offset) ?? 0;
     _anchor = _pagePosition;
     next.addListener(_onLayout);
     _waitingPage = null;
@@ -196,9 +212,11 @@ class ReaderScreenState extends State<ReaderScreen> {
     _resetPages();
     _markLastAfterFrame();
     final generation = _generation;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && generation == _generation) _saveScreenPosition();
-    });
+    if (savePosition) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && generation == _generation) _saveScreenPosition();
+      });
+    }
   }
 
   void _resetPages() {
@@ -500,7 +518,7 @@ class ReaderScreenState extends State<ReaderScreen> {
       final gesture = _dragStartPage != null;
       if (!layoutStale && !choosing && !gesture && _following && at != null && _layout != null &&
           state != NarrationState.idle) {
-        if (command) {
+        if (command && !_current.contains(at.block, at.offset)) {
           goToPosition(at, user: false);
         } else {
           _goToPlace(at.block, at.offset, user: false);
@@ -516,7 +534,7 @@ class ReaderScreenState extends State<ReaderScreen> {
       _following = true;
     });
     final at = soundingPosition;
-    if (at != null) goToPosition(at, user: false);
+    if (at != null && !_current.contains(at.block, at.offset)) goToPosition(at, user: false);
   }
 
   // --- жесты ---------------------------------------------------------------------------------------------
@@ -623,6 +641,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     // абзаца уже не было (замечание владельца 2026-11-14). «Дочитана» — отдельный факт и здесь не меняется.
     final place = (_following ? soundingPosition : null) ?? _pagePosition;
     _anchor = place;
+    _heldAfterClose = place;
     narration.close(screenPosition: place);
     setState(() => _following = true);
   }

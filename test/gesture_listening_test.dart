@@ -69,8 +69,7 @@ void main() {
     expect(find.byKey(const Key('to-reading-place')), findsNothing);
     expect(onPage(tester, reader(tester).soundingPosition!), isTrue,
         reason: 'начало абзаца — на прошлой странице: экран переходит к голосу');
-    expect(find.byWidgetPredicate((w) => w.key is ValueKey<String> &&
-        (w.key! as ValueKey<String>).value.startsWith('hl-${f.block}-')), findsWidgets);
+    expect(find.byKey(ValueKey('hl-${f.block}-0')), findsOneWidget);
   });
 
   testWidgets('долгое нажатие посреди автоматического переворота за голосом: выбранный абзац — на странице, которая '

@@ -262,6 +262,14 @@ class ChapterPagination extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Следующая порция тем же итератором. Перераскладка может досчитать ограниченный текст старой
+  /// видимой страницы до удерживаемого места перед первым показом; книга до этой страницы не считается.
+  void advancePage() {
+    _timer?.cancel();
+    _timer = null;
+    _advance(_generation);
+  }
+
   /// После отмены ни измерений, ни уведомлений от старого расчёта больше нет.
   void cancel() {
     _generation++;
