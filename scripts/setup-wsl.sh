@@ -80,7 +80,7 @@ if (( license_status != 0 )); then
 fi
 
 packages=()
-for package in "platforms;android-${ANDROID_API}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${ANDROID_NDK}"; do
+for package in "platforms;android-${ANDROID_API}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${ANDROID_NDK}" "cmake;${ANDROID_CMAKE}"; do
   if [[ ! -f "${ANDROID_HOME}/${package//;/\/}/package.xml" ]]; then
     packages+=("${package}")
   fi
@@ -88,7 +88,7 @@ done
 if (( ${#packages[@]} > 0 )); then
   "${SDKMANAGER}" --sdk_root="${ANDROID_HOME}" --install "${packages[@]}"
 else
-  echo "Android SDK ${ANDROID_API}, build-tools ${ANDROID_BUILD_TOOLS}, NDK ${ANDROID_NDK} уже стоят"
+  echo "Android SDK ${ANDROID_API}, build-tools ${ANDROID_BUILD_TOOLS}, NDK ${ANDROID_NDK}, CMake ${ANDROID_CMAKE} уже стоят"
 fi
 
 if [[ -f "${FLUTTER_HOME}/.installed-ok" ]]; then
