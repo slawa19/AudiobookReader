@@ -22,6 +22,7 @@ ANDROID_CMDLINE_SHA256="4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e7
 ANDROID_API="36"
 ANDROID_BUILD_TOOLS="36.0.0"
 ANDROID_NDK="28.2.13676358"
+ANDROID_CMAKE="3.22.1"
 # У platform-tools нет версионного идентификатора sdkmanager: берём неизменяемый архив.
 # SHA-1 опубликована Google в https://dl.google.com/android/repository/repository2-1.xml.
 ANDROID_PLATFORM_TOOLS="37.0.3"
@@ -58,7 +59,8 @@ require_android() {
   if [[ ! -x "${JAVA_HOME}/bin/java" || ! -x "${SDKMANAGER}" \
       || ! -f "${ANDROID_HOME}/platforms/android-${ANDROID_API}/package.xml" \
       || ! -f "${ANDROID_HOME}/build-tools/${ANDROID_BUILD_TOOLS}/package.xml" \
-      || ! -f "${ANDROID_HOME}/ndk/${ANDROID_NDK}/package.xml" ]]; then
+      || ! -f "${ANDROID_HOME}/ndk/${ANDROID_NDK}/package.xml" \
+      || ! -f "${ANDROID_HOME}/cmake/${ANDROID_CMAKE}/package.xml" ]]; then
     echo "Средства сборки Android не установлены. Запустите: bash scripts/setup-wsl.sh" >&2
     exit 2
   fi

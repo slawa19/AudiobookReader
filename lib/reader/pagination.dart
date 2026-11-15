@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
@@ -57,31 +58,11 @@ class BookPageLayout {
   }
 }
 
-/// Вся книга, разбитая на страницы для одного размера колонки и одной типографики.
-///
-/// Синхронный расчёт оставлен для прототипа и пакетных проверок. Для чтения от позиции — [ChapterPagination].
-class BookLayout {
-  BookLayout._(this.pages, this.chapterFirstPage);
-
-  final List<BookPageLayout> pages;
-  final List<int> chapterFirstPage;
-
-  static BookLayout compute({
-    required Book book,
-    required PageStyle style,
-    required Size column,
-    Map<String, Size> imageSizes = const {},
-  }) {
-    final pages = <BookPageLayout>[];
-    final firsts = <int>[];
-    final p = _Paginator(book, style, column, imageSizes);
-    for (var c = 0; c < book.chapters.length; c++) {
-      firsts.add(pages.length);
-      pages.addAll(p.chapter(c));
-    }
-    return BookLayout._(pages, firsts);
-  }
-
+/// Расчёт главы от сохранённого места. Первая страница готова после [start], каждая следующая считается
+/// отдельным событием главного изолята. Экран может рисовать [pages], не дожидаясь [isComplete].
+/// Повторный [start] отменяет прежнюю работу; место передаётся явно, а не выводится из новой типографики.
+/// С [start] `throughBook: true` расчёт продолжается через границы следующих глав до конца книги.
+class ChapterPagination extends ChangeNotifier {
   /// Номер страницы, на которой стоит место (блок, смещение).
   int pageOf(int block, int offset) {
     var lo = 0;
@@ -97,14 +78,20 @@ class BookLayout {
     }
     return lo;
   }
-}
 
-/// Расчёт главы от сохранённого места. Первая страница готова после [start], каждая следующая считается
-/// отдельным событием главного изолята. Экран может рисовать [pages], не дожидаясь [isComplete].
-/// Повторный [start] отменяет прежнюю работу; место передаётся явно, а не выводится из новой типографики.
-class ChapterPagination extends ChangeNotifier {
+  final List<int> chapterFirstPage = [];
+
+  /// Готовая страница места. Последняя известная страница ещё не означает конец книги.
+  int? findPage(int block, int offset) {
+    if (_pages.isEmpty) return null;
+    final i = pageOf(block, offset);
+    final page = _pages[i];
+    return page.contains(block, offset) ||
+        (isComplete && block == page.lastBlock && offset == page.lastEnd) ? i : null;
+  }
+
   final List<BookPageLayout> _pages = [];
-  List<BookPageLayout> get pages => List.unmodifiable(_pages);
+  late final List<BookPageLayout> pages = UnmodifiableListView(_pages);
   bool get isCalculating => _iterator != null;
   bool get isComplete => _complete;
   bool _complete = false;
@@ -118,14 +105,16 @@ class ChapterPagination extends ChangeNotifier {
     required Size column,
     required int block,
     required int offset,
+    bool throughBook = false,
     Map<String, Size> imageSizes = const {},
   }) {
     cancel();
     _complete = false;
     _pages.clear();
+    chapterFirstPage.clear();
     final chapter = book.chapterOf(block);
     _iterator = _Paginator(book, style, column, imageSizes)
-        .chapter(chapter, firstBlock: block, firstOffset: offset).iterator;
+        .fromPosition(chapter, block, offset, throughBook).iterator;
     _advance(_generation);
   }
 
@@ -134,8 +123,10 @@ class ChapterPagination extends ChangeNotifier {
     final iterator = _iterator;
     if (iterator == null) return;
     if (iterator.moveNext()) {
+      if (_pages.isEmpty || _pages.last.chapter != iterator.current.chapter) chapterFirstPage.add(_pages.length);
       _pages.add(iterator.current);
-      _timer = Timer(Duration.zero, () => _advance(generation));
+      // Короткая пауза оставляет место кадру и событиям ввода между порциями, в том числе в тестовых часах.
+      _timer = Timer(const Duration(milliseconds: 1), () => _advance(generation));
     } else {
       _iterator = null;
       _timer = null;
@@ -178,6 +169,15 @@ class _Paginator {
     _cur = <PageFragment>[];
     _y = 0;
     return page;
+  }
+
+  Iterable<BookPageLayout> fromPosition(int c, int block, int offset, bool throughBook) sync* {
+    yield* chapter(c, firstBlock: block, firstOffset: offset);
+    if (throughBook) {
+      for (var next = c + 1; next < book.chapters.length; next++) {
+        yield* chapter(next);
+      }
+    }
   }
 
   Iterable<BookPageLayout> chapter(int c, {int? firstBlock, int firstOffset = 0}) sync* {
