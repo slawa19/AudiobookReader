@@ -226,7 +226,7 @@ void main() {
         .toList();
     expect(
       refs.map((s) => (b.blocks[1].text.substring(s.start, s.end), s.noteId)),
-      [('[1]', 'OPS/text.xhtml#n')],
+      [('[1]', 'OPS/text.xhtml#n'), ('[3]', 'OPS/text.xhtml#n')],
     );
     expect(b.blocks[5].spans.map((s) => (s.start, s.end, s.style)), [
       (8, 16, SpanStyle.italic),

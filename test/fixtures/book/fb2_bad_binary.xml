@@ -1,0 +1,2 @@
+<FictionBook><description><title-info><coverpage><image href="#bad"/></coverpage></title-info></description><body><p>Текст.</p><image href="#bad"/><image href="#missing"/><image href="#good"/></body><binary id="bad">BAD_DATA</binary><binary id="good">QUJD
+RA==</binary></FictionBook>

@@ -2,6 +2,8 @@
 // DTD не загружается и не исполняется: внешних обращений у разборщика нет.
 import 'dart:convert';
 
+import 'html_entities.dart';
+
 class XmlElement {
   XmlElement(this.name, this.attributes, this.parent);
   final String name;
@@ -42,6 +44,18 @@ const _cp1251 =
     'ЂЃ‚ѓ„…†‡€‰Љ‹ЊЌЋЏђ‘’“”•–—\u0098™љ›њќћџ'
     '\u00a0ЎўЈ¤Ґ¦§Ё©Є«¬\u00ad®Ї°±Ііґµ¶·ё№є»јЅѕї';
 
+// 0x80..0xFF; undefined byte positions retain their C1 code point.
+const _cp1250 =
+    '€\u0081‚\u0083„…†‡\u0088‰Š‹ŚŤŽŹ\u0090‘’“”•–—\u0098™š›śťžź'
+    '\u00a0ˇ˘Ł¤Ą¦§¨©Ş«¬\u00ad®Ż°±˛ł´µ¶·¸ąş»Ľ˝ľż'
+    'ŔÁÂĂÄĹĆÇČÉĘËĚÍÎĎĐŃŇÓÔŐÖ×ŘŮÚŰÜÝŢß'
+    'ŕáâăäĺćçčéęëěíîďđńňóôőö÷řůúűüýţ˙';
+const _cp1252 =
+    '€\u0081‚ƒ„…†‡ˆ‰Š‹Œ\u008dŽ\u008f\u0090‘’“”•–—˜™š›œ\u009džŸ'
+    '\u00a0¡¢£¤¥¦§¨©ª«¬\u00ad®¯°±²³´µ¶·¸¹º»¼½¾¿'
+    'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞß'
+    'àáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ';
+
 String decodeXml(List<int> bytes) {
   if (bytes.length >= 2 &&
       ((bytes[0] == 255 && bytes[1] == 254) ||
@@ -79,6 +93,12 @@ String decodeXml(List<int> bytes) {
     ),
   );
   if (encoding == 'windows-1251' || encoding == 'cp1251') return cp();
+  if (encoding == 'windows-1250' || encoding == 'windows-1252') {
+    final table = encoding == 'windows-1250' ? _cp1250 : _cp1252;
+    return String.fromCharCodes(
+      content.map((b) => b < 128 ? b : table.codeUnitAt(b - 128)),
+    );
+  }
   if (encoding == 'iso-8859-1') return latin1.decode(bytes);
   if (encoding == 'us-ascii') return ascii.decode(content);
   if (encoding != null &&
@@ -155,32 +175,29 @@ void _validateNamespaces(XmlElement node) {
   }
 }
 
-String _entities(String source) => source.replaceAllMapped(
-  RegExp(r'&([^;\s<&]*);?'),
-  (m) {
-    if (!m[0]!.endsWith(';') || m[1]!.isEmpty) {
-      throw const FormatException('XML: malformed entity');
-    }
-    final s = m[1]!;
-    const known = {'amp': '&', 'lt': '<', 'gt': '>', 'quot': '"', 'apos': "'"};
-    if (known.containsKey(s)) return known[s]!;
-    if (s.startsWith('#')) {
-      final n = s.startsWith('#x')
-          ? int.tryParse(s.substring(2), radix: 16)
-          : int.tryParse(s.substring(1));
-      if (n == null ||
-          !_xmlChar(n) ||
-          !RegExp(r'^#(?:[0-9]+|x[0-9a-fA-F]+)$').hasMatch(s)) {
-        throw const FormatException('XML: invalid character reference');
+String _entities(String source) =>
+    source.replaceAllMapped(RegExp(r'&([^;\s<&]*);?'), (m) {
+      if (!m[0]!.endsWith(';') || m[1]!.isEmpty) {
+        throw const FormatException('XML: malformed entity');
       }
-      return String.fromCharCode(n);
-    }
-    if (_name.firstMatch(s)?[0] != s) {
-      throw const FormatException('XML: invalid entity name');
-    }
-    return m[0]!;
-  },
-);
+      final s = m[1]!;
+      if (htmlEntities.containsKey(s)) return htmlEntities[s]!;
+      if (s.startsWith('#')) {
+        final n = s.startsWith('#x')
+            ? int.tryParse(s.substring(2), radix: 16)
+            : int.tryParse(s.substring(1));
+        if (n == null ||
+            !_xmlChar(n) ||
+            !RegExp(r'^#(?:[0-9]+|x[0-9a-fA-F]+)$').hasMatch(s)) {
+          throw const FormatException('XML: invalid character reference');
+        }
+        return String.fromCharCode(n);
+      }
+      if (_name.firstMatch(s)?[0] != s) {
+        throw const FormatException('XML: invalid entity name');
+      }
+      return m[0]!;
+    });
 
 bool _xmlChar(int c) =>
     c == 9 ||
