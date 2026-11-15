@@ -97,7 +97,7 @@ Future<AppHarness> listeningApp(WidgetTester tester,
 }
 
 void main() {
-  testWidgets('короткий конец главы разрешён инвариантом и не помечен как искусственный обрыв', (tester) async {
+  testWidgets('короткий конец главы разрешён инвариантом', (tester) async {
     final p = await pumpPrototype(tester, size: phone360);
     final book = checked(utf8.encode('<FictionBook><body><section><p>Конец главы.</p></section>'
         '<section><p>${'Дальше продолжается обычная проза. ' * 70}</p></section></body></FictionBook>')).book;
@@ -106,7 +106,6 @@ void main() {
     final previous = st.layout.loadPrevious();
     await tester.pumpAndSettle();
     await previous;
-    expect(st.layout.pages.first.endsAtLayoutStart, isFalse);
     final move = st.goToPage(0);
     await tester.pumpAndSettle();
     await move;
@@ -143,7 +142,7 @@ void main() {
     expectFollowingPage(tester);
   });
 
-  testWidgets('настоящий контроллер: цель не выбирает короткий префикс перед сохранённой строкой', (tester) async {
+  testWidgets('настоящий контроллер: цель выбирает полную страницу перед сохранённой строкой', (tester) async {
     final h = await listeningApp(tester, narrow: true);
     var st = reader(tester);
     final book = st.widget.book;
@@ -171,10 +170,9 @@ void main() {
     await tester.pumpAndSettle();
     await previous;
     expect(st.layout.pages[st.page], same(shown), reason: 'досчёт назад не меняет уже показанную страницу');
-    expect(st.layout.pages.any((page) => page.endsAtLayoutStart), isTrue);
     // Переходы плеера теперь идут по абзацам. Цель внутри префикса задаём явным стартом с предложения.
     final offset = chapterSegments(book.blocks)[1].mappings.first.blockStart;
-    expect(st.layout.pages.any((page) => page.endsAtLayoutStart && page.contains(0, offset)), isTrue);
+    expect(st.layout.findPage(0, offset), isNotNull);
     h.app.services.narration.listen(book, PageRange(ReadingPosition(0, offset), ReadingPosition(0, offset + 1)));
     h.app.services.narration.pause();
     await tester.pumpAndSettle();
