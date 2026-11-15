@@ -8,8 +8,10 @@ import '../audio/audio_store.dart';
 import '../library/file_library.dart';
 import '../library/incoming_files.dart';
 import '../library/library.dart';
+import '../library/secret_store.dart';
 import '../library/settings.dart';
 import '../platform/platform.dart';
+import '../platform/secret_store.dart';
 import '../playback/chapter_download.dart';
 import '../playback/fake_narration.dart';
 import '../playback/tariffs.dart';
@@ -44,8 +46,13 @@ class NativeApplication extends AppAssembly {
     LibraryParser? parser,
     DateTime Function()? clock,
     LibraryTimer? timer,
+    SecretStore? secretStore,
   }) async {
-    final settings = AppSettings(voice: defaultVoiceName, modelId: TtsModel.flash.id);
+    final settings = AppSettings(
+      voice: defaultVoiceName,
+      modelId: TtsModel.flash.id,
+      secretStore: secretStore ?? AndroidSecretStore(),
+    );
     final library = FileLibrary(
       root ?? await getApplicationSupportDirectory(),
       settings: settings,

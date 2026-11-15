@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
 import '../book/model.dart';
+import 'usage.dart';
+
+export 'usage.dart';
 
 /// Позиция чтения (А§5): блок, смещение в нём, число знаков до блока.
 @immutable
@@ -105,6 +108,21 @@ class AddJob {
 
 /// Полка и хранение книг (А§2, `library`). Единственный писатель позиции и настроек книги.
 abstract class Library extends ChangeNotifier {
+  /// Снимок расхода: местное начало месяца → идентификатор модели → токены.
+  /// Неизменяемый; в файловой библиотеке доступен после ready.
+  Map<DateTime, Map<String, UsageTokens>> get usage => const {};
+
+  /// Один оплаченный ответ, в том числе ошибка с usage. Уникальность ответа
+  /// обеспечивает очередь. Future завершается после атомарной записи на диск.
+  /// [at] — момент ответа, без него используются подставляемые часы библиотеки.
+  Future<void> recordUsage({
+    required String modelId,
+    required int audioTokens,
+    required int inputTokens,
+    DateTime? at,
+  }) async =>
+      throw UnsupportedError('Запись расхода в этой библиотеке не реализована');
+
   /// Возвращает готовую или уже имеющуюся книгу; при отказе — null и строку в [addJobs].
   /// Вызывающий сохраняет файл по [path] до завершения Future, затем удаляет свою копию.
   Future<ShelfEntry?> addFile(String path, String fileName) async =>

@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'secret_store.dart';
+
 /// Тема: «как в системе» по умолчанию (FR-R6).
 enum ThemeChoice { system, light, sepia, dark }
 
@@ -22,7 +24,16 @@ const speeds = <double>[0.75, 1, 1.25, 1.5, 1.75, 2];
 ///
 /// Голос и модель хранятся строками: `library` не знает модуля `tts` (А§2). Умолчания передаёт `app`.
 class AppSettings extends ChangeNotifier {
-  AppSettings({required this._voice, required this._modelId, this._apiKey});
+  AppSettings({
+    required this._voice,
+    required this._modelId,
+    this._apiKey,
+    this._secretStore,
+  });
+
+  final SecretStore? _secretStore;
+  Future<void> _secretWriter = Future.value();
+  bool _secretWriteFailed = false;
 
   ThemeChoice _theme = ThemeChoice.system;
   int _fontStep = defaultFontStep;
@@ -41,7 +52,7 @@ class AppSettings extends ChangeNotifier {
   /// Язык интерфейса: код языка или `null` — «Как в системе» (язык телефона; не из поддерживаемых — английский).
   String? get language => _language;
 
-  /// Ключ сюда не попадает: его хранение — отдельная задача платформы.
+  /// Ключ сюда не попадает: его хранит отдельное защищённое хранилище.
   Map<String, Object?> toJson() => {
     'theme': theme.name,
     'fontStep': fontStep,
@@ -64,6 +75,7 @@ class AppSettings extends ChangeNotifier {
   /// Ключ в настоящем приложении лежит в защищённом хранилище; экрану нужен только хвост — не больше четырёх
   /// последних знаков, у короткого ключа — сколько есть.
   bool get hasApiKey => _apiKey != null && _apiKey!.isNotEmpty;
+  String? get apiKey => _apiKey;
   String get apiKeyTail {
     final key = _apiKey;
     if (key == null || key.isEmpty) return '';
@@ -77,8 +89,45 @@ class AppSettings extends ChangeNotifier {
   set speed(double v) => _set(() => _speed = v);
   set voice(String v) => _set(() => _voice = v);
   set modelId(String v) => _set(() => _modelId = v);
-  set apiKey(String? v) =>
-      _set(() => _apiKey = (v == null || v.trim().isEmpty) ? null : v.trim());
+  set apiKey(String? v) {
+    final value = v?.trim();
+    _apiKey = value == null || value.isEmpty ? null : value;
+    final store = _secretStore;
+    if (store != null && value != null && value.isNotEmpty) {
+      // Значение захватывается при изменении; быстрые правки пишутся по порядку.
+      _secretWriter = _secretWriter.then((_) async {
+        try {
+          await store.write(value);
+        } catch (_) {
+          // Ни исходная ошибка, ни её стек не должны вынести ключ в диагностику.
+          _secretWriteFailed = true;
+        }
+      });
+    }
+    notifyListeners();
+  }
+
+  /// Вызывается библиотекой до готовности приложения. Сбой чтения после
+  /// восстановления данных оставляет пустое поле для повторного ввода ключа.
+  Future<void> loadApiKey() async {
+    final store = _secretStore;
+    if (store == null) return;
+    try {
+      final value = (await store.read())?.trim();
+      _apiKey = value == null || value.isEmpty ? null : value;
+    } catch (_) {
+      _apiKey = null;
+    }
+  }
+
+  /// Дожидается записи ключа. Также вызывается FileLibrary.flush().
+  Future<void> flushApiKey() async {
+    await _secretWriter;
+    if (_secretWriteFailed) {
+      _secretWriteFailed = false;
+      throw const SecretStoreException();
+    }
+  }
 
   void _set(void Function() f) {
     f();
