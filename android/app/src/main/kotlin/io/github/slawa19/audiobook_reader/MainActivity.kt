@@ -7,10 +7,12 @@ import io.flutter.embedding.engine.FlutterEngine
 
 class MainActivity : FlutterActivity() {
     private lateinit var incomingFiles: IncomingFilesChannel
+    private lateinit var audioEncoder: AudioEncoderChannel
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         incomingFiles = IncomingFilesChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+        audioEncoder = AudioEncoderChannel(flutterEngine.dartExecutor.binaryMessenger)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,6 +34,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onDestroy() {
         incomingFiles.close()
+        audioEncoder.close()
         super.onDestroy()
     }
 }
