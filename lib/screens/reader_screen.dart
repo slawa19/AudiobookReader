@@ -275,7 +275,12 @@ class ReaderScreenState extends State<ReaderScreen> {
     _pendingGoal = null;
     if (pending == null) return;
     pending.removeListener(_onPendingLayout);
-    if (!identical(pending, _layout)) pending.dispose();
+    if (identical(pending, _layout)) {
+      // Поиск мог временно забрать слушателя у показанной раскладки. Любая отмена возвращает его.
+      pending.addListener(_onLayout);
+    } else {
+      pending.dispose();
+    }
   }
 
   void _cancelPageRequest() {
@@ -419,11 +424,7 @@ class ReaderScreenState extends State<ReaderScreen> {
   }
 
   void _goToCalculatedPage(int target, {required bool user}) {
-    final pending = _pendingLayout;
-    if (pending != null) {
-      _cancelPending();
-      if (identical(pending, _layout)) layout.addListener(_onLayout);
-    }
+    _cancelPending();
     layout.resume();
     // Новая команда может прийти до кадра, который подключит заменённый PageController.
     // Готовая страница показывается сразу, а не теряется вместе с отменённым ожиданием.
@@ -494,6 +495,15 @@ class ReaderScreenState extends State<ReaderScreen> {
     if (_pendingLayout != null) return;
     final pc = _pc;
     if (pc == null || !pc.hasClients) return;
+    if (_grabbedAuto) {
+      // Касание остановило автоматический переворот: это выбор читателя и на краю книги,
+      // где встречный переворот остаётся на той же странице.
+      _grabbedAuto = false;
+      _navOp++;
+      _programmatic = false;
+      _animatingTo = null;
+      setState(_userMoved);
+    }
     final pending = _flipTarget;
     final base = layout.isComplete ? math.min(pending ?? _page, layout.pages.length - 1) : pending ?? _page;
     final requested = layout.hasPrevious ? base + delta : math.max(0, base + delta);
@@ -534,7 +544,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     _waitingDone = null;
     target = target.clamp(0, layout.pages.length - 1);
     // Уже листаем туда же автоматически — не перезапускать анимацию (озвучка зовёт сюда на каждом шаге).
-    if (target == _page || (!user && target == _animatingTo)) return;
+    if (target == _page || (!user && _programmatic && target == _animatingTo)) return;
     final op = ++_navOp;
     _programmatic = !user;
     final beyondExtent = target * pc.position.viewportDimension > pc.position.maxScrollExtent + 0.1;
