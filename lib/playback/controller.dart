@@ -16,6 +16,9 @@ import 'player.dart';
 import 'synthesis_queue.dart';
 import 'voice_sample.dart';
 
+/// Первые три секунды блока считаются его началом при команде «назад».
+const blockStartWindow = Duration(seconds: 3);
+
 class _Segment {
   _Segment(this.speech, this.chapter);
   final SpeechSegment speech;
@@ -373,31 +376,23 @@ class FileNarrationController extends NarrationController {
 
   void _step(bool forward) {
     final book = _book;
-    if (book == null || !isActive || _start == null) return;
-    var chapter = book.chapterOf(_start!.block);
-    List<SpeechSegment> inChapter(int c) {
-      final ch = book.chapters[c];
-      return chapterSegments(book.blocks.sublist(ch.firstBlock, ch.endBlock));
+    if (book == null || !isActive || _position == null) return;
+    _updatePosition();
+    final current = _position!.block;
+    // Это оценка места, а не время текущего файла: один абзац может занимать несколько файлов.
+    final seconds = _position!.offset * secondsPerChar / speed;
+    final atStart = _state == NarrationState.paused || !_heard ||
+        seconds < blockStartWindow.inMilliseconds / 1000;
+    var target = forward ? current + 1 : atStart ? current - 1 : current;
+    while (target >= 0 && target < book.blocks.length) {
+      // Те же правила пригодности текста, что у синтеза, включая сноски и блоки из одних знаков.
+      if (chapterSegments([book.blocks[target]]).isNotEmpty) break;
+      target += forward ? 1 : -1;
     }
-
-    var all = inChapter(chapter);
-    var current = all.indexWhere(
-      (s) => s.mappings.any(
-        (m) =>
-            m.block == _start!.block &&
-            m.blockStart <= _start!.offset &&
-            m.blockEnd > _start!.offset,
-      ),
-    );
-    current += forward ? 1 : -1;
-    while (current < 0 || current >= all.length) {
-      chapter += forward ? 1 : -1;
-      if (chapter < 0 || chapter >= book.chapters.length) return;
-      all = inChapter(chapter);
-      current = forward ? 0 : all.length - 1;
-    }
+    if (target < 0 || target >= book.blocks.length) return;
     _command();
-    _begin(book, _first(all[current]), _intent);
+    // Каноническое начало/части берутся из кэша; segmentsFrom нужен только для хвоста группы.
+    _begin(book, ReadingPosition(target, 0), _intent);
   }
 
   @override

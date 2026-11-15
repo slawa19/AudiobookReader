@@ -140,8 +140,8 @@ void main() {
     await tapCenter(tester);
     await advance(tester, const Duration(milliseconds: 400));
     final chapter = tester.widget<Text>(find.byKey(const Key('top-bar-chapter')));
-    expect(chapter.maxLines, isNull);
-    expect(chapter.overflow, isNot(TextOverflow.ellipsis));
+    expect(chapter.maxLines, 2);
+    expect(chapter.overflow, TextOverflow.ellipsis);
     expect(find.descendant(of: find.byKey(const Key('player-panel')), matching: find.text(chapter.data!)), findsNothing);
   });
 

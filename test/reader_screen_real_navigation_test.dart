@@ -9,6 +9,7 @@ import 'package:audiobook_reader/playback/player.dart';
 import 'package:audiobook_reader/reader/book_page.dart';
 import 'package:audiobook_reader/reader/pagination.dart';
 import 'package:audiobook_reader/screens/reader_screen.dart';
+import 'package:audiobook_reader/tts/segments.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -39,11 +40,11 @@ class DelayedPlayer extends FakePlayer {
   }
 }
 
-// Обычная проза: 8 абзацев по 2400 знаков, начала отрезков внутри строк.
+// Обычная проза: 12 абзацев по 2400 знаков, начала отрезков внутри строк.
 List<int> navigationBook() => utf8.encode('''<?xml version="1.0" encoding="utf-8"?>
 <FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
 <description><title-info><book-title>Переходы по прозе</book-title><lang>ru</lang></title-info></description>
-<body><section>${List.generate(8, (b) => '<p>${List.generate(14, (s) => 'Утром путешественник $b осмотрел дорогу и продолжил путь. Вдали показались деревья, за которыми открывалась широкая долина. Он остановился у реки и посмотрел на другой берег.').join(' ')}</p>').join()}</section></body></FictionBook>''');
+<body><section>${List.generate(12, (b) => '<p>${List.generate(14, (s) => 'Утром путешественник $b осмотрел дорогу и продолжил путь. Вдали показались деревья, за которыми открывалась широкая долина. Он остановился у реки и посмотрел на другой берег.').join(' ')}</p>').join()}</section></body></FictionBook>''');
 
 /// Инвариант экрана для прозы: если глава ещё продолжается, следующая строка не помещается.
 /// Конец главы/книги разрешает короткую страницу; искусственное место старта — нет.
@@ -163,11 +164,13 @@ void main() {
     await previous;
     expect(st.layout.pages[st.page], same(shown), reason: 'досчёт назад не меняет уже показанную страницу');
     expect(st.layout.pages.any((page) => page.endsAtLayoutStart), isTrue);
-    for (final key in ['previous', 'next']) {
-      await tester.tap(find.byKey(Key(key)));
-      await tester.pumpAndSettle();
-      expectFollowingPage(tester);
-    }
+    // Переходы плеера теперь идут по абзацам. Цель внутри префикса задаём явным стартом с предложения.
+    final offset = chapterSegments(book.blocks)[1].mappings.first.blockStart;
+    expect(st.layout.pages.any((page) => page.endsAtLayoutStart && page.contains(0, offset)), isTrue);
+    h.app.services.narration.listen(book, PageRange(ReadingPosition(0, offset), ReadingPosition(0, offset + 1)));
+    h.app.services.narration.pause();
+    await tester.pumpAndSettle();
+    expectFollowingPage(tester);
     h.app.services.narration.resume();
     await h.until(() => h.player.playing);
     await tester.pumpAndSettle();
@@ -175,37 +178,28 @@ void main() {
   });
 
   for (final delayed in [false, true]) {
-    testWidgets('настоящий контроллер: вперёд ×10, назад ×10; задержка событий $delayed', (tester) async {
+    testWidgets('настоящий контроллер: вперёд ×10, назад ×10 по абзацам; задержка событий $delayed', (tester) async {
       final h = await listeningApp(tester, delayed: delayed);
       final n = h.app.services.narration;
-      var insideLine = false;
       for (final direction in ['next', 'previous']) {
         for (var step = 0; step < 10; step++) {
           final revision = n.commandRevision;
+          final block = n.block!;
           await tester.tap(find.byKey(Key(direction)));
           await h.until(() {
             h.playbackClock.advance(const Duration(milliseconds: 20));
             return n.state == NarrationState.playing;
           });
           for (var frame = 0; frame < 24; frame++) {
-            h.playbackClock.advance(const Duration(milliseconds: 400));
+            h.playbackClock.advance(const Duration(milliseconds: 40));
             await tester.pump(const Duration(milliseconds: 20));
           }
           await tester.pumpAndSettle();
           expect(n.commandRevision, revision + 1);
+          expect(n.unitStart, ReadingPosition(block + (direction == 'next' ? 1 : -1), 0));
           expectFollowingPage(tester);
-          final st = reader(tester);
-          final unit = n.unitStart!;
-          if (unit.offset > 0) {
-            final block = st.widget.book.blocks[unit.block];
-            final tp = piecePainter(st.pageStyle, block, 0, block.text.length, width: st.columnSize.width);
-            final shift = hasIndent(block, 0) ? 1 : 0;
-            insideLine |= tp.getLineBoundary(TextPosition(offset: unit.offset + shift)).start - shift != unit.offset;
-            tp.dispose();
-          }
         }
       }
-      expect(insideLine, isTrue, reason: 'начала отрезков действительно попадают в середину строк');
     });
   }
 
