@@ -337,6 +337,10 @@ void main() {
     h.controller.setSpeed(2);
     expect(h.engine.calls, isEmpty);
     h.clock.advance(const Duration(milliseconds: 100));
+    await ioSettled();
+    // Готовый звук за дырой тоже ограничивает покупку (А§6.3).
+    expect(h.engine.calls, isEmpty);
+    h.clock.advance(const Duration(seconds: 60));
     await h.calls(2);
     expect(h.engine.calls.map((c) => c.text), ['Второй.', 'Четвёртый.']);
     expect(h.player.items.length, 1);

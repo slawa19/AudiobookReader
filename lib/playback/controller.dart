@@ -28,6 +28,7 @@ class _Unit {
   final int segment;
   final SynthesisRequest request;
   PlayerItem? item;
+  Duration? duration;
 }
 
 /// Настоящая логика прослушивания; платформенный адаптер получает только файлы и команды.
@@ -63,7 +64,14 @@ class FileNarrationController extends NarrationController {
   SynthesisTask? _task;
   List<_Segment> _segments = [];
   List<_Unit> _units = [];
+  int _nextChapter = 0, _nextSegment = 0;
+  PlayerItem? _current;
+  final _requested = <String>{};
+  final _repaired = <String>{};
+  _Unit? _badUnit;
+  Object? _visible;
   int _session = 0, _commands = 0, _cursor = 0, _appended = 0, _segment = 0;
+  int _playerGeneration = 0;
   bool _intent = false,
       _heard = false,
       _refreshing = false,
@@ -96,6 +104,28 @@ class FileNarrationController extends NarrationController {
   @override
   int get commandRevision => _commands;
   int get session => _session;
+
+  @override
+  void notifyListeners() {
+    // Шаг — полпроцента блока или восемь знаков для длинного абзаца.
+    // Одинаковый снимок не пересобирает экран и уведомление на каждом ходе.
+    final visible = (
+      _state,
+      _reason,
+      _error,
+      bookId,
+      block,
+      (blockProgress * 200).floor(),
+      (_position?.offset ?? 0) ~/ 8,
+      _start,
+      speed,
+      _sleep,
+      _commands,
+    );
+    if (visible == _visible) return;
+    _visible = visible;
+    super.notifyListeners();
+  }
 
   VoiceProfile profileFor(Book book) => VoiceProfile(
     model: settings.modelId,
@@ -153,7 +183,7 @@ class FileNarrationController extends NarrationController {
     }
     _session++;
     _task?.dispose();
-    player.clear(_session);
+    player.clear(++_playerGeneration);
     player.setSpeed(speed);
     _book = book;
     _profile = profileFor(book);
@@ -163,48 +193,16 @@ class FileNarrationController extends NarrationController {
     _intent = intent;
     _heard = false;
     _cursor = _appended = _segment = 0;
+    _current = null;
+    _requested.clear();
+    _repaired.clear();
+    _badUnit = null;
     _segments = [];
-    final chapter = book.chapterOf(at.block);
-    for (var c = chapter; c < book.chapters.length; c++) {
-      final ch = book.chapters[c];
-      final blocks = book.blocks.sublist(ch.firstBlock, ch.endBlock);
-      final canonical = chapterSegments(blocks);
-      final exact = canonical.indexWhere((s) => _first(s) == at);
-      // Каноническая часть длинного предложения уже имеет точную границу.
-      // Повторная нормализация к началу предложения увела бы назад на другой отрезок.
-      final list = c != chapter
-          ? canonical
-          : exact >= 0
-          ? canonical.sublist(exact)
-          : segmentsFrom(blocks, block: at.block, offset: at.offset);
-      _segments.addAll(list.map((s) => _Segment(s, c)));
-    }
     _units = [];
-    for (var i = 0; i < _segments.length; i++) {
-      final ready = segmentReadiness(
-        _segments[i].speech,
-        _profile!,
-        queue.audio.formatId,
-        (key) =>
-            queue.audio.has(key, bookId: book.id) ||
-            queue.isPending(key, bookId: book.id),
-        startup: i == 0,
-      );
-      for (final u in ready.units) {
-        _units.add(
-          _Unit(
-            u.segment,
-            i,
-            queue.request(
-              u.text,
-              _profile!,
-              bookId: book.id,
-              session: _session,
-            ),
-          ),
-        );
-      }
-    }
+    _nextSegment = 0;
+    _nextChapter = book.chapterOf(at.block);
+    _loadChapter(at: at);
+    _ensureUnits();
     _start = _position = _segments.isEmpty
         ? at
         : _first(_segments.first.speech);
@@ -213,6 +211,7 @@ class FileNarrationController extends NarrationController {
     final session = _session;
     _task = queue.task(
       session: session,
+      canStart: _canStart,
       changed: () {
         if (session == _session) _refresh();
       },
@@ -222,6 +221,98 @@ class FileNarrationController extends NarrationController {
     );
     notifyListeners();
     _refresh();
+  }
+
+  bool _loadChapter({ReadingPosition? at}) {
+    final book = _book!;
+    while (_nextChapter < book.chapters.length) {
+      final c = _nextChapter++;
+      final ch = book.chapters[c];
+      final blocks = book.blocks.sublist(ch.firstBlock, ch.endBlock);
+      final canonical = chapterSegments(blocks);
+      final exact = at == null
+          ? -1
+          : canonical.indexWhere((s) => _first(s) == at);
+      // Каноническая часть длинного предложения уже имеет точную границу.
+      // Повторная нормализация к началу предложения увела бы назад на другой отрезок.
+      final list = at == null
+          ? canonical
+          : exact >= 0
+          ? canonical.sublist(exact)
+          : segmentsFrom(blocks, block: at.block, offset: at.offset);
+      _segments.addAll(list.map((s) => _Segment(s, c)));
+      if (list.isNotEmpty) return true;
+      at = null;
+    }
+    return false;
+  }
+
+  double get _target {
+    var seconds = reserveTarget.inSeconds.toDouble();
+    if (_sleep?.kind == SleepKind.minutes) {
+      seconds = math.min(
+        seconds,
+        _sleep!.remaining(now()).inMicroseconds / 1000000,
+      );
+    }
+    return seconds;
+  }
+
+  double _seconds(_Unit u) =>
+      (u.duration?.inMicroseconds.toDouble() ??
+          u.speech.text.length * secondsPerChar * 1000000) /
+      1000000 /
+      speed;
+
+  double get _elapsed =>
+      _current == null ? 0 : player.position.inMicroseconds / 1000000 / speed;
+
+  // Готовность и отпечатки проверяем только для окна запаса, главы делим по надобности.
+  void _ensureUnits() {
+    var ahead = -_elapsed;
+    for (var i = _cursor; i < _units.length; i++) {
+      ahead += _seconds(_units[i]);
+    }
+    while (ahead < _target || _units.length <= _cursor) {
+      if (_nextSegment >= _segments.length && !_loadChapter()) break;
+      final i = _nextSegment++;
+      final ready = segmentReadiness(
+        _segments[i].speech,
+        _profile!,
+        queue.audio.formatId,
+        (key) =>
+            queue.audio.has(key, bookId: bookId) ||
+            queue.isPending(key, bookId: bookId),
+        startup: i == 0,
+      );
+      for (final u in ready.units) {
+        _units.add(
+          _Unit(
+            u.segment,
+            i,
+            queue.request(u.text, _profile!, bookId: bookId, session: _session),
+          ),
+        );
+        ahead += _seconds(_units.last);
+      }
+    }
+  }
+
+  bool _canStart(SynthesisRequest request) {
+    if (!_intent || _failure != null || !isActive) return false;
+    if (_requested.contains(request.fingerprint)) return true;
+    var bought = -_elapsed;
+    for (var i = _cursor; i < _boundary; i++) {
+      final u = _units[i];
+      if (_requested.contains(u.request.fingerprint) ||
+          queue.audio.has(u.request.fingerprint, bookId: bookId) ||
+          queue.isPending(u.request.fingerprint, bookId: bookId)) {
+        bought += _seconds(u);
+      }
+    }
+    if (bought >= _target) return false;
+    _requested.add(request.fingerprint);
+    return true;
   }
 
   @override
@@ -238,11 +329,11 @@ class FileNarrationController extends NarrationController {
       return;
     }
     _intent = true;
-    _state = player.current == null
+    _state = _current == null
         ? NarrationState.preparing
         : NarrationState.playing;
     notifyListeners();
-    if (player.current != null) player.play();
+    if (_cursor < _appended) player.play();
     _refresh();
   }
 
@@ -258,7 +349,7 @@ class FileNarrationController extends NarrationController {
       active: false,
     );
     _save();
-    unawaited(library.flush());
+    _flush();
     notifyListeners();
   }
 
@@ -283,10 +374,13 @@ class FileNarrationController extends NarrationController {
   void _step(bool forward) {
     final book = _book;
     if (book == null || !isActive || _start == null) return;
-    final all = <SpeechSegment>[
-      for (final ch in book.chapters)
-        ...chapterSegments(book.blocks.sublist(ch.firstBlock, ch.endBlock)),
-    ];
+    var chapter = book.chapterOf(_start!.block);
+    List<SpeechSegment> inChapter(int c) {
+      final ch = book.chapters[c];
+      return chapterSegments(book.blocks.sublist(ch.firstBlock, ch.endBlock));
+    }
+
+    var all = inChapter(chapter);
     var current = all.indexWhere(
       (s) => s.mappings.any(
         (m) =>
@@ -296,7 +390,12 @@ class FileNarrationController extends NarrationController {
       ),
     );
     current += forward ? 1 : -1;
-    if (current < 0 || current >= all.length) return;
+    while (current < 0 || current >= all.length) {
+      chapter += forward ? 1 : -1;
+      if (chapter < 0 || chapter >= book.chapters.length) return;
+      all = inChapter(chapter);
+      current = forward ? 0 : all.length - 1;
+    }
     _command();
     _begin(book, _first(all[current]), _intent);
   }
@@ -340,54 +439,47 @@ class FileNarrationController extends NarrationController {
       while (_again && !_disposed && isActive) {
         _again = false;
         final session = _session;
-        final boundary = _boundary;
-        // Только непрерывный префикс попадает в список, в том числе при паузе.
-        while (_appended < boundary) {
-          final u = _units[_appended];
+        _ensureUnits();
+        var ahead = -_elapsed;
+        // Пробуем только окно запаса. Файлы за дырой учитываются в покупке,
+        // но в плеер попадает лишь непрерывный префикс.
+        for (var i = _cursor; i < _boundary && ahead < _target; i++) {
+          final u = _units[i];
           final file = queue.audio.file(u.request.fingerprint, bookId: bookId);
-          if (file == null) break;
-          Duration length;
-          try {
-            length = await player.duration(file);
-          } catch (_) {
-            if (!_disposed && session == _session && isActive) {
-              _failure = const TtsError('Не удалось прочитать звуковой файл');
-              _stopError();
+          if (file != null && u.duration == null) {
+            try {
+              u.duration = await player.duration(file);
+              if (u.duration! <= Duration.zero) throw const FormatException();
+            } catch (e) {
+              if (!_disposed && session == _session && isActive) {
+                _repairFile(u, '${e.runtimeType}');
+              }
             }
-            break;
           }
           if (_disposed || session != _session || !isActive) break;
-          if (_appended >= _boundary) break;
-          final item = PlayerItem(
-            file: file,
-            segment: u.segment,
-            duration: length,
-          );
-          u.item = item;
-          _appended++;
-          player.append(item);
+          if (i >= _boundary) break;
+          if (i == _appended &&
+              u.duration != null &&
+              queue.audio.has(u.request.fingerprint, bookId: bookId)) {
+            final item = PlayerItem(
+              file: file!,
+              segment: u.segment,
+              duration: u.duration!,
+            );
+            u.item = item;
+            _appended++;
+            player.append(item);
+            // Первый звук не ждёт проб оставшихся файлов.
+            if (_intent) {
+              player.play();
+            }
+          }
+          ahead += _seconds(u);
         }
         if (_disposed || session != _session || !isActive) continue;
-        if (_intent && player.current != null) {
-          _state = NarrationState.playing;
+        if (_intent && _cursor < _appended) {
+          if (_current != null) _state = NarrationState.playing;
           player.play();
-        }
-        var reserve = 0.0;
-        for (var i = _cursor; i < _appended; i++) {
-          reserve +=
-              (_units[i].item!.duration.inMicroseconds -
-                  (identical(player.current, _units[i].item)
-                      ? player.position.inMicroseconds
-                      : 0)) /
-              1000000 /
-              speed;
-        }
-        var target = reserveTarget.inSeconds.toDouble();
-        if (_sleep?.kind == SleepKind.minutes) {
-          target = math.min(
-            target,
-            _sleep!.remaining(now()).inMicroseconds / 1000000,
-          );
         }
         final requests = _units
             .skip(_cursor)
@@ -395,11 +487,8 @@ class FileNarrationController extends NarrationController {
             .map((u) => u.request)
             .toList();
         // Пауза сохраняет интерес к уже идущему ответу и его постоянной ошибке.
-        _task?.update(
-          requests,
-          active: _intent && _failure == null && reserve < target,
-        );
-        if (player.current == null) _exhausted();
+        _task?.update(requests, active: _intent && _failure == null);
+        if (_cursor >= _appended) _exhausted();
         if (!_disposed) notifyListeners();
       }
     } finally {
@@ -408,26 +497,46 @@ class FileNarrationController extends NarrationController {
   }
 
   void _event(PlayerEvent event) {
-    if (_disposed || event.generation != _session || !isActive) return;
+    if (_disposed || event.generation != _playerGeneration || !isActive) return;
     switch (event.kind) {
+      case PlayerEventKind.failed:
+        final index = _units.indexWhere((u) => identical(u.item, event.item));
+        if (index < _cursor) return;
+        _cursor = index;
+        _current = null;
+        // Список заменяется, сеанс синтеза остаётся. Старый drained не вправе
+        // завершить уже восстановленный список.
+        player.clear(++_playerGeneration);
+        _appended = index;
+        for (final u in _units.skip(index)) {
+          u.item = null;
+        }
+        _repairFile(_units[index], 'PlayerError');
+        _refresh();
       case PlayerEventKind.interrupted:
         pause();
       case PlayerEventKind.started:
         final index = _units.indexWhere((u) => identical(u.item, event.item));
         if (index < 0) return;
         _cursor = index;
+        _current = event.item;
+        if (_intent) _state = NarrationState.playing;
         _segment = _units[index].segment;
         _heard = true;
         _start = _first(_segments[_segment].speech);
+        final oldBlock = block;
         _updatePosition();
-        _save(listening: true);
+        if (oldBlock != block) _save();
+        library.saveListeningPosition(bookId!, _start!);
         notifyListeners();
       case PlayerEventKind.progress:
+        final oldBlock = block;
         _updatePosition();
-        _save();
+        if (oldBlock != block) _save();
         notifyListeners();
         _refresh();
       case PlayerEventKind.drained:
+        _current = null;
         _cursor = _appended;
         _exhausted();
         _refresh();
@@ -435,11 +544,11 @@ class FileNarrationController extends NarrationController {
   }
 
   void _updatePosition() {
-    if (_cursor >= _units.length || player.current == null) return;
+    if (_cursor >= _units.length || _current == null) return;
     final u = _units[_cursor];
     final fraction =
         player.position.inMicroseconds /
-        math.max(1, player.current!.duration.inMicroseconds);
+        math.max(1, _current!.duration.inMicroseconds);
     final offset = (fraction * u.speech.text.length).floor().clamp(
       0,
       u.speech.text.length - 1,
@@ -465,6 +574,35 @@ class FileNarrationController extends NarrationController {
     }
   }
 
+  void _flush() {
+    unawaited(
+      library.flush().catchError((Object error) {
+        library.recordFileFailure('state.json / settings.json', error);
+      }),
+    );
+  }
+
+  void _repairFile(_Unit u, String type) {
+    final file = queue.audio.file(u.request.fingerprint, bookId: bookId);
+    u.duration = null;
+    u.item = null;
+    try {
+      if (file != null) file.deleteSync();
+    } catch (e) {
+      _badUnit = u;
+      _failure = TtsError('${e.runtimeType}: audio file removal failed');
+    }
+    if (!_repaired.add(u.request.fingerprint)) {
+      _badUnit = u;
+      _failure = TtsError('$type: audio file unreadable');
+    } else {
+      // Замена уже оплаченного файла сохраняет его место в резерве, как повтор
+      // временной ошибки; дальний готовый звук не должен запирать эту дыру.
+      _requested.add(u.request.fingerprint);
+    }
+    if (_failure != null && !_intent) _stopError();
+  }
+
   void _fatal(TtsError error) {
     _failure = error;
     if (_state == NarrationState.paused) {
@@ -477,10 +615,14 @@ class FileNarrationController extends NarrationController {
   void _stopError() {
     final e = _failure!;
     // Первое ещё не опубликованное место, а не место последнего готового дальнего файла.
-    final missing = _units
-        .skip(_cursor)
-        .where((u) => !queue.audio.has(u.request.fingerprint, bookId: bookId))
-        .firstOrNull;
+    final missing =
+        _badUnit ??
+        _units
+            .skip(_cursor)
+            .where(
+              (u) => !queue.audio.has(u.request.fingerprint, bookId: bookId),
+            )
+            .firstOrNull;
     if (missing != null) _start = _position = _first(missing.speech);
     _error = NarrationError(
       switch (e.reason) {
@@ -502,26 +644,36 @@ class FileNarrationController extends NarrationController {
     _state = NarrationState.stopped;
     _reason = reason;
     _save(listening: true);
-    unawaited(library.flush());
+    _flush();
     notifyListeners();
   }
 
   void _exhausted() {
-    if (!_intent || player.current != null) return;
+    if (!_intent || _cursor < _appended) return;
     if (_failure != null) {
       _stopError();
       return;
     }
-    if (_cursor >= _units.length) {
-      if (_sleep?.kind == SleepKind.endOfChapter) setSleepTimer(null);
+    // Конец материализованного окна ещё не означает конец главы или книги.
+    // Сначала открываем следующие отрезки, затем проверяем настоящую границу.
+    if (_cursor >= _units.length) _ensureUnits();
+    final more =
+        _nextSegment < _segments.length ||
+        _nextChapter < _book!.chapters.length;
+    if (_cursor >= _units.length && !more) {
+      if (_sleep?.kind == SleepKind.endOfChapter) {
+        _sleepAlarm?.cancel();
+        _sleep = null;
+      }
       library.setFinished(bookId!, true);
       _stop(StopReason.endOfBook);
     } else if (_cursor >= _boundary && _sleep?.kind == SleepKind.endOfChapter) {
-      final at = _first(_segments[_units[_cursor].segment].speech);
-      setSleepTimer(null);
+      final at = _first(_units[_cursor].speech);
+      _sleepAlarm?.cancel();
+      _sleep = null;
       _begin(_book!, at, false);
-    } else if (_heard) {
-      _state = NarrationState.waiting;
+    } else {
+      _state = _heard ? NarrationState.waiting : NarrationState.preparing;
     }
   }
 
@@ -565,11 +717,12 @@ class FileNarrationController extends NarrationController {
   void close({ReadingPosition? screenPosition}) {
     final book = _book;
     _updatePosition();
-    final position = screenPosition ?? _position;
+    final position = screenPosition ?? (isActive ? _position : null);
     _session++;
     _task?.dispose();
     _task = null;
-    player.clear(_session);
+    player.clear(++_playerGeneration);
+    _current = null;
     _sleepAlarm?.cancel();
     _sleep = null;
     _intent = false;
@@ -581,7 +734,7 @@ class FileNarrationController extends NarrationController {
     if (book != null && position != null) {
       library.savePosition(book.id, position);
     }
-    unawaited(library.flush());
+    _flush();
     notifyListeners();
   }
 
@@ -604,9 +757,17 @@ class FileNarrationController extends NarrationController {
 
   @override
   void deleteBook(String bookId) {
+    final title = library.entry(bookId).title;
     deleteBookNarration(bookId);
     queue.invalidateBook(bookId, deleted: true);
-    unawaited(library.deleteBook(bookId));
+    unawaited(
+      library.deleteBook(bookId).catchError((Object error) {
+        if (library.shelf.any((book) => book.id == bookId)) {
+          queue.restoreBook(bookId);
+        }
+        library.recordFileFailure(title, error);
+      }),
+    );
   }
 
   @override
@@ -615,7 +776,7 @@ class FileNarrationController extends NarrationController {
     _session++;
     _task?.dispose();
     _sleepAlarm?.cancel();
-    player.clear(_session);
+    player.clear(++_playerGeneration);
     unawaited(_subscription.cancel());
     super.dispose();
   }
