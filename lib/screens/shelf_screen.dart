@@ -39,7 +39,6 @@ class _ShelfScreenState extends State<ShelfScreen> {
         ];
         final jobs = library.addJobs;
         final empty = books.isEmpty && jobs.isEmpty;
-        final bottomInset = MediaQuery.paddingOf(context).bottom;
         return Scaffold(
           floatingActionButton: empty
               ? null
@@ -48,7 +47,12 @@ class _ShelfScreenState extends State<ShelfScreen> {
                   onPressed: () => services.addBook(context),
                   child: const Icon(Icons.add_rounded, size: 28),
                 ),
-          body: CustomScrollView(
+          // Список не просвечивает через системную панель. Хвост прокрутки
+          // поднимает последнюю строку целиком над кнопкой добавления.
+          body: SafeArea(
+            top: false,
+            bottom: !empty,
+            child: CustomScrollView(
             slivers: [
               SliverToBoxAdapter(
                 child: SafeArea(
@@ -94,9 +98,10 @@ class _ShelfScreenState extends State<ShelfScreen> {
                     return _BookRow(entry: e, onOpen: () => _open(e), onMenu: () => _menu(e));
                   },
                 ),
-                SliverToBoxAdapter(child: SizedBox(height: 96 + bottomInset)),
+                const SliverToBoxAdapter(child: SizedBox(height: 56 + 16 + 24)),
               ],
             ],
+            ),
           ),
         );
       },
@@ -107,12 +112,21 @@ class _ShelfScreenState extends State<ShelfScreen> {
     if (_opening) return;
     _opening = true;
     try {
+      final openBook = services.openBook;
+      if (openBook != null) {
+        await openBook(e);
+        return;
+      }
       final book = await library.loadBook(e.id);
       library.markOpened(e.id);
       if (!mounted) return;
       await Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => ReaderScreen(services: services, book: book),
       ));
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      }
     } finally {
       _opening = false;
     }

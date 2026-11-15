@@ -108,6 +108,18 @@ class FileLibrary extends Library {
 
   @override
   List<AddJob> get addJobs => List.unmodifiable(_jobs);
+
+  /// Отказ до разбора: например, Android не смог скопировать выбранный файл.
+  void recordFileFailure(String fileName, Object error) {
+    _jobs.insert(0, AddJob(
+      fileName: fileName,
+      status: AddJobStatus.failed,
+      failure: AddFailure.unreadable,
+      technical: error.toString(),
+    ));
+    notifyListeners();
+  }
+
   @override
   ShelfEntry entry(String bookId) => _stored[bookId]!.entry;
 

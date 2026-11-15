@@ -25,6 +25,8 @@ class AppServices {
     required this.spentByMonth,
     required this.themePreviews,
     this.openDemoStates,
+    this.onFlush,
+    this.openBook,
   });
 
   /// Цвета тем для превью в «Виде текста»: палитры живут в `app`.
@@ -50,4 +52,11 @@ class AppServices {
 
   /// Только прототип: панель «Состояния для показа». В настоящем приложении — `null`.
   final void Function(BuildContext context)? openDemoStates;
+
+  /// Корень настоящего приложения также показывает ошибки записи.
+  final Future<void> Function()? onFlush;
+  Future<void> flush() => onFlush?.call() ?? library.flush();
+
+  /// Настоящее приложение согласует открытие с полки и из входящего файла.
+  final Future<void> Function(ShelfEntry entry)? openBook;
 }

@@ -124,6 +124,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     s.library.removeListener(_rebuild);
     // Закрытие книги завершает прослушивание (А§6.6); позицию к этому моменту уже пишет контроллер.
     if (narration.bookId == book.id && narration.state != NarrationState.idle) narration.close();
+    unawaited(s.flush());
     setImmersive(false);
     _flipTimer?.cancel();
     _guardTimer?.cancel();
