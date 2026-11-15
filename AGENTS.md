@@ -84,6 +84,9 @@ wsl.exe -d Debian --cd "D:\Work\Projects\AudiobookReader" -- bash scripts/build-
 - WSL работает под root: Flutter из архива требует `safe.directory` в глобальном git WSL — `setup-wsl.sh` ставит
   его сам.
 - `adb` для телефона — в Windows: `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe` (поставлен 2026-11-15).
+  Телефон пропал из `adb devices`, хотя виден Windows как накопитель, — на нём выключилась «Отладка по USB»: её
+  выключает «Автоблокировка» Samsung (Безопасность и конфиденциальность); владелец отключил её 2026-11-15. Телефон
+  засыпает и блокируется — снимок экрана тогда чёрный; разблокирует только владелец.
 - CI — `.github/workflows/ci.yml`: те же скрипты на чистом Ubuntu, APK отладочным ключом.
 
 Shell определяется первой командой (`uname`): Git Bash — `MINGW64_NT`, WSL — `Linux …WSL2`. Внутри WSL `wsl.exe`
