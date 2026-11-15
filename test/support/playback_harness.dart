@@ -9,6 +9,7 @@ import 'package:audiobook_reader/book/model.dart';
 import 'package:audiobook_reader/book/parse.dart';
 import 'package:audiobook_reader/library/file_library.dart';
 import 'package:audiobook_reader/library/settings.dart';
+import 'package:audiobook_reader/playback/chapter_download.dart';
 import 'package:audiobook_reader/playback/clock.dart';
 import 'package:audiobook_reader/playback/controller.dart';
 import 'package:audiobook_reader/playback/fake_player.dart';
@@ -100,6 +101,7 @@ class PlaybackHarness {
     AudioEncoder? encoder,
     FakePlayer Function(ManualPlaybackClock)? playerFactory,
     FakePlayer Function(ManualPlaybackClock)? sampleFactory,
+    ChapterDownloads Function(SynthesisQueue)? downloadsFactory,
   }) async {
     final root = await Directory.systemTemp.createTemp('playback-');
     final clock = ManualPlaybackClock();
@@ -153,6 +155,7 @@ class PlaybackHarness {
       queue: queue,
       player: player,
       sampler: sampler,
+      downloads: downloadsFactory?.call(queue),
       clock: clock,
     );
     final input = await File('${root.path}/input.json')
@@ -219,6 +222,7 @@ class PlaybackHarness {
   );
 
   Future<void> dispose() async {
+    controller.downloads?.dispose();
     controller.dispose();
     sampler.dispose();
     queue.dispose();
