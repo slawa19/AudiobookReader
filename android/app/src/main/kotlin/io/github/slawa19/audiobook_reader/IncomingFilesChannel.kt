@@ -67,7 +67,7 @@ class IncomingFilesChannel(private val context: Context, messenger: BinaryMessen
                 "application/x-fictionbook", "application/fb2+zip",
                 "application/x-fictionbook+zip", "application/fb2",
                 "application/zip", "application/x-zip-compressed",
-                "application/octet-stream", "application/xml", "text/xml"
+                "application/octet-stream", "application/xml", "text/xml", "text/plain"
             ))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }

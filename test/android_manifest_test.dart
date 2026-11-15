@@ -19,6 +19,7 @@ void main() {
     'application/x-fictionbook+zip',
     'application/fb2',
     'application/fb2+zip',
+    'text/plain',
   };
   const genericTypes = {'application/zip', 'application/x-zip-compressed', 'application/xml', 'text/xml'};
 
@@ -58,6 +59,10 @@ void main() {
     });
     expect(accepts(opaque, 'application/octet-stream'), isTrue);
     expect(accepts(opaque, 'application/x-fictionbook+xml'), isTrue);
+    expect(accepts(opaque, 'text/plain'), isTrue);
+    expect(accepts(Uri.parse('content://files/book.txt'), 'text/plain'), isTrue);
+    expect(accepts(Uri.parse('content://files/book.txt'), 'application/octet-stream'), isTrue);
+    expect(accepts(opaque, 'image/png'), isFalse);
     for (final type in genericTypes) {
       expect(accepts(opaque, type), isFalse, reason: type);
       expect(accepts(Uri.parse('content://files/book.fb2'), type), isTrue, reason: type);
@@ -107,7 +112,7 @@ void main() {
     expect(typed, isNot(contains('android:host')));
   });
 
-  test('Android: общие MIME в VIEW ограничены расширениями книг, TXT не принимается', () {
+  test('Android: общие MIME в VIEW ограничены расширениями FB2/EPUB, TXT имеет свой MIME', () {
     final generic = filters.singleWhere((filter) => filter.contains('android:pathSuffix'));
     expect(generic, contains('android.intent.action.VIEW'));
     expect(values(generic, 'name'), contains('android.intent.category.DEFAULT'));
@@ -116,9 +121,7 @@ void main() {
     expect(values(generic, 'host'), {'*'});
     expect(values(generic, 'pathSuffix'), {'.fb2', '.fb2.zip', '.epub'});
     for (final filter in filters) {
-      expect(values(filter, 'mimeType'), isNot(contains('text/plain')));
       expect(values(filter, 'mimeType').any((type) => type.contains('*')), isFalse);
-      expect(filter, isNot(contains('.txt')));
     }
   });
 
@@ -129,6 +132,25 @@ void main() {
     expect(values(send, 'mimeType').intersection(genericTypes), isEmpty);
     expect(send, isNot(contains('android:scheme')));
     expect(send, isNot(contains('android:path')));
+  });
+
+  test('Android: выбор файла включает TXT и octet-stream; SEND не читает EXTRA_TEXT', () {
+    final channel = File(
+      'android/app/src/main/kotlin/io/github/slawa19/audiobook_reader/IncomingFilesChannel.kt',
+    ).readAsStringSync();
+    final types = RegExp(r'putExtra\(Intent.EXTRA_MIME_TYPES, arrayOf\(([\s\S]*?)\)\)')
+        .firstMatch(channel)!
+        .group(1)!;
+    expect(RegExp(r'"([^"]+)"').allMatches(types).map((m) => m.group(1)).toSet(), {
+      ...bookTypes,
+      ...genericTypes,
+      'application/octet-stream',
+    });
+    expect(channel, contains('Intent.ACTION_VIEW -> intent.data'));
+    expect(channel, contains('Intent.ACTION_SEND -> streamUri(intent)'));
+    expect(channel, contains('Intent.EXTRA_STREAM'));
+    expect(channel, isNot(contains('Intent.EXTRA_TEXT')));
+    expect(channel, contains('if (uri == null || uri.scheme != "content")'));
   });
 
   test('Android: входящие URI не становятся маршрутами Flutter; разрешений памяти нет', () {

@@ -44,6 +44,16 @@ const _cp1251 =
     'ЂЃ‚ѓ„…†‡€‰Љ‹ЊЌЋЏђ‘’“”•–—\u0098™љ›њќћџ'
     '\u00a0ЎўЈ¤Ґ¦§Ё©Є«¬\u00ad®Ї°±Ііґµ¶·ё№є»јЅѕї';
 
+String decodeWindows1251(List<int> bytes) => String.fromCharCodes(
+  bytes.map(
+    (b) => b < 128
+        ? b
+        : b >= 192
+        ? b + 848
+        : _cp1251.codeUnitAt(b - 128),
+  ),
+);
+
 // 0x80..0xFF; undefined byte positions retain their C1 code point.
 const _cp1250 =
     '€\u0081‚\u0083„…†‡\u0088‰Š‹ŚŤŽŹ\u0090‘’“”•–—\u0098™š›śťžź'
@@ -83,15 +93,7 @@ String decodeXml(List<int> bytes) {
     r'''^\uFEFF?\s*<\?xml\s+[^?]*encoding\s*=\s*["']([^"']+)["']''',
   ).firstMatch(head);
   final encoding = declaration?.group(1)?.toLowerCase();
-  String cp() => String.fromCharCodes(
-    content.map(
-      (b) => b < 128
-          ? b
-          : b >= 192
-          ? b + 848
-          : _cp1251.codeUnitAt(b - 128),
-    ),
-  );
+  String cp() => decodeWindows1251(content);
   if (encoding == 'windows-1251' || encoding == 'cp1251') return cp();
   if (encoding == 'windows-1250' || encoding == 'windows-1252') {
     final table = encoding == 'windows-1250' ? _cp1250 : _cp1252;
