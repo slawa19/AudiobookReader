@@ -1,0 +1,7 @@
+<package version="VERSION"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Книга EPUB</dc:title><dc:creator>Автор</dc:creator><dc:language>pl</dc:language>COVER_META</metadata><manifest>
+<item id="text" href="text.xhtml" media-type="application/xhtml+xml"/>
+<item id="nav" href="nav/NAV_HREF" media-type="NAV_TYPE" NAV_PROPERTIES/>
+<item id="second" href="second.xhtml" media-type="application/xhtml+xml"/>
+<item id="notes" href="notes.xhtml" media-type="application/xhtml+xml"/>
+<item id="cover" href="pic.png" media-type="image/png" COVER_PROPERTIES/>
+</manifest><spine toc="nav">SPINE</spine></package>

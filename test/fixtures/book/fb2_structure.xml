@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FictionBook xmlns:xlink="http://www.w3.org/1999/xlink">
+  <description><title-info><book-title>Малая книга</book-title><author><first-name>Анна</first-name><middle-name>Ивановна</middle-name><last-name>Тестова</last-name></author><lang>ru</lang><coverpage><image xlink:href="#cover"/></coverpage></title-info><annotation><p>Служебный текст.</p></annotation></description>
+  <body><p>До раздела.</p><section><title><p>Часть</p></title><epigraph><p>Эпиграф.</p><text-author>Автор.</text-author></epigraph><annotation><p>Вступление.</p></annotation>
+    <section><title><p>Первая</p></title><p>Текст.</p><poem><stanza><v>Строка один.</v><v>Строка два.</v></stanza></poem><cite><p>Цитата.</p></cite><empty-line/><image xlink:href="#pic"/><table><tr><td>А</td><td>Б</td></tr><tr><td>В</td></tr></table></section>
+    <section><title><p>Вторая</p></title><p>Конец.</p></section><p>Послесловие части.</p>
+  </section></body>
+  <binary id="cover" content-type="image/png">AQID</binary><binary id="pic" content-type="image/jpeg">BAUG</binary>
+</FictionBook>

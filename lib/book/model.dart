@@ -7,7 +7,12 @@ enum BlockKind { heading, paragraph, image, verse, cite, separator }
 enum SpanStyle { italic, bold, sup, sub, noteRef }
 
 class TextSpanRange {
-  const TextSpanRange({required this.start, required this.end, required this.style, this.noteId});
+  const TextSpanRange({
+    required this.start,
+    required this.end,
+    required this.style,
+    this.noteId,
+  });
 
   final int start;
   final int end;
@@ -16,16 +21,29 @@ class TextSpanRange {
   /// Только у [SpanStyle.noteRef].
   final String? noteId;
 
+  Map<String, Object?> toJson() => {
+    'start': start,
+    'end': end,
+    'style': style.name,
+    if (noteId != null) 'noteId': noteId,
+  };
+
   factory TextSpanRange.fromJson(Map<String, Object?> json) => TextSpanRange(
-        start: json['start']! as int,
-        end: json['end']! as int,
-        style: SpanStyle.values.byName(json['style']! as String),
-        noteId: json['noteId'] as String?,
-      );
+    start: json['start']! as int,
+    end: json['end']! as int,
+    style: SpanStyle.values.byName(json['style']! as String),
+    noteId: json['noteId'] as String?,
+  );
 }
 
 class Block {
-  const Block({required this.index, required this.kind, required this.text, this.spans = const [], this.imageId});
+  const Block({
+    required this.index,
+    required this.kind,
+    required this.text,
+    this.spans = const [],
+    this.imageId,
+  });
 
   final int index;
   final BlockKind kind;
@@ -35,40 +53,63 @@ class Block {
   final List<TextSpanRange> spans;
   final String? imageId;
 
+  Map<String, Object?> toJson() => {
+    'index': index,
+    'kind': kind.name,
+    'text': text,
+    'spans': [for (final s in spans) s.toJson()],
+    if (imageId != null) 'imageId': imageId,
+  };
+
   /// Блоки, которые читаются вслух (А§3).
   bool get isSpoken =>
-      kind == BlockKind.heading || kind == BlockKind.paragraph || kind == BlockKind.verse || kind == BlockKind.cite;
+      kind == BlockKind.heading ||
+      kind == BlockKind.paragraph ||
+      kind == BlockKind.verse ||
+      kind == BlockKind.cite;
 
   factory Block.fromJson(Map<String, Object?> json) => Block(
-        index: json['index'] as int? ?? 0,
-        kind: BlockKind.values.byName(json['kind']! as String),
-        text: json['text']! as String,
-        spans: [
-          for (final s in (json['spans'] as List<Object?>? ?? const []))
-            TextSpanRange.fromJson(s! as Map<String, Object?>),
-        ],
-        imageId: json['imageId'] as String?,
-      );
+    index: json['index'] as int? ?? 0,
+    kind: BlockKind.values.byName(json['kind']! as String),
+    text: json['text']! as String,
+    spans: [
+      for (final s in (json['spans'] as List<Object?>? ?? const []))
+        TextSpanRange.fromJson(s! as Map<String, Object?>),
+    ],
+    imageId: json['imageId'] as String?,
+  );
 }
 
 class Chapter {
-  const Chapter({required this.title, required this.level, required this.firstBlock, required this.blockCount});
+  const Chapter({
+    required this.title,
+    required this.level,
+    required this.firstBlock,
+    required this.blockCount,
+  });
 
   final String title;
   final int level;
   final int firstBlock;
   final int blockCount;
 
+  Map<String, Object?> toJson() => {
+    'title': title,
+    'level': level,
+    'firstBlock': firstBlock,
+    'blockCount': blockCount,
+  };
+
   int get endBlock => firstBlock + blockCount;
 
   bool contains(int block) => block >= firstBlock && block < endBlock;
 
   factory Chapter.fromJson(Map<String, Object?> json) => Chapter(
-        title: json['title']! as String,
-        level: json['level']! as int,
-        firstBlock: json['firstBlock']! as int,
-        blockCount: json['blockCount']! as int,
-      );
+    title: json['title']! as String,
+    level: json['level']! as int,
+    firstBlock: json['firstBlock']! as int,
+    blockCount: json['blockCount']! as int,
+  );
 }
 
 class Note {
@@ -77,10 +118,18 @@ class Note {
   final String id;
   final List<Block> blocks;
 
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'blocks': [for (final b in blocks) b.toJson()],
+  };
+
   factory Note.fromJson(Map<String, Object?> json) => Note(
-        id: json['id']! as String,
-        blocks: [for (final b in json['blocks']! as List<Object?>) Block.fromJson(b! as Map<String, Object?>)],
-      );
+    id: json['id']! as String,
+    blocks: [
+      for (final b in json['blocks']! as List<Object?>)
+        Block.fromJson(b! as Map<String, Object?>),
+    ],
+  );
 }
 
 /// Книга без единого блока не создаётся: разбор такой файл отклоняет («Не удалось прочитать книгу», FR-B6),
@@ -105,8 +154,8 @@ class Book {
     required this.blocks,
     required this.notes,
     this.parserVersion = 1,
-  })  : _charsBefore = _prefix(_nonEmpty(blocks)),
-        chapters = _chaptersFor(chapters, blocks.length);
+  }) : _charsBefore = _prefix(_nonEmpty(blocks)),
+       chapters = _chaptersFor(chapters, blocks.length);
 
   static List<Block> _nonEmpty(List<Block> blocks) {
     if (blocks.isEmpty) throw const EmptyBookException();
@@ -116,7 +165,11 @@ class Book {
   /// Пустые разделы отбрасываются; если глав не осталось, книга — одна глава без названия (как TXT, FR-B5).
   static List<Chapter> _chaptersFor(List<Chapter> chapters, int blockCount) {
     final kept = chapters.where((c) => c.blockCount > 0).toList();
-    if (kept.isEmpty) kept.add(Chapter(title: '', level: 1, firstBlock: 0, blockCount: blockCount));
+    if (kept.isEmpty) {
+      kept.add(
+        Chapter(title: '', level: 1, firstBlock: 0, blockCount: blockCount),
+      );
+    }
     return List.unmodifiable(kept);
   }
 
@@ -132,12 +185,25 @@ class Book {
 
   int get totalChars => _charsBefore.last;
 
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'title': title,
+    'author': author,
+    'language': language,
+    'parserVersion': parserVersion,
+    'totalChars': totalChars,
+    'chapters': [for (final c in chapters) c.toJson()],
+    'blocks': [for (final b in blocks) b.toJson()],
+    'notes': [for (final n in notes.values) n.toJson()],
+  };
+
   /// Число знаков до начала блока [block] (А§4, `charsBefore`).
   int charsBefore(int block) => _charsBefore[block.clamp(0, blocks.length)];
 
   /// Доля книги по знакам для места (блок, смещение).
-  double fractionAt(int block, int offset) =>
-      totalChars == 0 ? 0 : ((charsBefore(block) + offset) / totalChars).clamp(0.0, 1.0);
+  double fractionAt(int block, int offset) => totalChars == 0
+      ? 0
+      : ((charsBefore(block) + offset) / totalChars).clamp(0.0, 1.0);
 
   /// Место по доле книги: блок и смещение в нём.
   (int block, int offset) placeAt(double fraction) {
@@ -176,7 +242,15 @@ class Book {
     final rawBlocks = json['blocks']! as List<Object?>;
     for (var i = 0; i < rawBlocks.length; i++) {
       final b = Block.fromJson(rawBlocks[i]! as Map<String, Object?>);
-      blocks.add(Block(index: i, kind: b.kind, text: b.text, spans: b.spans, imageId: b.imageId));
+      blocks.add(
+        Block(
+          index: i,
+          kind: b.kind,
+          text: b.text,
+          spans: b.spans,
+          imageId: b.imageId,
+        ),
+      );
     }
     return Book(
       id: json['id']! as String,
@@ -184,11 +258,16 @@ class Book {
       author: json['author']! as String,
       language: json['language'] as String? ?? 'ru',
       parserVersion: json['parserVersion'] as int? ?? 1,
-      chapters: [for (final c in json['chapters']! as List<Object?>) Chapter.fromJson(c! as Map<String, Object?>)],
+      chapters: [
+        for (final c in json['chapters']! as List<Object?>)
+          Chapter.fromJson(c! as Map<String, Object?>),
+      ],
       blocks: blocks,
       notes: {
         for (final n in (json['notes'] as List<Object?>? ?? const []))
-          (n! as Map<String, Object?>)['id']! as String: Note.fromJson(n as Map<String, Object?>),
+          (n! as Map<String, Object?>)['id']! as String: Note.fromJson(
+            n as Map<String, Object?>,
+          ),
       },
     );
   }
