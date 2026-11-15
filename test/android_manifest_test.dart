@@ -161,4 +161,18 @@ void main() {
       expect(manifest, isNot(contains(permission)));
     }
   });
+
+  test('Android: SEND без файла и VIEW без data молча завершаются до copy и emit', () {
+    final channel = File(
+      'android/app/src/main/kotlin/io/github/slawa19/audiobook_reader/IncomingFilesChannel.kt',
+    ).readAsStringSync();
+    final accept = channel.split('fun accept(intent: Intent) {')[1].split('private fun streamUri')[0];
+    expect(accept, contains('Intent.ACTION_VIEW -> intent.data'));
+    expect(accept, contains('Intent.ACTION_SEND -> streamUri(intent)'));
+    expect(accept, contains('intent.clipData'));
+    // Обе ветви проходят общую проверку: пустой URI не попадает в рабочую очередь.
+    expect(accept, matches(RegExp(r'else -> return\s*\}\s*\?: return\s*copy\(uri, ::emit\)')));
+    expect(accept, isNot(contains('Result.failure')));
+    expect(accept, isNot(contains('sink')));
+  });
 }

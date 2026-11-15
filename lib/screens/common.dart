@@ -211,7 +211,7 @@ class BookCover extends StatelessWidget {
             color: scheme.surfaceContainerHighest,
             alignment: Alignment.center,
             child: Text(
-              entry.title.characters.first.toUpperCase(),
+              (entry.title.characters.firstOrNull ?? '').toUpperCase(),
               style: bookTitleStyle(context, width * 0.42).copyWith(color: scheme.onSurfaceVariant),
             ),
           );

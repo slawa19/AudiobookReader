@@ -98,6 +98,12 @@ class NativeApplication extends AppAssembly {
       root ?? await getApplicationSupportDirectory(),
       settings: settings,
       parser: parser,
+      interfaceLanguage: () => resolveLocale(
+        settings.language == null
+            ? WidgetsBinding.instance.platformDispatcher.locales
+            : [Locale(settings.language!)],
+        supportedLocales,
+      ).languageCode,
       clock: clock,
       timer: timer,
     );
