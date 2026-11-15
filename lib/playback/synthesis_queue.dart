@@ -32,11 +32,19 @@ class SynthesisRequest {
 /// Пауза запрещает новые запросы и повторы; уже начатое по-прежнему публикуется.
 /// Такой же потребитель сможет задать весь остаток скачиваемой главы.
 class SynthesisTask {
-  SynthesisTask._(this.queue, this.session, this.changed, this.failed);
+  SynthesisTask._(
+    this.queue,
+    this.session,
+    this.changed,
+    this.failed,
+    this.canStart,
+  );
   final SynthesisQueue queue;
   final int session;
   final void Function() changed;
   final void Function(TtsError error) failed;
+  // Только прослушивание ограничивает покупку; скачивание главы и проба — нет.
+  final bool Function(SynthesisRequest)? canStart;
   List<SynthesisRequest> _requests = [];
   bool _active = true, _disposed = false, _settling = false;
   TtsError? error;
@@ -56,9 +64,9 @@ class SynthesisTask {
 }
 
 class _Retry {
-  _Retry(this.attempt, this.at, this.session);
+  _Retry(this.attempt, this.session);
   final int attempt;
-  final DateTime at;
+  bool due = false;
   final int session;
   Timer? timer;
 }
@@ -69,6 +77,7 @@ class _Flight {
   final targets = <(String?, int, int), SynthesisRequest>{};
   Timer? writeTimer;
   Completer<void>? writeWake;
+  bool writeBlocked = false;
 }
 
 /// Единственный реестр оплачиваемых запросов. Обработчик ответа не знает плеера.
@@ -123,8 +132,9 @@ class SynthesisQueue {
     required int session,
     required void Function() changed,
     required void Function(TtsError) failed,
+    bool Function(SynthesisRequest)? canStart,
   }) {
-    final task = SynthesisTask._(this, session, changed, failed);
+    final task = SynthesisTask._(this, session, changed, failed, canStart);
     _tasks.add(task);
     return task;
   }
@@ -166,11 +176,14 @@ class SynthesisQueue {
           task.error != null) {
         continue;
       }
+      if (task.canStart != null && _flights.values.any((f) => f.writeBlocked)) {
+        continue;
+      }
       for (final r in task._requests) {
         if (!_valid(r) || _has(r)) continue;
         final retry = _retries[r.fingerprint];
         // Пока ближайший ждёт повтора, свободное место не отдаётся дальним.
-        if (retry != null && clock.now().isBefore(retry.at)) break;
+        if (retry != null && !retry.due) break;
         final flight = _flights[r.fingerprint];
         if (flight != null) {
           _attach(flight, r);
@@ -178,6 +191,7 @@ class SynthesisQueue {
           continue;
         }
         if (_network >= synthesisConcurrency) break;
+        if (task.canStart != null && !task.canStart!(r)) break;
         final next = _Flight(r);
         _attach(next, r);
         _flights[r.fingerprint] = next;
@@ -257,9 +271,9 @@ class SynthesisQueue {
       result = await engine.synthesize(r.text, r.profile);
     } on TtsError catch (e) {
       failure = e;
-    } catch (_) {
+    } catch (e) {
       // Не печатаем произвольный объект транспорта: в нём могут оказаться заголовки.
-      failure = const TtsError('Не удалось получить ответ синтеза');
+      failure = TtsError('${e.runtimeType}: synthesis request failed');
     }
     _network--;
     final at = clock.now();
@@ -268,13 +282,12 @@ class SynthesisQueue {
       if (failure is TemporaryTtsError) {
         if (_needs(r.fingerprint)) {
           final attempt = (_retries[r.fingerprint]?.attempt ?? -1) + 1;
-          final retry = _Retry(
-            attempt,
-            clock.now().add(_delay(attempt)),
-            r.session,
-          );
+          final retry = _Retry(attempt, r.session);
           _retries[r.fingerprint] = retry;
-          retry.timer = clock.schedule(_delay(attempt), _schedule);
+          retry.timer = clock.schedule(_delay(attempt), () {
+            retry.due = true;
+            _schedule();
+          });
         }
       } else {
         for (final task in _tasks.toList()) {
@@ -319,11 +332,13 @@ class SynthesisQueue {
                 result.sampleRate,
                 bookId: target.value.bookId,
               );
+              flight.writeBlocked = false;
               break;
             } on AudioWriteCancelled {
               break;
             } catch (_) {
               if (!_valid(target.value)) break;
+              flight.writeBlocked = true;
               await _writeLater(flight, _delay(attempt++));
             }
           }
@@ -351,6 +366,12 @@ class SynthesisQueue {
   void invalidateAll() {
     _generation++;
     _wakeInvalidWrites();
+    _schedule();
+  }
+
+  /// Отказ удаления оставляет книгу на полке; старые ответы всё ещё невалидны.
+  void restoreBook(String id) {
+    _deleted.remove(id);
     _schedule();
   }
 

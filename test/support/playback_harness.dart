@@ -102,43 +102,54 @@ class PlaybackHarness {
     FakePlayer Function(ManualPlaybackClock)? playerFactory,
     FakePlayer Function(ManualPlaybackClock)? sampleFactory,
     ChapterDownloads Function(SynthesisQueue)? downloadsFactory,
+    FileLibrary Function(
+      Directory,
+      AppSettings,
+      ManualPlaybackClock,
+      LibraryParser,
+    )?
+    libraryFactory,
+    ManualPlaybackClock Function()? clockFactory,
+    FakeTtsEngine Function()? engineFactory,
   }) async {
     final root = await Directory.systemTemp.createTemp('playback-');
-    final clock = ManualPlaybackClock();
+    final clock = clockFactory?.call() ?? ManualPlaybackClock();
     final settings = AppSettings(
       voice: 'Aoede',
       modelId: TtsModel.flash.id,
       apiKey: 'dummy-secret',
     );
-    final library = FileLibrary(
-      root,
-      settings: settings,
-      clock: clock.now,
-      timer: clock.schedule,
-      parser: (path) async {
-        final bytes = await File(path).readAsBytes();
-        final json = jsonDecode(utf8.decode(bytes)) as Map<String, Object?>;
-        return ParsedBook(
-          book: Book.fromJson({
-            ...json,
-            'id': sha256.convert(bytes).toString().substring(0, 12),
-          }),
-          format: SourceFormat.fb2,
-          images: const {},
+    Future<ParsedBook> parser(String path) async {
+      final bytes = await File(path).readAsBytes();
+      final json = jsonDecode(utf8.decode(bytes)) as Map<String, Object?>;
+      return ParsedBook(
+        book: Book.fromJson({
+          ...json,
+          'id': sha256.convert(bytes).toString().substring(0, 12),
+        }),
+        format: SourceFormat.fb2,
+        images: const {},
+      );
+    }
+
+    final library =
+        libraryFactory?.call(root, settings, clock, parser) ??
+        FileLibrary(
+          root,
+          settings: settings,
+          clock: clock.now,
+          timer: clock.schedule,
+          parser: parser,
         );
-      },
-    );
     await library.ready;
     settings.speed = speed;
     final audio = FileAudioStore(
       root,
       encoder: encoder ?? const WavAudioEncoder(),
     );
-    final engine = FakeTtsEngine(
-      manual: true,
-      sampleRate: 100,
-      secondsPerCharacter: 0.1,
-    );
+    final engine =
+        engineFactory?.call() ??
+        FakeTtsEngine(manual: true, sampleRate: 100, secondsPerCharacter: 0.1);
     final queue = SynthesisQueue(
       engine: engine,
       audio: audio,

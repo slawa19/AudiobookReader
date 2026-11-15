@@ -11,7 +11,14 @@ class FileVoiceSampler extends VoiceSampler {
   FileVoiceSampler({required this.queue, required this.player}) {
     _subscription = player.events.listen((event) {
       if (event.generation != _session || _disposed) return;
-      if (event.kind == PlayerEventKind.drained ||
+      if (event.kind == PlayerEventKind.failed) {
+        _task?.dispose();
+        _task = null;
+        player.clear(++_session);
+        _state = SampleState.failed;
+        _error = 'PlayerError: audio file unreadable';
+        notifyListeners();
+      } else if (event.kind == PlayerEventKind.drained ||
           event.kind == PlayerEventKind.interrupted) {
         stop();
       } else {

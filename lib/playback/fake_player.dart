@@ -121,6 +121,13 @@ class FakePlayer implements PlayerPort {
     _emit(PlayerEventKind.interrupted);
   }
 
+  /// Ошибка декодирования текущего файла, управляемая тестом.
+  void failCurrent() {
+    if (current == null) return;
+    pause();
+    _emit(PlayerEventKind.failed);
+  }
+
   @override
   void setSpeed(double value) {
     if (!value.isFinite || value <= 0) throw ArgumentError.value(value);
@@ -142,7 +149,10 @@ class FakePlayer implements PlayerPort {
   @override
   void retainThrough(int segment) {
     final first = items.indexWhere((i) => i.segment > segment);
-    if (first >= 0) items.removeRange(first, items.length);
+    if (first >= 0) {
+      final from = math.max(first, _index + 1);
+      if (from < items.length) items.removeRange(from, items.length);
+    }
   }
 
   Future<void> dispose() async {
