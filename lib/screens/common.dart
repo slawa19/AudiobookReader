@@ -262,8 +262,8 @@ class ButtonPair extends StatelessWidget {
   }
 }
 
-/// Сообщает размер ребёнка после раскладки — чтобы страница кончалась над панелью, высота которой зависит от
-/// состояния, языка и масштаба шрифта.
+/// Измеряет сообщение об ошибке, конец книги или скачивание. Панель управления не измеряется:
+/// её постоянная высота не зависит от состояния и следования.
 class MeasureSize extends SingleChildRenderObjectWidget {
   const MeasureSize({super.key, required this.onChange, required super.child});
 

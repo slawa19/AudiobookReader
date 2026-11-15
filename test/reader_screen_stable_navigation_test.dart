@@ -99,28 +99,28 @@ void main() {
   }
 
   for (final source in ['voice', 'page']) {
-  testWidgets('D7: досчёт прежней цели $source назад не заменяет страницу под новым жестом', (tester) async {
-    final h = await propertyApp(tester);
-    h.app.services.narration.pause();
-    await frames(tester);
-    final st = reader(tester);
-    final before = textBounds(st);
-    if (source == 'voice') {
-      h.app.services.narration.previous();
-    } else {
-      st.goToPage(-1);
-    }
-    expect(st.layout.isLoadingPrevious, isTrue);
-    final gesture = await tester.startGesture(pageThird(tester, true));
-    await gesture.moveBy(const Offset(-28, 0));
-    await frames(tester, 200);
-    await gesture.moveBy(Offset(-st.columnSize.width * 0.8, 0));
-    await frames(tester, 2);
-    await gesture.up();
-    await frames(tester, 60);
-    final after = textBounds(st);
-    expect((after.$1, after.$2), (before.$3, before.$4));
-    expect(st.following, isFalse);
-  });
+    testWidgets('D7: досчёт прежней цели $source назад не заменяет страницу под новым жестом', (tester) async {
+      final h = await propertyApp(tester);
+      h.app.services.narration.pause();
+      await frames(tester);
+      final st = reader(tester);
+      final before = textBounds(st);
+      if (source == 'voice') {
+        h.app.services.narration.previous();
+      } else {
+        st.goToPage(-1);
+      }
+      expect(st.layout.isLoadingPrevious, isTrue);
+      final gesture = await tester.startGesture(pageThird(tester, true));
+      await gesture.moveBy(const Offset(-28, 0));
+      await frames(tester, 200);
+      await gesture.moveBy(Offset(-st.columnSize.width * 0.8, 0));
+      await frames(tester, 2);
+      await gesture.up();
+      await frames(tester, 60);
+      final after = textBounds(st);
+      expect((after.$1, after.$2), (before.$3, before.$4));
+      expect(st.following, isFalse);
+    });
   }
 }

@@ -80,15 +80,26 @@ void main() {
       expect((p.firstBlock, p.firstOffset, p.lastBlock, p.lastEnd), bounds);
     }
     await h.until(() => h.app.queue.inFlight == 0);
+    h.engine.enqueue(delay: const Duration(seconds: 1));
     h.app.settings.voice = 'Achernar';
+    h.app.services.narration.restartSession();
     h.app.services.narration.resume();
+    expect(h.app.services.narration.state, NarrationState.preparing);
+    for (var frame = 0; frame < 28; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(st.columnSize.height, height);
+    }
     final preparing = st.layout.pages[st.page];
+    final stable = (preparing.firstBlock, preparing.firstOffset, preparing.lastBlock, preparing.lastEnd);
     for (var frame = 0; frame < 140; frame++) {
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
       await tester.pump(const Duration(milliseconds: 16));
       expect(st.columnSize.height, height);
       expect(tester.getRect(find.byKey(const Key('player-close'))), close);
+      final p = st.layout.pages[st.page];
+      expect((p.firstBlock, p.firstOffset, p.lastBlock, p.lastEnd), stable);
     }
-    expect(st.layout.pages, contains(same(preparing)));
+    expect(h.app.services.narration.state, NarrationState.playing);
     expect(tester.takeException(), isNull);
   });
 
