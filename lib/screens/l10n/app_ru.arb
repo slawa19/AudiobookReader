@@ -1,4 +1,7 @@
 {
+  "mediaChannel": "Прослушивание книг",
+  "mediaPrevious": "Предыдущий отрезок",
+  "mediaNext": "Следующий отрезок",
   "@@locale": "ru",
   "shelfTitle": "Книги",
   "@shelfTitle": {

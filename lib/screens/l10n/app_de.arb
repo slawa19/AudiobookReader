@@ -1,4 +1,7 @@
 {
+  "mediaChannel": "Buchwiedergabe",
+  "mediaPrevious": "Vorheriger Abschnitt",
+  "mediaNext": "Nächster Abschnitt",
   "@@locale": "de",
   "shelfTitle": "Bücher",
   "settings": "Einstellungen",

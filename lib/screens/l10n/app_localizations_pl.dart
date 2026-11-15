@@ -10,6 +10,15 @@ class AppLocalizationsPl extends AppLocalizations {
   AppLocalizationsPl([String locale = 'pl']) : super(locale);
 
   @override
+  String get mediaChannel => 'Odtwarzanie książek';
+
+  @override
+  String get mediaPrevious => 'Poprzedni fragment';
+
+  @override
+  String get mediaNext => 'Następny fragment';
+
+  @override
   String get shelfTitle => 'Książki';
 
   @override

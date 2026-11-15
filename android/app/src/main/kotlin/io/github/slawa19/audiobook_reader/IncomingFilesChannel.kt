@@ -2,6 +2,7 @@ package io.github.slawa19.audiobook_reader
 
 import android.app.Activity
 import android.content.Intent
+import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -15,7 +16,8 @@ import java.io.IOException
 import java.util.concurrent.Executors
 
 /** Каналы и копирование входящих файлов. Очередь и ответы канала — только в UI-потоке. */
-class IncomingFilesChannel(private val activity: Activity, messenger: BinaryMessenger) {
+class IncomingFilesChannel(private val context: Context, messenger: BinaryMessenger) {
+    var activity: Activity? = null
     private val methods = MethodChannel(messenger, "audiobook_reader/incoming_files")
     private val events = EventChannel(messenger, "audiobook_reader/incoming_files/events")
     private val worker = Executors.newSingleThreadExecutor()
@@ -47,6 +49,11 @@ class IncomingFilesChannel(private val activity: Activity, messenger: BinaryMess
     }
 
     private fun pickFile(result: MethodChannel.Result) {
+        val activity = activity
+        if (activity == null) {
+            result.error("no_activity", "Приложение не открыто", null)
+            return
+        }
         if (picker != null) {
             result.error("picker_busy", "Выбор файла уже открыт", null)
             return
@@ -120,13 +127,13 @@ class IncomingFilesChannel(private val activity: Activity, messenger: BinaryMess
 
     private fun copyFile(uri: Uri?): Map<String, String> {
         if (uri == null || uri.scheme != "content") throw IOException("Не передан content-URI файла")
-        val resolver = activity.contentResolver
+        val resolver = context.contentResolver
         val name = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
             val column = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
             if (column >= 0 && it.moveToFirst()) it.getString(column) else null
         }?.takeIf { it.isNotBlank() } ?: uri.lastPathSegment ?: uri.toString()
         prepareCache()
-        val directory = File(activity.cacheDir, "incoming_books")
+        val directory = File(context.cacheDir, "incoming_books")
         if (!directory.isDirectory && !directory.mkdirs()) throw IOException("Не удалось создать временную папку")
         // Имя от провайдера — только метаданные, никогда не часть пути к нашей копии.
         val target = File.createTempFile("book-", ".tmp", directory)
@@ -143,7 +150,7 @@ class IncomingFilesChannel(private val activity: Activity, messenger: BinaryMess
     private fun prepareCache() {
         synchronized(CACHE_LOCK) {
             if (cachePrepared) return
-            val directory = File(activity.cacheDir, "incoming_books")
+            val directory = File(context.cacheDir, "incoming_books")
             if (directory.exists() && !directory.deleteRecursively()) {
                 throw IOException("Не удалось удалить временные копии входящих книг")
             }

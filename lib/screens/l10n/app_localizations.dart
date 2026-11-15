@@ -102,6 +102,24 @@ abstract class AppLocalizations {
     Locale('de'),
   ];
 
+  /// No description provided for @mediaChannel.
+  ///
+  /// In ru, this message translates to:
+  /// **'Прослушивание книг'**
+  String get mediaChannel;
+
+  /// No description provided for @mediaPrevious.
+  ///
+  /// In ru, this message translates to:
+  /// **'Предыдущий отрезок'**
+  String get mediaPrevious;
+
+  /// No description provided for @mediaNext.
+  ///
+  /// In ru, this message translates to:
+  /// **'Следующий отрезок'**
+  String get mediaNext;
+
   /// Заголовок полки
   ///
   /// In ru, this message translates to:

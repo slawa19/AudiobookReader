@@ -151,6 +151,7 @@ class _AudiobookAppState extends State<AudiobookApp> with WidgetsBindingObserver
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    widget.assembly.setForeground(state == AppLifecycleState.resumed);
     if (state == AppLifecycleState.resumed) {
       _backgroundFlushed = false;
     } else if (!_backgroundFlushed) {

@@ -10,6 +10,15 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get mediaChannel => 'Book playback';
+
+  @override
+  String get mediaPrevious => 'Previous segment';
+
+  @override
+  String get mediaNext => 'Next segment';
+
+  @override
   String get shelfTitle => 'Books';
 
   @override

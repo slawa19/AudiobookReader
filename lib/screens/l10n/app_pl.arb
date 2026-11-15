@@ -1,4 +1,7 @@
 {
+  "mediaChannel": "Odtwarzanie książek",
+  "mediaPrevious": "Poprzedni fragment",
+  "mediaNext": "Następny fragment",
   "@@locale": "pl",
   "shelfTitle": "Książki",
   "settings": "Ustawienia",

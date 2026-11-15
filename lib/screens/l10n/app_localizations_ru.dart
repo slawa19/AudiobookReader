@@ -10,6 +10,15 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String get mediaChannel => 'Прослушивание книг';
+
+  @override
+  String get mediaPrevious => 'Предыдущий отрезок';
+
+  @override
+  String get mediaNext => 'Следующий отрезок';
+
+  @override
   String get shelfTitle => 'Книги';
 
   @override

@@ -22,17 +22,29 @@ void main() {
   };
   const genericTypes = {'application/zip', 'application/x-zip-compressed', 'application/xml', 'text/xml'};
 
-  test('Android: только INTERNET; незашифрованный HTTP запрещён всему приложению', () {
+  test('Android: точные разрешения воспроизведения; незашифрованный HTTP запрещён', () {
     final permissions = RegExp(r'<uses-permission(?:-sdk-\d+)?\b[^>]*>')
         .allMatches(manifest)
         .map((match) => values(match.group(0)!, 'name').single)
         .toList();
-    expect(permissions, unorderedEquals(['android.permission.INTERNET']));
+    expect(
+      permissions,
+      unorderedEquals([
+        'android.permission.INTERNET',
+        'android.permission.WAKE_LOCK',
+        'android.permission.FOREGROUND_SERVICE',
+        'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
+      ]),
+    );
     final application = RegExp(r'<application\b[^>]*>').firstMatch(manifest)!.group(0)!;
     expect(values(application, 'usesCleartextTraffic'), {'false'});
     // Без отдельного networkSecurityConfig нет исключений, разрешающих HTTP по доменам.
     expect(values(application, 'networkSecurityConfig'), isEmpty);
-    expect(manifest, isNot(contains('<service')));
+    final services = RegExp(r'<service\b[^>]*>').allMatches(manifest).toList();
+    expect(services, hasLength(1));
+    expect(values(services.single.group(0)!, 'name'), {'com.ryanheise.audioservice.AudioService'});
+    expect(values(services.single.group(0)!, 'foregroundServiceType'), {'mediaPlayback'});
+    expect(manifest, contains('android.intent.action.MEDIA_BUTTON'));
   });
 
   test('Android: непрозрачный URI MediaStore с octet-stream принимается, архивы и XML требуют суффикс', () {
