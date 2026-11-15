@@ -49,6 +49,7 @@
 | [FABLE_REVIEW_001_STAGE1_2026-11-15.md](reviews/FABLE_REVIEW_001_STAGE1_2026-11-15.md) | код этапа 1 «Читалка» |
 | [FABLE_REVIEW_001_STAGE2_2026-11-15.md](reviews/FABLE_REVIEW_001_STAGE2_2026-11-15.md) | код этапа 2 «Озвучка» |
 | [FABLE_REVIEW_001_NAV_TXT_2026-11-15.md](reviews/FABLE_REVIEW_001_NAV_TXT_2026-11-15.md) | переходы по абзацам, возврат страницы, TXT |
+| [READER_SCREEN_REVIEW_2026-11-15.md](reviews/READER_SCREEN_REVIEW_2026-11-15.md) | экран чтения во время озвучки: два независимых ревью (Opus 5.5 и gpt-6-astra) |
 | [EXPERIMENT_CODEX_IMPL.md](reviews/EXPERIMENT_CODEX_IMPL.md) | журнал эксперимента: код пишут агенты Codex, принимает оркестратор |
 
 ## Правила именования
