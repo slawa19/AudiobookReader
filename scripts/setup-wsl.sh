@@ -111,6 +111,10 @@ else
   mv "${tmp}/flutter" "${FLUTTER_HOME}"
   rm -rf "${tmp}"
 
+  # Архив принадлежит другому владельцу; git внутри SDK иначе отказывается работать.
+  git config --global --get-all safe.directory | grep -qx "${FLUTTER_HOME}" \
+    || git config --global --add safe.directory "${FLUTTER_HOME}"
+
   "${FLUTTER_BIN}" --disable-analytics >/dev/null
   "${FLUTTER_HOME}/bin/dart" --disable-analytics >/dev/null || true
   "${FLUTTER_BIN}" config --enable-web >/dev/null

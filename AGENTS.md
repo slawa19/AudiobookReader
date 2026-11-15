@@ -69,22 +69,22 @@ wsl.exe -d Debian --cd "D:\Work\Projects\AudiobookReader" -- bash scripts/protot
   сборки не потребовался. `minSdk=31`, compile/target SDK — 36, из закреплённого Flutter.
 - `build-apk.sh` без флагов собирает release с ключом из `.env` (четыре `ANDROID_KEY*` из `.env.example`);
   без файла или параметров подписи останавливается. `--debug` использует отладочный ключ и не читает `.env`.
-  Постоянный ключ создаётся отдельно и хранится вне репозитория. APK — `build/app/outputs/flutter-apk/`.
+  APK — `build/app/outputs/flutter-apk/`.
 
-Команды Android-окружения ниже запущены и отработали 2026-11-15 в отдельном worktree `s001-env`
-(`D:\Temp\claude\wt-env`); главное дерево при этом не менялось:
+Сборка APK (обе команды запущены и отработали 2026-11-15; release — в главном дереве постоянным ключом, подпись
+проверена `apksigner verify --print-certs`):
 
 ```
-wsl.exe -d Debian --cd "D:\Temp\claude\wt-env" -- bash scripts/setup-wsl.sh
-wsl.exe -d Debian --cd "D:\Temp\claude\wt-env" -- bash scripts/build-apk.sh --debug
-wsl.exe -d Debian --cd "D:\Temp\claude\wt-env" -- bash scripts/build-apk.sh
+wsl.exe -d Debian --cd "D:\Work\Projects\AudiobookReader" -- bash scripts/build-apk.sh
+wsl.exe -d Debian --cd "D:\Work\Projects\AudiobookReader" -- bash scripts/build-apk.sh --debug
 ```
 
-Повторный setup занял около 1,4 с без повторной загрузки SDK. Release проверен одноразовым ключом вне дерева:
-`apksigner verify --verbose --print-certs` прошёл, сертификат APK совпал с сертификатом ключа; временные ключ и
-`.env` удалены. Постоянный ключ не создавался. CI описан в `.github/workflows/ci.yml`, проверен `actionlint`, но
-workflow на GitHub ещё не запускался. Телефона в сессии нет: установка APK и обновление поверх первой сборки
-(SC-0) не проверены.
+- Постоянный ключ подписи создан 2026-11-15: `C:\Users\RedOutPC\.android-keys\audiobook-reader.jks`, параметры — в
+  `.env`. Потеря ключа или пароля — переустановка приложения с потерей книг и позиций; ключ не пересоздавать.
+- WSL работает под root: Flutter из архива требует `safe.directory` в глобальном git WSL — `setup-wsl.sh` ставит
+  его сам.
+- `adb` для телефона — в Windows: `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe` (поставлен 2026-11-15).
+- CI — `.github/workflows/ci.yml`: те же скрипты на чистом Ubuntu, APK отладочным ключом.
 
 Shell определяется первой командой (`uname`): Git Bash — `MINGW64_NT`, WSL — `Linux …WSL2`. Внутри WSL `wsl.exe`
 не вкладывать. Голое `wsl` не использовать: в PATH Git Bash его может не быть.
