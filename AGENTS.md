@@ -58,11 +58,33 @@ wsl.exe -d Debian --cd "D:\Work\Projects\AudiobookReader" -- bash scripts/test.s
 wsl.exe -d Debian --cd "D:\Work\Projects\AudiobookReader" -- bash scripts/prototype.sh start|stop|status
 ```
 
-- `setup-wsl.sh` ставит Flutter закреплённой версии и забирает пакеты; повторный запуск ничего не ломает.
+- `setup-wsl.sh` ставит закреплённые Flutter, JDK и Android SDK в `~/sdk` и забирает пакеты; повторный запуск
+  использует готовую установку без повторной загрузки SDK. Скрипты работают и в обычном Linux (CI), без WSL-команд.
 - `test.sh` — анализатор без замечаний (в том числе info) и тесты; селектор и опции уходят во `flutter test`.
   Переснять снимки экранов: `bash scripts/test.sh test/screens_golden_test.dart --update-goldens`.
 - `prototype.sh start` собирает веб-версию и поднимает её на http://127.0.0.1:8642/ (открывается и из Windows).
-- **Android SDK ещё не ставился, APK не собирался** — это этап 0 спеки 001 (`scripts/build-apk.sh`, FR-E2).
+- Android: Temurin JDK **21.0.13+9**, cmdline-tools **22.0** (архив **15859902**), platform **android-36**
+  (revision 2), build-tools **36.0.0**, NDK **28.2.13676358**, platform-tools **37.0.3**. Версии и суммы архивов —
+  `scripts/env.sh`; `flutter doctor -v` подтвердил Android toolchain и принятие всех лицензий. CMake для текущей
+  сборки не потребовался. `minSdk=31`, compile/target SDK — 36, из закреплённого Flutter.
+- `build-apk.sh` без флагов собирает release с ключом из `.env` (четыре `ANDROID_KEY*` из `.env.example`);
+  без файла или параметров подписи останавливается. `--debug` использует отладочный ключ и не читает `.env`.
+  Постоянный ключ создаётся отдельно и хранится вне репозитория. APK — `build/app/outputs/flutter-apk/`.
+
+Команды Android-окружения ниже запущены и отработали 2026-11-15 в отдельном worktree `s001-env`
+(`D:\Temp\claude\wt-env`); главное дерево при этом не менялось:
+
+```
+wsl.exe -d Debian --cd "D:\Temp\claude\wt-env" -- bash scripts/setup-wsl.sh
+wsl.exe -d Debian --cd "D:\Temp\claude\wt-env" -- bash scripts/build-apk.sh --debug
+wsl.exe -d Debian --cd "D:\Temp\claude\wt-env" -- bash scripts/build-apk.sh
+```
+
+Повторный setup занял около 1,4 с без повторной загрузки SDK. Release проверен одноразовым ключом вне дерева:
+`apksigner verify --verbose --print-certs` прошёл, сертификат APK совпал с сертификатом ключа; временные ключ и
+`.env` удалены. Постоянный ключ не создавался. CI описан в `.github/workflows/ci.yml`, проверен `actionlint`, но
+workflow на GitHub ещё не запускался. Телефона в сессии нет: установка APK и обновление поверх первой сборки
+(SC-0) не проверены.
 
 Shell определяется первой командой (`uname`): Git Bash — `MINGW64_NT`, WSL — `Linux …WSL2`. Внутри WSL `wsl.exe`
 не вкладывать. Голое `wsl` не использовать: в PATH Git Bash его может не быть.

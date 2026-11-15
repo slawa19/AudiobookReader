@@ -41,8 +41,15 @@
 
 ## Окружение
 
-- Flutter 3.50.0 установлен в WSL Debian (`~/sdk/flutter-3.50.0`, `scripts/setup-wsl.sh`); команды — `AGENTS.md`,
-  «Стек и runtime». Android SDK и `adb` не установлены, APK не собирался; в Windows Flutter нет.
+- Flutter 3.50.0 установлен в WSL Debian (`~/sdk/flutter-3.50.0`, `scripts/setup-wsl.sh`); в Windows Flutter нет.
+  Окружение Android проверено 2026-11-15 в `D:\Temp\claude\wt-env`: Temurin JDK 21.0.13+9, cmdline-tools 22.0
+  (архив 15859902), platform android-36 (revision 2), build-tools 36.0.0, NDK 28.2.13676358, platform-tools/adb
+  37.0.3; всё в `~/sdk`, версии закреплены в `scripts/env.sh`. CMake не потребовался. Повторный setup — около
+  1,4 с без повторной загрузки SDK; `flutter doctor -v` подтвердил Android toolchain и принятые лицензии.
+  `scripts/build-apk.sh --debug` и release с одноразовым ключом дали APK; `apksigner` проверил подпись и совпадение
+  сертификата с ключом. Временные ключ и `.env` удалены, постоянный ключ не создавался. Точные запущенные команды —
+  `AGENTS.md`, «Стек и runtime». CI добавлен и проверен `actionlint`, workflow ещё не запускался; установки и
+  обновления на телефоне не было (SC-0 остаётся неполным).
 - FigCraft: `D:\Program Files\ArtCraft\FigCraft\`. Сервер MCP — `figcraft-cli.exe mcp`, прописан в `.mcp.json`;
   подключается у сессии, запущенной из каталога проекта. Без MCP тот же движок доступен как
   `figcraft-cli.exe run <сценарий.json>` и `render`.
