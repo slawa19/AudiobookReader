@@ -39,10 +39,14 @@ class PageFragment {
 
 /// Страница: пара «начало» и «конец» (А§5) плюс раскладка кусков.
 class BookPageLayout {
-  const BookPageLayout({required this.chapter, required this.fragments});
+  const BookPageLayout({required this.chapter, required this.fragments, this.endsAtLayoutStart = false});
 
   final int chapter;
   final List<PageFragment> fragments;
+
+  /// Префикс оборван перед уже показанным началом раскладки. Его можно листать назад,
+  /// но нельзя выбирать как полную страницу произвольной цели (А§5).
+  final bool endsAtLayoutStart;
 
   int get firstBlock => fragments.first.block;
   int get firstOffset => fragments.first.start;
@@ -310,8 +314,8 @@ class _Paginator {
   late double _y;
   late int _chapter;
 
-  BookPageLayout _flush() {
-    final page = BookPageLayout(chapter: _chapter, fragments: _cur);
+  BookPageLayout _flush({bool endsAtLayoutStart = false}) {
+    final page = BookPageLayout(chapter: _chapter, fragments: _cur, endsAtLayoutStart: endsAtLayoutStart);
     _cur = <PageFragment>[];
     _y = 0;
     return page;
@@ -370,7 +374,11 @@ class _Paginator {
       }
       prevKind = block.kind;
     }
-    if (_cur.isNotEmpty) yield _flush();
+    if (_cur.isNotEmpty) {
+      final cut = stopBlock != null && stopBlock < ch.endBlock &&
+          (stopBlock < ch.endBlock - 1 || stopOffset < book.blocks[stopBlock].text.length);
+      yield _flush(endsAtLayoutStart: cut);
+    }
   }
 
   /// Даже один огромный абзац измеряется окнами. Незавершённую последнюю строку окна измеряем заново
