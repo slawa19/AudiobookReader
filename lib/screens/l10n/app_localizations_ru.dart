@@ -16,6 +16,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settings => 'Настройки';
 
   @override
+  String get fakeVoice => 'Подставной голос';
+
+  @override
   String get addBook => 'Добавить книгу';
 
   @override

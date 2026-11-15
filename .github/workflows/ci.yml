@@ -20,3 +20,6 @@ jobs:
         run: bash scripts/test.sh
       - name: APK с отладочной подписью
         run: bash scripts/build-apk.sh --debug
+      # Последовательно: второй вариант использует уже собранные зависимости Gradle.
+      - name: Подставной APK с отладочной подписью
+        run: bash scripts/build-apk.sh --debug --fake

@@ -147,6 +147,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
                 sliver: SliverList.list(children: [
+                  if (s.fakeTts)
+                    Padding(
+                      key: const Key('fake-voice'),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Text(l10n.fakeVoice, style: theme.textTheme.titleSmall),
+                    ),
                   if (!settings.hasApiKey)
                     Container(
                       key: const Key('need-key'),

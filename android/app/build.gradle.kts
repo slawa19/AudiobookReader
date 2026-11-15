@@ -1,8 +1,17 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     // Flutter подключается после плагина Android.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Flutter передаёт --dart-define в Base64 через dart-defines. Тот же признак читает app/assembly.dart:
+// нельзя получить подставной звук с applicationId настоящей сборки.
+val fakeTts = providers.gradleProperty("dart-defines").orNull
+    ?.split(',')
+    ?.map { String(Base64.getDecoder().decode(it), Charsets.UTF_8) }
+    ?.contains("FAKE_TTS=true") == true
 
 android {
     namespace = "io.github.slawa19.audiobook_reader"
@@ -16,7 +25,8 @@ android {
     }
 
     defaultConfig {
-        applicationId = "io.github.slawa19.audiobook_reader"
+        applicationId = "io.github.slawa19.audiobook_reader" + if (fakeTts) ".fake" else ""
+        manifestPlaceholders["appLabel"] = if (fakeTts) "AudiobookReader (fake)" else "AudiobookReader"
         minSdk = 31
         targetSdk = flutter.targetSdkVersion
         // Версия приложения берётся из pubspec.yaml.

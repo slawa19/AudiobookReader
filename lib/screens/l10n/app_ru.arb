@@ -5,6 +5,7 @@
     "description": "Заголовок полки"
   },
   "settings": "Настройки",
+  "fakeVoice": "Подставной голос",
   "addBook": "Добавить книгу",
   "continueReading": "Продолжить",
   "progressNew": "новая",

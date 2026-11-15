@@ -16,6 +16,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get settings => 'Ustawienia';
 
   @override
+  String get fakeVoice => 'Głos testowy';
+
+  @override
   String get addBook => 'Dodaj książkę';
 
   @override

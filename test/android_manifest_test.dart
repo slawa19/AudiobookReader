@@ -22,6 +22,19 @@ void main() {
   };
   const genericTypes = {'application/zip', 'application/x-zip-compressed', 'application/xml', 'text/xml'};
 
+  test('Android: только INTERNET; незашифрованный HTTP запрещён всему приложению', () {
+    final permissions = RegExp(r'<uses-permission(?:-sdk-\d+)?\b[^>]*>')
+        .allMatches(manifest)
+        .map((match) => values(match.group(0)!, 'name').single)
+        .toList();
+    expect(permissions, unorderedEquals(['android.permission.INTERNET']));
+    final application = RegExp(r'<application\b[^>]*>').firstMatch(manifest)!.group(0)!;
+    expect(values(application, 'usesCleartextTraffic'), {'false'});
+    // Без отдельного networkSecurityConfig нет исключений, разрешающих HTTP по доменам.
+    expect(values(application, 'networkSecurityConfig'), isEmpty);
+    expect(manifest, isNot(contains('<service')));
+  });
+
   test('Android: непрозрачный URI MediaStore с octet-stream принимается, архивы и XML требуют суффикс', () {
     final opaque = Uri.parse('content://media/external/file/20334');
     bool accepts(Uri uri, String type) => filters.any((filter) {
