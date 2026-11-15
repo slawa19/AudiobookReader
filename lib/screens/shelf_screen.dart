@@ -292,8 +292,8 @@ class _ContinueChapterState extends State<_ContinueChapter> {
       if (label == null || label.isEmpty) return const SizedBox.shrink();
       final excerpt = book != null && book.chapters[chapter!].title.trim().isEmpty;
       return Text(label,
-          maxLines: excerpt ? 1 : null,
-          overflow: excerpt ? TextOverflow.ellipsis : null,
+          maxLines: excerpt ? 1 : 2,
+          overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant));
     },
   );

@@ -208,7 +208,7 @@ class ReaderScreenState extends State<ReaderScreen> {
   void _startLayout(ReadingPosition place, {ReadingPosition? retain, bool completeRetain = false,
       bool savePosition = true, bool move = false, bool user = false}) {
     _cancelPending();
-    _layout?.cancel();
+    _layout?.pause();
     final metrics = _wantedMetrics;
     final next = ChapterPagination();
     next.start(book: book, style: metrics.style, column: metrics.column, block: place.block, offset: place.offset,
@@ -356,6 +356,14 @@ class ReaderScreenState extends State<ReaderScreen> {
   }
 
   void _goToPlace(int block, int offset, {bool user = true}) {
+    final target = layout.findPage(block, offset);
+    final changingMetrics = _pendingLayout != null && _pendingMetrics != _shownMetrics;
+    if (!changingMetrics && target != null && !layout.pages[target].endsAtLayoutStart &&
+        (!user || target == _page)) {
+      // Возврат к любому уже посчитанному месту сохраняет страницу и положение текста (А§5).
+      _goToCalculatedPage(target, user: user);
+      return;
+    }
     if (_pendingLayout != null) {
       if (_current.contains(block, offset)) {
         setState(() => _startLayout(_pagePosition, retain: ReadingPosition(block, offset), completeRetain: true));
@@ -364,27 +372,49 @@ class ReaderScreenState extends State<ReaderScreen> {
       }
       return;
     }
-    final target = layout.findPage(block, offset);
-    if (target != null && (target == _page || (!user && (target - _page).abs() == 1))) {
-      goToPage(target, user: user);
-      return;
-    }
     goToPosition(ReadingPosition(block, offset), user: user);
   }
 
-  /// Произвольная цель ищется в раскладке от начала её блока, без разрыва слова новым началом страницы.
+  void _goToCalculatedPage(int target, {required bool user}) {
+    final pending = _pendingLayout;
+    if (pending != null) {
+      _cancelPending();
+      if (identical(pending, _layout)) layout.addListener(_onLayout);
+    }
+    layout.resume();
+    // Новая команда может прийти до кадра, который подключит заменённый PageController.
+    // Готовая страница показывается сразу, а не теряется вместе с отменённым ожиданием.
+    if (_pc == null || !_pc!.hasClients) {
+      _cancelPageRequest();
+      _onPageChanged(target, programmatic: !user);
+      setState(_resetPages);
+    } else {
+      goToPage(target, user: user);
+    }
+  }
+
+  /// Готовое место голоса сохраняет страницу; новая цель ищется от начала блока без разрыва слова.
   void goToPosition(ReadingPosition place, {bool user = true}) {
+    final shown = layout.findPage(place.block, place.offset);
+    final changingMetrics = _pendingLayout != null && _pendingMetrics != _shownMetrics;
+    if (!user && !changingMetrics && shown != null && !layout.pages[shown].endsAtLayoutStart) {
+      _goToCalculatedPage(shown, user: user);
+      return;
+    }
     setState(() {
       _cancelPageRequest();
       _selectedBlock = null;
       _selectedAt = null;
       if (user) _userMoved();
-      if (_pendingGoal?.block == place.block) {
+      final candidateLayout = _pendingLayout ?? layout;
+      final candidate = candidateLayout.findPage(place.block, place.offset);
+      final cut = candidate != null && candidateLayout.pages[candidate].endsAtLayoutStart;
+      if (!cut && _pendingGoal?.block == place.block) {
         _pendingGoal = place;
         _pendingMove = true;
         _pendingUser = user;
         _onPendingLayout();
-      } else if (_pendingLayout == null && layout.pages.first.firstBlock == place.block &&
+      } else if (!cut && _pendingLayout == null && layout.pages.first.firstBlock == place.block &&
           layout.pages.first.firstOffset == 0) {
         // Этот блок уже считается с начала: продолжаем его очередь, не измеряя готовый префикс заново.
         _pendingLayout = layout;
@@ -609,7 +639,16 @@ class ReaderScreenState extends State<ReaderScreen> {
     final command = narration.commandRevision != _seenCommands;
     if (command) {
       _seenCommands = narration.commandRevision;
-      if (narration.bookId == book.id) _following = true;
+      if (narration.bookId == book.id) {
+        _following = true;
+        // Явная команда звука отменяет прежнее листание, даже если голос остался
+        // на текущей странице: завершение той анимации уже не является выбором читателя.
+        // Пока палец держит страницу, его жест сохраняет приоритет (А§5).
+        if (_dragStartPage == null) {
+          _cancelPageRequest();
+          if (_pc != null && _animatingTo != null) _resetPages();
+        }
+      }
     }
     if (narration.bookId == book.id) {
       if (state == NarrationState.stopped && _lastState != NarrationState.stopped) _following = true;
@@ -1162,13 +1201,13 @@ class _TopBar extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                          // Название главы переносится; начало текста безымянной главы — одной строкой.
+                        // Название главы — не больше двух строк; начало безымянной — одной строкой.
                         Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleMedium),
                         if (subtitle != null && subtitle!.isNotEmpty)
                           Text(subtitle!,
                               key: const Key('top-bar-chapter'),
-                              maxLines: chapterExcerpt ? 1 : null,
-                              overflow: chapterExcerpt ? TextOverflow.ellipsis : null,
+                              maxLines: chapterExcerpt ? 1 : 2,
+                              overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
                       ],
                     ),

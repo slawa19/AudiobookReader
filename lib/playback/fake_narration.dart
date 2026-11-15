@@ -6,10 +6,14 @@ import '../book/model.dart';
 import '../library/library.dart';
 import '../library/settings.dart';
 import '../tts/sentences.dart';
+import '../tts/segments.dart';
 import '../tts/voices.dart';
 import 'chapter_download.dart';
 import 'narration.dart';
 import 'voice_sample.dart';
+
+/// То же окно начала блока, что у настоящего контроллера.
+const _blockStartWindow = Duration(seconds: 3);
 
 /// Подставная озвучка прототипа: звука нет, таймер двигает «звучащий» блок по книге.
 ///
@@ -200,7 +204,10 @@ class FakeNarrationController extends NarrationController {
   void _step({required bool forward}) {
     if (_book == null || _block == null) return;
     if (_state != NarrationState.paused && !isActive) return;
-    final target = forward ? _spokenFrom(_block! + 1, forward: true) : _spokenFrom(_block! - 1, forward: false);
+    final elapsed = _duration(_book!.blocks[_block!]).inMilliseconds * _progress;
+    final atStart = elapsed < _blockStartWindow.inMilliseconds;
+    final from = forward ? _block! + 1 : atStart ? _block! - 1 : _block!;
+    final target = _spokenFrom(from, forward: forward);
     if (target == null) return;
     _userCommand();
     _moveKeepingIntent(target);
@@ -463,7 +470,7 @@ class FakeNarrationController extends NarrationController {
     if (book == null) return null;
     var i = from;
     while (i >= 0 && i < book.blocks.length) {
-      if (book.blocks[i].isSpoken && book.blocks[i].text.trim().isNotEmpty) return i;
+      if (chapterSegments([book.blocks[i]]).isNotEmpty) return i;
       i += forward ? 1 : -1;
     }
     return null;

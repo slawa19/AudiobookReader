@@ -81,17 +81,21 @@ void main() {
       expect(h.controller.state, NarrationState.stopped);
     });
   }
-  test('10 переход и смена профиля сохраняют каноническую часть длинного предложения', () async {
+  test('10 автоматическая часть длинного предложения переживает смену профиля; вперёд идёт к следующему абзацу', () async {
     final text = '${List.filled(300, 'слово').join(' ')}.';
     final h = await PlaybackHarness.create(
       playbackBook([
-        [text],
+        [text, 'Следующий абзац.'],
       ], kind: BlockKind.paragraph),
     );
     final canonical = chapterSegments(h.book.blocks);
     final expected = canonical[1].mappings.first.blockStart;
+    for (final segment in canonical) {
+      await h.cache(segment.text, seconds: 60);
+    }
     h.controller.readFrom(h.book, 0);
-    h.controller.next();
+    await until(() => h.player.playing && h.player.items.length >= 2);
+    h.clock.advance(const Duration(seconds: 61));
     expect(h.controller.unitStart, ReadingPosition(0, expected));
     h.controller.pause();
     h.settings.voice = 'Kore';
@@ -99,6 +103,8 @@ void main() {
     expect(h.controller.unitStart, ReadingPosition(0, expected));
     expect(h.controller.state, NarrationState.paused);
     expect(h.engine.calls, isEmpty);
+    h.controller.next();
+    expect(h.controller.unitStart, const ReadingPosition(1, 0));
   });
   test('1 idle → preparing → playing → paused → playing; прерывание без автопродолжения', () async {
     final h = await PlaybackHarness.create(

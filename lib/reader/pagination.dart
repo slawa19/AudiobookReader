@@ -39,10 +39,14 @@ class PageFragment {
 
 /// Страница: пара «начало» и «конец» (А§5) плюс раскладка кусков.
 class BookPageLayout {
-  const BookPageLayout({required this.chapter, required this.fragments});
+  const BookPageLayout({required this.chapter, required this.fragments, this.endsAtLayoutStart = false});
 
   final int chapter;
   final List<PageFragment> fragments;
+
+  /// Префикс оборван перед уже показанным началом раскладки. Его можно листать назад,
+  /// но нельзя выбирать как полную страницу произвольной цели (А§5).
+  final bool endsAtLayoutStart;
 
   int get firstBlock => fragments.first.block;
   int get firstOffset => fragments.first.start;
@@ -141,9 +145,10 @@ class ChapterPagination extends ChangeNotifier {
 
   final List<BookPageLayout> _pages = [];
   late final List<BookPageLayout> pages = UnmodifiableListView(_pages);
-  bool get isCalculating => _iterator != null || _backIterator != null;
+  bool get isCalculating => (!_paused && _iterator != null) || _backIterator != null;
   bool get isComplete => _complete;
   bool _complete = false;
+  bool _paused = false;
   Timer? _timer;
   Iterator<BookPageLayout>? _iterator;
   int _generation = 0;
@@ -265,13 +270,34 @@ class ChapterPagination extends ChangeNotifier {
   /// Следующая порция тем же итератором. Перераскладка может досчитать ограниченный текст старой
   /// видимой страницы до удерживаемого места перед первым показом; книга до этой страницы не считается.
   void advancePage() {
+    if (_paused) return;
     _timer?.cancel();
     _timer = null;
     _advance(_generation);
   }
 
+  /// Пока ищется другая цель, видимые страницы и итератор остаются для возможного возврата.
+  void pause() {
+    _paused = true;
+    _generation++;
+    _timer?.cancel();
+    _timer = null;
+    cancelPrevious();
+  }
+
+  /// Продолжает хвост без повторного измерения или замены уже показанных страниц.
+  void resume() {
+    if (!_paused) return;
+    _paused = false;
+    if (_iterator != null) {
+      final generation = _generation;
+      _timer = Timer(const Duration(milliseconds: 1), () => _advance(generation));
+    }
+  }
+
   /// После отмены ни измерений, ни уведомлений от старого расчёта больше нет.
   void cancel() {
+    _paused = false;
     _generation++;
     _timer?.cancel();
     _timer = null;
@@ -310,8 +336,8 @@ class _Paginator {
   late double _y;
   late int _chapter;
 
-  BookPageLayout _flush() {
-    final page = BookPageLayout(chapter: _chapter, fragments: _cur);
+  BookPageLayout _flush({bool endsAtLayoutStart = false}) {
+    final page = BookPageLayout(chapter: _chapter, fragments: _cur, endsAtLayoutStart: endsAtLayoutStart);
     _cur = <PageFragment>[];
     _y = 0;
     return page;
@@ -370,7 +396,11 @@ class _Paginator {
       }
       prevKind = block.kind;
     }
-    if (_cur.isNotEmpty) yield _flush();
+    if (_cur.isNotEmpty) {
+      final cut = stopBlock != null && stopBlock < ch.endBlock &&
+          (stopBlock < ch.endBlock - 1 || stopOffset < book.blocks[stopBlock].text.length);
+      yield _flush(endsAtLayoutStart: cut);
+    }
   }
 
   /// Даже один огромный абзац измеряется окнами. Незавершённую последнюю строку окна измеряем заново
