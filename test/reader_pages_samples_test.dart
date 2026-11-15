@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'pagination_test.dart' show checkCoverage, colors, styleFor;
 import 'support/book_samples.dart';
+import 'support/pagination.dart';
 import 'support/reader_samples.dart';
 
 Future<Map<String, Size>> imageSizes(ParsedBook parsed) async {
@@ -30,7 +31,7 @@ Future<Map<String, Size>> imageSizes(ParsedBook parsed) async {
 Future<void> renderPages(
   WidgetTester tester,
   ParsedBook parsed,
-  BookLayout layout,
+  ChapterPagination layout,
   PageStyle style,
   Size column,
 ) async {
@@ -130,7 +131,7 @@ void main() {
       for (final entry in samples.entries) {
         final parsed = entry.value;
         final book = parsed.book;
-        final layout = BookLayout.compute(book: book, style: style, column: column, imageSizes: sizes[entry.key]!);
+        final layout = await paginate(tester: tester, book: book, style: style, column: column, imageSizes: sizes[entry.key]!);
         checkCoverage(book, layout, column);
         await renderPages(tester, parsed, layout, style, column);
         for (final block in book.blocks) {
@@ -159,7 +160,7 @@ void main() {
     final style = styleFor(5, 1.3);
     final sizes = (await tester.runAsync(() => imageSizes(parsed)))!;
     expect(sizes.values.single.height, greaterThan(sizes.values.single.width));
-    final layout = BookLayout.compute(book: parsed.book, style: style, column: column, imageSizes: sizes);
+    final layout = await paginate(tester: tester, book: parsed.book, style: style, column: column, imageSizes: sizes);
     checkCoverage(parsed.book, layout, column);
     for (final block in parsed.book.blocks.where(
       (b) => b.kind == BlockKind.heading || b.kind == BlockKind.image && b.text.isNotEmpty,
@@ -172,11 +173,11 @@ void main() {
     await renderPages(tester, parsed, layout, style, column);
   });
 
-  test('пустые блоки из разборщика: разделитель и картинка без подписи не дают строк подписи', () {
+  test('пустые блоки из разборщика: разделитель и картинка без подписи не дают строк подписи', () async {
     final book = samples['fb2_structure.xml']!.book;
     final empty = book.blocks.where((b) => b.text.isEmpty).toList();
     expect(empty.map((b) => b.kind), [BlockKind.separator, BlockKind.image]);
-    final layout = BookLayout.compute(book: book, style: styleFor(5, 1.3), column: column);
+    final layout = await paginate(book: book, style: styleFor(5, 1.3), column: column);
     checkCoverage(book, layout, column);
     final image = empty.singleWhere((b) => b.kind == BlockKind.image);
     final fragments = layout.pages.expand((p) => p.fragments).where((f) => f.block == image.index).toList();
@@ -195,7 +196,7 @@ void main() {
       ),
     );
     final style = styleFor(5, 1.3);
-    final layout = BookLayout.compute(book: parsed.book, style: style, column: column);
+    final layout = await paginate(tester: tester, book: parsed.book, style: style, column: column);
     checkCoverage(parsed.book, layout, column);
     for (final block in parsed.book.blocks) {
       final whole = piecePainter(style, block, 0, block.text.length, width: column.width);

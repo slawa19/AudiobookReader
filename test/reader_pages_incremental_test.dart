@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'pagination_test.dart' show colors;
 import 'support/book_samples.dart';
+import 'support/pagination.dart';
 
 class MeasuredStyle extends PageStyle {
   MeasuredStyle({double size = 16, double height = 27})
@@ -87,7 +88,7 @@ void main() {
     pagination.cancel();
   });
 
-  test('между страницами проходит событие, полный результат совпадает с синхронным', () async {
+  test('между страницами проходит событие; глава совпадает с порционным расчётом книги', () async {
     final book = checked(epub(content: fixture('epub_structures.xhtml'))).book;
     final style = MeasuredStyle();
     final pagination = ChapterPagination();
@@ -105,7 +106,8 @@ void main() {
     expect(heartbeat, isTrue);
     expect(pagination.pages.length, greaterThan(1));
     expect(heartbeatBeforeSecondPage, isTrue);
-    final sync = BookLayout.compute(book: book, style: style, column: column);
+    final sync = await paginate(book: book, style: style, column: column);
+    addTearDown(sync.dispose);
     final chapter = sync.pages.where((p) => p.chapter == 0).toList();
     expect(pagination.pages.length, chapter.length);
     for (var i = 0; i < chapter.length; i++) {

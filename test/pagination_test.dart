@@ -11,6 +11,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'support/pagination.dart';
+
 Future<Book> loadBook(String name) async {
   final data = await rootBundle.load('assets/demo/$name.json');
   return Book.fromJson(jsonDecode(utf8.decode(data.buffer.asUint8List())) as Map<String, Object?>);
@@ -54,7 +56,7 @@ Book awkwardBook() {
   );
 }
 
-void checkCoverage(Book book, BookLayout layout, Size col) {
+void checkCoverage(Book book, ChapterPagination layout, Size col) {
   final covered = <int, List<(int, int)>>{};
   for (final page in layout.pages) {
     expect(page.fragments, isNotEmpty);
@@ -92,7 +94,7 @@ const colors = PageColors(
 
 /// Рисует страницы в теме Material и сравнивает высоту каждого текстового куска (абзац, стих, цитата,
 /// заголовок, подпись) с посчитанной. Возвращает число проверенных кусков.
-Future<int> checkRenderedHeights(WidgetTester tester, Book book, BookLayout layout, PageStyle style, Size col,
+Future<int> checkRenderedHeights(WidgetTester tester, Book book, ChapterPagination layout, PageStyle style, Size col,
     Iterable<int> pages) async {
   var checked = 0;
   for (final i in pages) {
@@ -147,18 +149,18 @@ void main() {
   ];
 
   for (final (label, screen, step, scale) in cases) {
-    test('разбивка покрывает весь текст без пропусков и не режет строки: $label', () {
+    test('разбивка покрывает весь текст без пропусков и не режет строки: $label', () async {
       for (final book in [kapitanskaya, dama, awkwardBook()]) {
         final col = column(screen);
-        final layout = BookLayout.compute(book: book, style: styleFor(step, scale), column: col, imageSizes: imageSizes);
+        final layout = await paginate(book: book, style: styleFor(step, scale), column: col, imageSizes: imageSizes);
         checkCoverage(book, layout, col);
       }
     });
   }
 
-  test('страница находится по месту в книге', () {
+  test('страница находится по месту в книге', () async {
     final style = styleFor(2, 1);
-    final layout = BookLayout.compute(book: kapitanskaya, style: style, column: column(const Size(412, 915)), imageSizes: imageSizes);
+    final layout = await paginate(book: kapitanskaya, style: style, column: column(const Size(412, 915)), imageSizes: imageSizes);
     for (var i = 0; i < layout.pages.length; i++) {
       final p = layout.pages[i];
       expect(layout.pageOf(p.firstBlock, p.firstOffset), i);
@@ -173,7 +175,7 @@ void main() {
     addTearDown(tester.view.reset);
     final style = styleFor(2, 1);
     final col = column(const Size(412, 915));
-    final layout = BookLayout.compute(book: kapitanskaya, style: style, column: col, imageSizes: imageSizes);
+    final layout = await paginate(tester: tester, book: kapitanskaya, style: style, column: col, imageSizes: imageSizes);
     // Первые страницы трёх глав и соседние: заголовки, стихи, цитаты, подписи, сноски, картинка.
     final pages = {
       for (final first in layout.chapterFirstPage) ...[first, first + 1, first + 2],
@@ -189,7 +191,7 @@ void main() {
     final book = awkwardBook();
     final style = styleFor(5, 1.3);
     final col = column(const Size(320, 640));
-    final layout = BookLayout.compute(book: book, style: style, column: col, imageSizes: imageSizes);
+    final layout = await paginate(tester: tester, book: book, style: style, column: col, imageSizes: imageSizes);
     checkCoverage(book, layout, col);
     final headingPages = layout.pages.where((p) => p.fragments.any((f) => f.block == 0)).length;
     final captionPages = layout.pages.where((p) => p.fragments.any((f) => f.block == 2 && !f.isImage)).length;
@@ -202,10 +204,10 @@ void main() {
     expect(checked, greaterThan(5));
   });
 
-  test('№7: пустой раздел в главы не попадает, пустая книга не создаётся', () {
+  test('№7: пустой раздел в главы не попадает, пустая книга не создаётся', () async {
     final book = awkwardBook();
     expect(book.chapters.map((c) => c.title), ['Глава']);
-    final layout = BookLayout.compute(book: book, style: styleFor(2, 1), column: column(const Size(412, 915)));
+    final layout = await paginate(book: book, style: styleFor(2, 1), column: column(const Size(412, 915)));
     expect(layout.chapterFirstPage, hasLength(book.chapters.length));
     expect(
       () => Book(id: 'x', title: 'x', author: 'x', language: 'ru', chapters: const [], blocks: const [], notes: const {}),
@@ -230,7 +232,7 @@ void main() {
     expect(style.verse.fontStyle, FontStyle.italic);
     final book = awkwardBook();
     final col = column(const Size(412, 915));
-    final layout = BookLayout.compute(book: book, style: style, column: col, imageSizes: imageSizes);
+    final layout = await paginate(tester: tester, book: book, style: style, column: col, imageSizes: imageSizes);
     final page = layout.pages.indexWhere((p) => p.fragments.any((f) => f.block == 4));
     await tester.pumpWidget(Directionality(
       textDirection: TextDirection.ltr,
@@ -246,7 +248,7 @@ void main() {
   testWidgets('проверка высоты чувствительна: у той же страницы на другой ширине высоты расходятся', (tester) async {
     final style = styleFor(2, 1);
     final col = column(const Size(412, 915));
-    final layout = BookLayout.compute(book: kapitanskaya, style: style, column: col, imageSizes: imageSizes);
+    final layout = await paginate(tester: tester, book: kapitanskaya, style: style, column: col, imageSizes: imageSizes);
     final page = layout.pages[1];
     var differs = 0;
     for (final f in page.fragments) {
