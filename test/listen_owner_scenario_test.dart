@@ -18,7 +18,8 @@ import 'support/harness.dart';
 /// («— Ну, Котик, сегодня ты играла…»). Тёмная тема, как у владельца.
 Future<void> openOwnerPage(WidgetTester tester, Prototype p) async {
   p.settings.theme = ThemeChoice.dark;
-  await openDama(tester, p, at: const ReadingPosition(23, 0));
+  // Явное начало страницы этого сценария: хвост 22 перед полным абзацем 23.
+  await openDama(tester, p, at: const ReadingPosition(22, 966));
   final st = reader(tester);
   final page = st.layout.pages[st.page];
   expect(page.firstBlock, 22, reason: 'вверху страницы — хвост абзаца 22');
@@ -45,6 +46,9 @@ void main() {
     // Снова «Слушать».
     await tapCenter(tester);
     await advance(tester, const Duration(milliseconds: 400));
+    final beforeListen = reader(tester).layout.pages[reader(tester).page];
+    final startBeforeListen = (beforeListen.firstBlock, beforeListen.firstOffset);
+    final topBeforeListen = beforeListen.fragments.firstWhere((f) => f.block == 23 && f.start == 0).top;
     await tester.tap(find.byKey(const Key('listen')));
     await advance(tester, const Duration(seconds: 3));
     final st = reader(tester);
@@ -52,6 +56,10 @@ void main() {
     final page = st.layout.pages[st.page];
     expect(page.fragments.any((f) => f.block == 23 && f.start == 0), isTrue,
         reason: 'страница та же — назад не перелистнулась');
+    expect((page.firstBlock, page.firstOffset), startBeforeListen,
+        reason: '«Слушать» не меняет начало уже видимой страницы');
+    expect(page.fragments.firstWhere((f) => f.block == 23 && f.start == 0).top, topBeforeListen,
+        reason: 'звучащий абзац остаётся на прежнем месте по вертикали');
     expect(st.following, isTrue);
   });
 

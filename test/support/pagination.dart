@@ -13,6 +13,8 @@ Future<ChapterPagination> paginate({
   required Size column,
   Map<String, Size> imageSizes = const {},
   WidgetTester? tester,
+  int block = 0,
+  int offset = 0,
 }) async {
   Future<ChapterPagination> calculate() async {
     final pagination = ChapterPagination();
@@ -21,7 +23,7 @@ Future<ChapterPagination> paginate({
       if (pagination.isComplete) done.complete();
     }
     pagination.addListener(changed);
-    pagination.start(book: book, style: style, column: column, block: 0, offset: 0,
+    pagination.start(book: book, style: style, column: column, block: block, offset: offset,
         imageSizes: imageSizes, throughBook: true);
     await done.future.timeout(const Duration(seconds: 30));
     pagination.removeListener(changed);

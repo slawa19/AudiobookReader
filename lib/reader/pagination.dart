@@ -7,6 +7,10 @@ import 'package:flutter/widgets.dart';
 import '../book/model.dart';
 import 'page_style.dart';
 
+/// Наблюдение за фактическими измерениями в тестах; текст книги сюда не передаётся.
+@visibleForTesting
+void Function(int block, int start, int end)? debugPageMeasurement;
+
 /// Кусок блока на странице: текст [start, end) блока [block] и его место по вертикали.
 ///
 /// У картинки два вида кусков: сама картинка ([imageSize] задан, текст пуст) и строки подписи (текст подписи,
@@ -63,6 +67,47 @@ class BookPageLayout {
 /// Повторный [start] отменяет прежнюю работу; место передаётся явно, а не выводится из новой типографики.
 /// С [start] `throughBook: true` расчёт продолжается через границы следующих глав до конца книги.
 class ChapterPagination extends ChangeNotifier {
+  late Book _book;
+  late PageStyle _style;
+  late Size _column;
+  Map<String, Size> _imageSizes = const {};
+
+  /// Индексы в [pages] локальны: при досчёте назад начало массива сдвигается на это число страниц.
+  int get prependedCount => _prepended;
+  int _prepended = 0;
+  int _bookStart = 0;
+  bool get hasPrevious => _pages.isNotEmpty &&
+      (_pages.first.firstBlock > _bookStart || _pages.first.firstOffset > 0);
+  bool get isLoadingPrevious => _backIterator != null;
+  Timer? _backTimer;
+  Iterator<BookPageLayout>? _backIterator;
+  final List<BookPageLayout> _before = [];
+  Completer<int>? _backDone;
+  int _backChapter = 0;
+
+  /// Конец книги известен из координат самой страницы, без ожидания следующей порции расчёта.
+  bool endsBook(BookPageLayout page) {
+    if (page.lastEnd != _book.blocks[page.lastBlock].text.length) return false;
+    for (var b = page.lastBlock + 1; b < _book.blocks.length; b++) {
+      if (_book.blocks[b].text.isNotEmpty || _visualEmpty(_book.blocks[b])) return false;
+    }
+    return true;
+  }
+
+  /// Конец текстового блока относится к следующему блоку. Пустые картинки и разделители — видимые места.
+  (int, int) _place(int block, int offset) {
+    block = block.clamp(0, _book.blocks.length - 1);
+    offset = offset.clamp(0, _book.blocks[block].text.length);
+    while (block < _book.blocks.length) {
+      final b = _book.blocks[block];
+      if (offset < b.text.length || (b.text.isEmpty && _visualEmpty(b))) return (block, offset);
+      block++;
+      offset = 0;
+    }
+    return (_book.blocks.length, 0);
+  }
+
+  bool _visualEmpty(Block b) => b.kind == BlockKind.image || b.kind == BlockKind.separator;
   /// Номер страницы, на которой стоит место (блок, смещение).
   int pageOf(int block, int offset) {
     var lo = 0;
@@ -84,6 +129,10 @@ class ChapterPagination extends ChangeNotifier {
   /// Готовая страница места. Последняя известная страница ещё не означает конец книги.
   int? findPage(int block, int offset) {
     if (_pages.isEmpty) return null;
+    final place = _place(block, offset);
+    if (place.$1 == _book.blocks.length) return endsBook(_pages.last) ? _pages.length - 1 : null;
+    block = place.$1;
+    offset = place.$2;
     final i = pageOf(block, offset);
     final page = _pages[i];
     return page.contains(block, offset) ||
@@ -92,7 +141,7 @@ class ChapterPagination extends ChangeNotifier {
 
   final List<BookPageLayout> _pages = [];
   late final List<BookPageLayout> pages = UnmodifiableListView(_pages);
-  bool get isCalculating => _iterator != null;
+  bool get isCalculating => _iterator != null || _backIterator != null;
   bool get isComplete => _complete;
   bool _complete = false;
   Timer? _timer;
@@ -112,10 +161,88 @@ class ChapterPagination extends ChangeNotifier {
     _complete = false;
     _pages.clear();
     chapterFirstPage.clear();
+    _prepended = 0;
+    _book = book;
+    _bookStart = 0;
+    while (_bookStart < book.blocks.length - 1 && book.blocks[_bookStart].text.isEmpty &&
+        !_visualEmpty(book.blocks[_bookStart])) { _bookStart++; }
+    _style = style;
+    _column = column;
+    _imageSizes = imageSizes;
+    var place = _place(block, offset);
+    if (place.$1 == book.blocks.length) {
+      // Для позиции за последним знаком достаточно ограниченного хвоста последнего видимого блока.
+      // Его последняя страница становится точкой старта; предшествующий текст подключается обычным ходом назад.
+      var last = book.blocks.length - 1;
+      while (last > 0 && book.blocks[last].text.isEmpty && !_visualEmpty(book.blocks[last])) { last--; }
+      var tail = math.max(0, book.blocks[last].text.length - 4096);
+      if (tail > 0 && book.blocks[last].text.codeUnitAt(tail) >= 0xDC00 &&
+          book.blocks[last].text.codeUnitAt(tail) <= 0xDFFF) { tail--; }
+      final pages = _Paginator(book, style, column, imageSizes)
+          .chapter(book.chapterOf(last), firstBlock: last, firstOffset: tail).toList();
+      place = (pages.last.firstBlock, pages.last.firstOffset);
+    }
+    block = place.$1;
+    offset = place.$2;
     final chapter = book.chapterOf(block);
     _iterator = _Paginator(book, style, column, imageSizes)
         .fromPosition(chapter, block, offset, throughBook).iterator;
     _advance(_generation);
+  }
+
+  /// Предыдущий участок считается от начала своей главы до уже показанного начала страницы.
+  /// Страницы добавляются одной вставкой: видимый кусок и его границы никогда не заменяются.
+  Future<int> loadPrevious() {
+    if (_backDone != null) return _backDone!.future;
+    if (!hasPrevious) return Future.value(0);
+    final first = _pages.first;
+    var chapter = _book.chapterOf(first.firstBlock);
+    final atChapterStart = first.firstBlock == _book.chapters[chapter].firstBlock && first.firstOffset == 0;
+    if (atChapterStart) chapter--;
+    _backChapter = chapter;
+    _before.clear();
+    _backDone = Completer<int>();
+    _backIterator = _Paginator(_book, _style, _column, _imageSizes).chapter(chapter,
+        stopBlock: first.firstBlock, stopOffset: first.firstOffset).iterator;
+    final generation = _generation;
+    _backTimer = Timer(const Duration(milliseconds: 1), () => _advanceBack(generation));
+    return _backDone!.future;
+  }
+
+  void _advanceBack(int generation) {
+    if (generation != _generation) return;
+    final iterator = _backIterator;
+    if (iterator == null) return;
+    if (iterator.moveNext()) {
+      _before.add(iterator.current);
+      _backTimer = Timer(const Duration(milliseconds: 1), () => _advanceBack(generation));
+    } else {
+      if (_before.isEmpty && _backChapter > 0) {
+        // Пустая глава или пустой префикс собственной главы не задерживает продвижение назад.
+        _backIterator = _Paginator(_book, _style, _column, _imageSizes).chapter(--_backChapter).iterator;
+        _backTimer = Timer(const Duration(milliseconds: 1), () => _advanceBack(generation));
+        notifyListeners();
+        return;
+      }
+      final count = _before.length;
+      _pages.insertAll(0, _before);
+      _prepended += count;
+      _before.clear();
+      _backIterator = null;
+      _backTimer = null;
+      final done = _backDone!;
+      _backDone = null;
+      _updateChapterFirsts();
+      done.complete(count);
+    }
+    notifyListeners();
+  }
+
+  void _updateChapterFirsts() {
+    chapterFirstPage.clear();
+    for (var i = 0; i < _pages.length; i++) {
+      if (i == 0 || _pages[i - 1].chapter != _pages[i].chapter) chapterFirstPage.add(i);
+    }
   }
 
   void _advance(int generation) {
@@ -135,12 +262,31 @@ class ChapterPagination extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Следующая порция тем же итератором. Перераскладка может досчитать ограниченный текст старой
+  /// видимой страницы до удерживаемого места перед первым показом; книга до этой страницы не считается.
+  void advancePage() {
+    _timer?.cancel();
+    _timer = null;
+    _advance(_generation);
+  }
+
   /// После отмены ни измерений, ни уведомлений от старого расчёта больше нет.
   void cancel() {
     _generation++;
     _timer?.cancel();
     _timer = null;
     _iterator = null;
+    cancelPrevious();
+  }
+
+  /// Более новая команда вперёд снимает ненужный запрос назад, не останавливая расчёт хвоста.
+  void cancelPrevious() {
+    _backTimer?.cancel();
+    _backTimer = null;
+    _backIterator = null;
+    _before.clear();
+    _backDone?.complete(0);
+    _backDone = null;
   }
 
   @override
@@ -180,7 +326,13 @@ class _Paginator {
     }
   }
 
-  Iterable<BookPageLayout> chapter(int c, {int? firstBlock, int firstOffset = 0}) sync* {
+  int? _stopBlock;
+  int _stopOffset = 0;
+
+  Iterable<BookPageLayout> chapter(int c, {int? firstBlock, int firstOffset = 0,
+      int? stopBlock, int stopOffset = 0}) sync* {
+    _stopBlock = stopBlock;
+    _stopOffset = stopOffset;
     final ch = book.chapters[c];
     _cur = [];
     _y = 0;
@@ -191,6 +343,7 @@ class _Paginator {
     final titleOnly = ch.blockCount == 1 && book.blocks[ch.firstBlock].kind == BlockKind.heading;
 
     for (var i = firstBlock ?? ch.firstBlock; i < ch.endBlock; i++) {
+      if (stopBlock != null && (i > stopBlock || (i == stopBlock && stopOffset == 0))) break;
       final block = book.blocks[i];
       final start = i == firstBlock ? firstOffset : 0;
       switch (block.kind) {
@@ -226,30 +379,32 @@ class _Paginator {
       {double before = 0, bool beforeAtPageTop = false, double after = 0, bool keepTogether = false}) sync* {
     final block = book.blocks[i];
     var at = start;
+    final limit = i == _stopBlock ? math.min(block.text.length, _stopOffset) : block.text.length;
+    if (at >= limit) return;
     do {
-      var end = math.min(at + 4096, block.text.length);
+      var end = math.min(at + 4096, limit);
       // Окно не разрезает суррогатную пару UTF-16.
-      if (end < block.text.length && end > at && block.text.codeUnitAt(end - 1) >= 0xD800 &&
+      if (end < limit && end > at && block.text.codeUnitAt(end - 1) >= 0xD800 &&
           block.text.codeUnitAt(end - 1) <= 0xDBFF) {
         end--;
       }
       // Незавершённое слово может изменить перенос и предпоследней строки окна. По возможности
       // заканчиваем окно на пробеле; последняя строка всё равно остаётся для следующего измерения.
-      if (end < block.text.length) {
+      if (end < limit) {
         final boundary = block.text.substring(at, end).lastIndexOf(RegExp(r'\s'));
         if (boundary >= 0) end = at + boundary + 1;
       }
       var measured = _measure(block, at, end);
-      if (end < block.text.length && measured.lineStarts.length > 1) {
+      if (end < limit && measured.lineStarts.length > 1) {
         end = measured.lineStarts.last;
         measured = _Measured(measured.lineHeights.sublist(0, measured.lineHeights.length - 1),
             measured.lineStarts.sublist(0, measured.lineStarts.length - 1), end);
       }
       yield* _placeLines(i, measured, before: at == start ? before : 0,
-          beforeAtPageTop: beforeAtPageTop, after: end == block.text.length ? after : 0,
-          keepTogether: keepTogether && at == start && end == block.text.length);
+          beforeAtPageTop: beforeAtPageTop, after: end == limit ? after : 0,
+          keepTogether: keepTogether && at == start && end == limit);
       at = end;
-    } while (at < block.text.length);
+    } while (at < limit);
   }
 
   /// Кладёт строки куска на страницы. [before] — отступ перед первой строкой (у начала страницы — только при
@@ -262,14 +417,14 @@ class _Paginator {
       final fitsEmpty = before + total <= column.height;
       if (fitsEmpty && _y + before + total > column.height) yield _flush();
     }
-    var line = 0;
-    while (line < m.lineHeights.length) {
-      final sp = line > 0 ? 0.0 : (_cur.isEmpty && !beforeAtPageTop ? 0.0 : before);
+    var first = true;
+    while (m.lineHeights.isNotEmpty) {
+      final sp = !first ? 0.0 : (_cur.isEmpty && !beforeAtPageTop ? 0.0 : before);
       final avail = column.height - _y - sp;
       var k = 0;
       var h = 0.0;
-      while (line + k < m.lineHeights.length && h + m.lineHeights[line + k] <= avail + 0.01) {
-        h += m.lineHeights[line + k];
+      while (k < m.lineHeights.length && h + m.lineHeights[k] <= avail + 0.01) {
+        h += m.lineHeights[k];
         k++;
       }
       if (k == 0) {
@@ -278,15 +433,29 @@ class _Paginator {
           continue;
         }
         // Строка выше пустой страницы (огромный кегль) — кладём одну, иначе разбивка не продвинется.
-        h = m.lineHeights[line];
+        h = m.lineHeights.first;
         k = 1;
       }
-      final start = m.lineStarts[line];
-      final end = line + k < m.lineStarts.length ? m.lineStarts[line + k] : m.end;
+      final start = m.lineStarts.first;
+      var end = k < m.lineStarts.length ? m.lineStarts[k] : m.end;
+      // Разрыв внутри длинного слова меняет перенос последней строки. Проверяем ровно тот кусок,
+      // который будет нарисован, а после разрыва заново измеряем оставшийся текст от нового начала.
+      h = _measure(book.blocks[i], start, end).lineHeights.fold(0.0, (a, b) => a + b);
+      while (h > avail + 0.01 && k > 1) {
+        k--;
+        end = m.lineStarts[k];
+        h = _measure(book.blocks[i], start, end).lineHeights.fold(0.0, (a, b) => a + b);
+      }
+      if (h > avail + 0.01 && _cur.isNotEmpty) {
+        yield _flush();
+        continue;
+      }
       _cur.add(PageFragment(block: i, start: start, end: end, top: _y + sp, height: h));
       _y += sp + h;
-      line += k;
-      if (line < m.lineHeights.length) yield _flush();
+      first = false;
+      if (end == m.end) break;
+      yield _flush();
+      m = _measure(book.blocks[i], end, m.end);
     }
     _y += after;
   }
@@ -329,6 +498,7 @@ class _Paginator {
   }
 
   _Measured _measure(Block block, int start, int end) {
+    debugPageMeasurement?.call(block.index, start, end);
     final tp = piecePainter(style, block, start, end, width: column.width);
     final metrics = tp.computeLineMetrics();
     final heights = <double>[];

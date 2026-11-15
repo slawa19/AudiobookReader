@@ -122,8 +122,10 @@ class BookPage extends StatelessWidget {
       top: f.top,
       left: fragmentInset(style, block),
       right: 0,
-      child: Text.rich(
-        pieceSpan(style, block, f.start, f.end, color: colors.ink, subColor: colors.ink2, noteColor: colors.accent),
+      // RichText, как TextPainter, использует явный стиль страницы. Text.rich добавлял системный boldText
+      // только при рисовании, хотя в измерении такого начертания не было.
+      child: RichText(
+        text: pieceSpan(style, block, f.start, f.end, color: colors.ink, subColor: colors.ink2, noteColor: colors.accent),
         textAlign: pieceAlign(block),
         strutStyle: pieceStrut(style, block),
         textScaler: TextScaler.noScaling,

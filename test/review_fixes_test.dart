@@ -82,8 +82,14 @@ void main() {
   // старт — с первого предложения, которое начинается на странице; страница назад не уезжает.
   testWidgets('№11 → FR-P3: «Слушать» начинает с первого предложения на странице, назад не листает', (tester) async {
     final p = await pumpPrototype(tester);
-    await openKapitanskaya(tester, p);
+    await openKapitanskaya(tester, p, at: const ReadingPosition(0, 0));
     final st = reader(tester);
+    // Сцена требует хвоста абзаца: получаем его обычным листанием от начала книги.
+    final continuation = st.layout.pages.indexWhere((page) => page.firstOffset > 0);
+    expect(continuation, greaterThan(0));
+    final move = st.goToPage(continuation);
+    await tester.pumpAndSettle();
+    await move;
     final page = st.layout.pages[st.page];
     expect(page.firstOffset, greaterThan(0), reason: 'страница начинается хвостом абзаца');
     final book = st.widget.book;
