@@ -112,6 +112,8 @@ class ReaderScreenState extends State<ReaderScreen> {
   bool get panelsVisible => _panels;
   bool get following => _following;
   @visibleForTesting
+  bool get gestureInProgress => _dragStartPage != null;
+  @visibleForTesting
   EdgeInsets get pagePadding => _pad;
   @visibleForTesting
   PageStyle get pageStyle => _style;
@@ -119,6 +121,9 @@ class ReaderScreenState extends State<ReaderScreen> {
   Size get columnSize => _column;
 
   bool get _mine => narration.bookId == book.id && narration.state != NarrationState.idle;
+
+  // Новый размер страницы блокирует старые жесты; близкая цель в той же раскладке — нет.
+  bool get _reflowing => _pendingLayout != null && !identical(_pendingLayout, _layout);
 
   @override
   void initState() {
@@ -364,17 +369,11 @@ class ReaderScreenState extends State<ReaderScreen> {
     final user = _waitingUser;
     _waitingPage = null;
     _waitingDone = null;
-    final generation = _generation;
-    final op = _navOp;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && generation == _generation && op == _navOp) {
-        _dragStartPage = null;
-        _userDragging = false;
-        _onPageChanged(waiting.clamp(0, layout.pages.length - 1), programmatic: !user);
-        setState(_resetPages);
-      }
-      done?.complete();
-    });
+    _dragStartPage = null;
+    _userDragging = false;
+    _onPageChanged(waiting.clamp(0, layout.pages.length - 1), programmatic: !user);
+    setState(_resetPages);
+    done?.complete();
   }
 
   void _goToPlace(int block, int offset, {bool user = true}) {
@@ -485,7 +484,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     } else {
       layout.cancelPrevious();
     }
-    if (!continuing) _resetPages();
+    if (!continuing && _animatingTo != null) _resetPages();
   }
 
   BookPageLayout get _current => _layout!.pages[_page];
@@ -503,9 +502,10 @@ class ReaderScreenState extends State<ReaderScreen> {
   /// доводится мгновенно, второй идёт от него. Касание пальцем останавливает анимацию прокрутки ещё до того,
   /// как распознано как касание, поэтому цель первого перехода помнится всё время его анимации.
   void _flip(int delta) {
-    if (_pendingLayout != null) return;
+    if (_reflowing) return;
+    if (_pendingLayout != null) _cancelPending();
     final pc = _pc;
-    if (pc == null || !pc.hasClients) return;
+    if (pc == null) return;
     if (_grabbedAuto) {
       // Касание остановило автоматический переворот: это выбор читателя и на краю книги,
       // где встречный переворот остаётся на той же странице.
@@ -519,7 +519,8 @@ class ReaderScreenState extends State<ReaderScreen> {
     final base = layout.isComplete ? math.min(pending ?? _page, layout.pages.length - 1) : pending ?? _page;
     final requested = layout.hasPrevious ? base + delta : math.max(0, base + delta);
     final target = layout.isComplete ? math.min(requested, layout.pages.length - 1) : requested;
-    if (pending != null && pending >= 0 && pending < layout.pages.length && (pc.page ?? _page.toDouble()) != pending) {
+    if (pc.hasClients && pending != null && pending >= 0 && pending < layout.pages.length &&
+        (pc.page ?? _page.toDouble()) != pending) {
       _navOp++;
       _programmatic = false;
       _animatingTo = null;
@@ -537,15 +538,15 @@ class ReaderScreenState extends State<ReaderScreen> {
   Timer? _flipTimer;
 
   Future<void> goToPage(int target, {bool user = true}) async {
-    if (_pendingLayout != null) return;
+    if (_reflowing) return;
+    if (_pendingLayout != null) _cancelPending();
     final pc = _pc;
-    if (pc == null || !pc.hasClients) return;
+    if (pc == null) return;
     if (target >= 0) layout.cancelPrevious();
     if ((target >= layout.pages.length && !layout.isComplete) || (target < 0 && layout.hasPrevious)) {
       _navOp++;
       _waitingPage = target;
       _waitingUser = user;
-      if (user) _userMoved();
       _waitingDone ??= Completer<void>();
       if (target < 0) unawaited(layout.loadPrevious());
       return _waitingDone!.future;
@@ -558,6 +559,11 @@ class ReaderScreenState extends State<ReaderScreen> {
     if (target == _page || (!user && _programmatic && target == _animatingTo)) return;
     final op = ++_navOp;
     _programmatic = !user;
+    if (!pc.hasClients) {
+      _onPageChanged(target, programmatic: !user);
+      setState(_resetPages);
+      return;
+    }
     final beyondExtent = target * pc.position.viewportDimension > pc.position.maxScrollExtent + 0.1;
     if ((target - _page).abs() == 1 && !beyondExtent) {
       _animatingTo = target;
@@ -621,15 +627,15 @@ class ReaderScreenState extends State<ReaderScreen> {
   }
 
   bool _onScroll(ScrollNotification n) {
-    if (_pendingLayout != null) return false;
+    if (_reflowing) return false;
     if (n is ScrollStartNotification && n.dragDetails != null) {
+      if (_pendingLayout != null) _cancelPending();
       // Палец на странице: автоматический переход отменяется. Следование выключится, только если жест в итоге
       // сменит страницу: малое перетаскивание с возвратом и отменённый жест ничего не меняют.
       _userDragging = true;
       _dragStartPage ??= _page;
       _dragWaiting = false;
-      _flipTarget = null;
-      _navOp++;
+      _cancelPageRequest();
       _programmatic = false;
       _animatingTo = null;
     } else if (n is OverscrollNotification && n.dragDetails != null && !_dragWaiting &&
@@ -648,6 +654,11 @@ class ReaderScreenState extends State<ReaderScreen> {
         if (_page != start || grabbed) {
           setState(_userMoved);
           _saveScreenPosition();
+        } else if (_following) {
+          // Команда могла прийти, пока палец держал страницу. После возврата жеста догоняем её и на паузе.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _dragStartPage == null && _following) _onNarration();
+          });
         }
       } else if (start == null) {
         _userDragging = false;
@@ -724,8 +735,9 @@ class ReaderScreenState extends State<ReaderScreen> {
       // Пока выбран абзац для «Читать отсюда», страница под пальцем не уходит за голосом (№8 проверки путей):
       // иначе кнопка исчезает, не дождавшись нажатия. Снят выбор — экран догоняет голос.
       final choosing = _selectedBlock != null;
-      // Пока идёт жест пальцем (и страница после него не встала), голос страницу не листает.
-      final gesture = _dragStartPage != null;
+      // Незавершённое ручное касание тоже имеет приоритет над очередным событием звука.
+      final gesture = _dragStartPage != null || (_waitingPage != null && _waitingUser) ||
+          (_animatingTo != null && !_programmatic);
       // Голос продвинулся в страницу, которую читатель листнул вперёд. Простое событие или смена высоты
       // этого не делает: предыдущее место обязано быть за пределами той же страницы.
       if (!_following && !choosing && !gesture && _pendingLayout == null && _layout != null &&
@@ -750,6 +762,8 @@ class ReaderScreenState extends State<ReaderScreen> {
   void _backToReadingPlace() {
     setState(() {
       _following = true;
+      _cancelPageRequest();
+      if (_animatingTo != null) _resetPages();
     });
     final at = soundingPosition;
     if (at != null) {
@@ -1013,7 +1027,7 @@ class ReaderScreenState extends State<ReaderScreen> {
                     key: ValueKey('pages-$_generation'),
                     controller: _pc,
                     // Даже единственная готовая страница принимает жест к ещё не посчитанному краю.
-                    physics: _pendingLayout == null
+                    physics: !_reflowing
                         ? const AlwaysScrollableScrollPhysics() : const NeverScrollableScrollPhysics(),
                     onPageChanged: (i) => _onPageChangedFrom(generation, i),
                     itemCount: _layout!.pages.length,
