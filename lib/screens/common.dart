@@ -306,7 +306,7 @@ class VoiceChip extends StatelessWidget {
     return ActionChip(
       avatar: Icon(Icons.record_voice_over_rounded, color: scheme.primary),
       label: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text(voiceName),
+          Flexible(child: Text(voiceName, maxLines: 1, overflow: TextOverflow.ellipsis)),
         const SizedBox(width: 2),
         Icon(Icons.expand_more_rounded, size: 18, color: scheme.onSurfaceVariant),
       ]),
