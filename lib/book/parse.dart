@@ -9,7 +9,7 @@ import 'content.dart';
 import 'model.dart';
 import 'xml.dart';
 
-const currentParserVersion = 1;
+const currentParserVersion = 2;
 
 enum SourceFormat {
   fb2('fb2'),
@@ -63,7 +63,7 @@ Map<String, Uint8List> _unzip(List<int> b) => {
     if (f.isFile) f.name: f.content,
 };
 SourceFormat _archiveFormat(Map<String, Uint8List> files) {
-  if (utf8.decode(files['mimetype'] ?? [], allowMalformed: true) ==
+  if (utf8.decode(files['mimetype'] ?? [], allowMalformed: true).trim() ==
       'application/epub+zip') {
     return SourceFormat.epub;
   }
@@ -155,10 +155,14 @@ ParsedBook _fb(XmlElement root, String id, SourceFormat format) {
   for (final bin in root.elements.where((e) => e.local == 'binary')) {
     final key = bin.attr('id');
     if (key != null) {
-      assets[key] = BookImage(
-        base64.decode(bin.text.replaceAll(RegExp(r'\s'), '')),
-        bin.attr('content-type') ?? 'application/octet-stream',
-      );
+      try {
+        assets[key] = BookImage(
+          base64.decode(bin.text.replaceAll(RegExp(r'\s'), '')),
+          bin.attr('content-type') ?? 'application/octet-stream',
+        );
+      } on FormatException {
+        // Повреждённая картинка отсутствует; основной текст остаётся доступным.
+      }
     }
   }
   String? href(XmlElement e) =>
@@ -168,10 +172,20 @@ ParsedBook _fb(XmlElement root, String id, SourceFormat format) {
     return assets.containsKey(key) ? key : null;
   }
 
-  String? noteTarget(XmlElement e) =>
-      e.local == 'a' && (href(e)?.startsWith('#') ?? false)
-      ? href(e)!.substring(1)
-      : null;
+  final noteIds = {
+    for (final body in root.elements.where(
+      (e) => e.local == 'body' && e.attr('name') == 'notes',
+    ))
+      for (final section in body.descendants('section'))
+        if (section.attr('id') != null) section.attr('id')!,
+  };
+  String? noteTarget(XmlElement e) {
+    final target = e.local == 'a' && (href(e)?.startsWith('#') ?? false)
+        ? href(e)!.substring(1)
+        : null;
+    return noteIds.contains(target) ? target : null;
+  }
+
   ContentBuilder builder() =>
       ContentBuilder(fb2: true, image: image, noteTarget: noteTarget);
   final notes = <String, Note>{};
@@ -182,7 +196,11 @@ ParsedBook _fb(XmlElement root, String id, SourceFormat format) {
       final key = section.attr('id');
       if (key == null) continue;
       final b = builder();
-      for (final child in section.elements.where((e) => e.local != 'section')) {
+      for (final child
+          in b
+              .contentChildren(section)
+              .whereType<XmlElement>()
+              .where((e) => e.local != 'section')) {
         b.render(child);
       }
       notes[key] = Note(id: key, blocks: b.blocks);
@@ -248,9 +266,15 @@ String _resolve(String document, String href) {
   return Uri.decodeComponent(uri.path);
 }
 
-String _fragment(String href) => Uri.parse(href).fragment;
+String _fragment(String href) => Uri.decodeComponent(Uri.parse(href).fragment);
 String _noteId(String document, String href) =>
     '${_resolve(document, href)}#${_fragment(href)}';
+String? _tocTarget(String document, String href) {
+  final uri = Uri.parse(href);
+  if (uri.hasScheme || uri.hasAuthority) return null;
+  return _noteId(document, href);
+}
+
 String? _epubNoteTarget(String document, String href) {
   try {
     return _noteId(document, href);
@@ -319,11 +343,10 @@ ParsedBook _epub(Map<String, Uint8List> files, String id) {
     void read(XmlElement e, int depth) {
       for (final c in e.elements) {
         if (c.local == 'a' && c.attr('href') != null) {
-          toc.add((
-            _noteId(navPath!, c.attr('href')!),
-            plain(c.text),
-            depth < 1 ? 1 : depth,
-          ));
+          final target = _tocTarget(navPath!, c.attr('href')!);
+          if (target != null) {
+            toc.add((target, plain(c.text), depth < 1 ? 1 : depth));
+          }
         } else {
           read(c, depth + (c.local == 'ol' ? 1 : 0));
         }
@@ -343,11 +366,14 @@ ParsedBook _epub(Map<String, Uint8List> files, String id) {
         for (final point in e.elements.where((e) => e.local == 'navPoint')) {
           final href = point.child('content')?.attr('src');
           if (href != null) {
-            toc.add((
-              _noteId(path, href),
-              plain(point.child('navLabel')?.text ?? ''),
-              depth,
-            ));
+            final target = _tocTarget(path, href);
+            if (target != null) {
+              toc.add((
+                target,
+                plain(point.child('navLabel')?.text ?? ''),
+                depth,
+              ));
+            }
           }
           read(point, depth + 1);
         }
@@ -372,10 +398,7 @@ ParsedBook _epub(Map<String, Uint8List> files, String id) {
   };
   for (var i = 0; i < pending.length; i++) {
     final path = pending[i];
-    for (final ref
-        in trees[path]!
-            .descendants('a')
-            .where((e) => epubTypes(e).contains('noteref'))) {
+    for (final ref in trees[path]!.descendants('a')) {
       final href = ref.attr('href');
       if (href == null || _epubNoteTarget(path, href) == null) continue;
       final target = _resolve(path, href);
@@ -392,6 +415,11 @@ ParsedBook _epub(Map<String, Uint8List> files, String id) {
   final noteElements = <XmlElement>{
     for (final tree in trees.values) ...tree.descendants().where(isEpubNote),
   };
+  final noteIds = {
+    for (final entry in trees.entries)
+      for (final node in entry.value.descendants().where(isEpubNote))
+        if (node.attr('id') != null) '${entry.key}#${node.attr('id')}',
+  };
   final images = <String, Uint8List>{};
   ContentBuilder builder(String path, {XmlElement? note}) => ContentBuilder(
     fb2: false,
@@ -406,8 +434,9 @@ ParsedBook _epub(Map<String, Uint8List> files, String id) {
     },
     noteTarget: (e) =>
         e.local == 'a' &&
-            epubTypes(e).contains('noteref') &&
-            e.attr('href') != null
+            e.attr('href') != null &&
+            (epubTypes(e).contains('noteref') ||
+                noteIds.contains(_epubNoteTarget(path, e.attr('href')!)))
         ? _epubNoteTarget(path, e.attr('href')!)
         : null,
   );
@@ -425,6 +454,7 @@ ParsedBook _epub(Map<String, Uint8List> files, String id) {
   }
   final blocks = <Block>[];
   final targets = <String, int>{};
+  final documentEnds = <String, int>{};
   for (final path in documents) {
     final tree = trees[path];
     if (tree == null) continue;
@@ -445,6 +475,7 @@ ParsedBook _epub(Map<String, Uint8List> files, String id) {
         ),
       );
     }
+    documentEnds[path] = blocks.length;
   }
   final b = ContentBuilder(
     fb2: false,
@@ -452,8 +483,12 @@ ParsedBook _epub(Map<String, Uint8List> files, String id) {
     noteTarget: (_) => null,
   )..blocks.addAll(blocks);
   for (final item in toc) {
-    final start = targets[item.$1] ?? targets['${item.$1.split('#').first}#'];
-    if (start != null) b.boundaries.add((start, item.$2, item.$3));
+    final path = item.$1.split('#').first;
+    final start = targets[item.$1] ?? targets['$path#'];
+    // Пустой документ (или якорь после его конца) не занимает чужое начало.
+    if (start != null && start < documentEnds[path]!) {
+      b.boundaries.add((start, item.$2, item.$3));
+    }
   }
   _cleanRefs(b, notes);
   final metadata = package.child('metadata');

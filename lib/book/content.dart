@@ -9,6 +9,61 @@ bool isEpubNote(XmlElement e) =>
     epubTypes(e).intersection({'footnote', 'endnote', 'rearnote'}).isNotEmpty;
 String plain(String s) => s.replaceAll(RegExp(r'\s+'), ' ').trim();
 
+// HTML 4 block content plus HTML5 sectioning/grouping and table/list parts.
+// https://www.w3.org/TR/html401/sgml/dtd.html (%block;)
+// https://html.spec.whatwg.org/multipage/rendering.html#the-css-user-agent-style-sheet-and-presentational-hints
+const _htmlBlocks = {
+  'address',
+  'article',
+  'aside',
+  'blockquote',
+  'body',
+  'center',
+  'dd',
+  'details',
+  'dialog',
+  'dir',
+  'div',
+  'dl',
+  'dt',
+  'fieldset',
+  'figcaption',
+  'figure',
+  'footer',
+  'form',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'header',
+  'hgroup',
+  'hr',
+  'html',
+  'legend',
+  'li',
+  'main',
+  'menu',
+  'nav',
+  'noscript',
+  'ol',
+  'p',
+  'pre',
+  'search',
+  'section',
+  'summary',
+  'table',
+  'tbody',
+  'td',
+  'tfoot',
+  'th',
+  'thead',
+  'tr',
+  'ul',
+  'caption',
+};
+
 class ContentBuilder {
   ContentBuilder({
     required this.fb2,
@@ -25,6 +80,29 @@ class ContentBuilder {
   final List<(int, String, int)> boundaries = [];
   final Map<XmlElement, XmlElement> _captions = {};
   final Set<XmlElement> _captionElements = {};
+
+  bool _empty(XmlElement e) =>
+      e.local == 'br' ||
+      (fb2 ? {'empty-line', 'image'} : {'hr', 'img'}).contains(e.local);
+
+  // При восстановлении незакрытого пустого тега XML-парсер вкладывает в него
+  // последующий текст. Для книжного содержимого это его соседи, а не дети.
+  Iterable<Object> contentChildren(XmlElement e) sync* {
+    for (final child in e.children) {
+      yield child;
+      if (child is XmlElement && _empty(child)) {
+        yield* contentChildren(child);
+      }
+    }
+  }
+
+  String _titleText(XmlElement? e) {
+    if (e == null || noteTarget(e) != null) return '';
+    final text = contentChildren(e)
+        .map((c) => c is XmlElement ? _titleText(c) : c as String)
+        .join();
+    return e.local == 'p' ? ' $text ' : text;
+  }
 
   void addImage(XmlElement e) {
     final id = image(e);
@@ -96,10 +174,10 @@ class ContentBuilder {
     }
     final tag = e.local;
     if (fb2 && tag == 'section') {
-      final title = plain(e.child('title')?.text ?? '');
+      final title = plain(_titleText(e.child('title')));
       boundary(title, level);
       var resume = false;
-      for (final child in e.elements) {
+      for (final child in contentChildren(e).whereType<XmlElement>()) {
         if (resume && child.local != 'section') boundary(title, level);
         render(
           child,
@@ -135,7 +213,7 @@ class ContentBuilder {
         : RegExp(r'^h[1-6]$').hasMatch(tag);
     if (heading) {
       if (fb2 && tag == 'title' && e.elements.any((c) => c.local == 'p')) {
-        for (final child in e.elements) {
+        for (final child in contentChildren(e).whereType<XmlElement>()) {
           render(child, context: BlockKind.heading, level: level);
         }
       } else {
@@ -152,7 +230,7 @@ class ContentBuilder {
     }
     if (tag == 'tr') {
       final line = _Inline(this, BlockKind.paragraph);
-      for (final c in e.elements) {
+      for (final c in contentChildren(e).whereType<XmlElement>()) {
         line.visit(c);
         line.write(' ');
       }
@@ -171,22 +249,24 @@ class ContentBuilder {
     }
     // Контейнеры сохраняют порядок смешанного содержимого. Отступы исходного XML блоков не создают.
     var line = _Inline(this, context);
-    for (final child in e.children) {
+    for (final child in contentChildren(e)) {
       if (child is String) {
         line.write(child);
       } else if (child is XmlElement) {
-        if ({
-          'a',
-          'span',
-          'em',
-          'i',
-          'strong',
-          'b',
-          'sup',
-          'sub',
-          'emphasis',
-          'br',
-        }.contains(child.local)) {
+        if ((!fb2 && !_htmlBlocks.contains(child.local)) ||
+            (fb2 &&
+                {
+                  'a',
+                  'span',
+                  'em',
+                  'i',
+                  'strong',
+                  'b',
+                  'sup',
+                  'sub',
+                  'emphasis',
+                  'br',
+                }.contains(child.local))) {
           line.visit(child);
           continue;
         }
@@ -222,16 +302,21 @@ class _Inline {
   final BlockKind kind;
   final bool preserveBreaks;
   String text = '';
+  bool _afterBreak = false;
   final List<TextSpanRange> spans = [];
   final List<_OpenSpan> active = [];
   void write(String value) {
+    if (_afterBreak) {
+      value = value.replaceFirst(RegExp(r'^\s+'), '');
+      if (value.isNotEmpty) _afterBreak = false;
+    }
     final normalized = preserveBreaks
         ? value
               .replaceAll(RegExp(r'[ \t]+'), ' ')
               .replaceAll(RegExp(r' *\n *'), '\n')
         : value.replaceAll(RegExp(r'\s+'), ' ');
     text += text.endsWith(' ')
-        ? normalized.replaceFirst(RegExp(r'^ '), '')
+        ? normalized.replaceFirst(RegExp(r'^ +'), '')
         : normalized;
   }
 
@@ -250,11 +335,18 @@ class _Inline {
     if (!owner.fb2 && {'head', 'script', 'style'}.contains(e.local)) return;
     if (e.local == 'br') {
       text = '${text.trimRight()}\n';
+      _afterBreak = true;
       return;
     }
     if ((owner.fb2 && e.local == 'image') || (!owner.fb2 && e.local == 'img')) {
       flush();
       owner.addImage(e);
+      return;
+    }
+    if ((owner.fb2 && e.local == 'empty-line') ||
+        (!owner.fb2 && e.local == 'hr')) {
+      flush();
+      owner.add(BlockKind.separator, '');
       return;
     }
     // В строке таблицы вложенные абзацы становятся текстом с пробелом, а не склеенными словами.
@@ -272,7 +364,7 @@ class _Inline {
       if (target != null) _OpenSpan(text.length, SpanStyle.noteRef, target),
     ];
     active.addAll(opened);
-    for (final c in e.children) {
+    for (final c in owner.contentChildren(e)) {
       if (c is String) {
         write(c);
       } else {
@@ -307,6 +399,7 @@ class _Inline {
       ], imageId);
     }
     text = '';
+    _afterBreak = false;
     spans.clear();
   }
 }

@@ -1,0 +1,1 @@
+<ncx><navMap><navPoint><navLabel><text>Внешняя</text></navLabel><content src="http://example.com/"/></navPoint><navPoint><navLabel><text>Сеть</text></navLabel><content src="//example.com/"/></navPoint><navPoint><navLabel><text>Местная</text></navLabel><content src="../text.xhtml"/></navPoint></navMap></ncx>
