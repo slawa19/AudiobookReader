@@ -37,8 +37,9 @@ void main() {
     expect(st.layout.pages[st.page], same(anchor), reason: 'малое движение с возвратом не листает');
     await tester.fling(find.byKey(const Key('page-area')), const Offset(100, 0), 2000);
     await tester.pumpAndSettle();
-    expect(st.layout.pages[st.page].lastEnd, 123,
-        reason: 'бросок меньше половины ширины, но с достаточной скоростью, не теряется');
+    expect(st.layout.pages[st.page].firstOffset, 0,
+        reason: 'бросок открывает полную первую страницу главы вместо короткого префикса');
+    expect(st.layout.pages[st.page].lastEnd, greaterThan(123));
     expect(st.layout.pages[st.page], isNot(same(anchor)));
     await tester.pumpWidget(const SizedBox());
   });
@@ -97,7 +98,7 @@ void main() {
     expect(firstAdded, greaterThan(0));
     expect(layout.pages[firstAdded], same(anchor));
     expect(pieces(anchor), original);
-    expect(layout.pages[firstAdded - 1].lastEnd, 2345, reason: 'короткая страница обрывается точно перед якорем');
+    expect(layout.pages[firstAdded - 1].lastEnd, 2345, reason: 'полная обратная страница кончается перед якорем');
     expect(layout.pages.first.chapter, 1, reason: 'назад считаем текущую главу, а не начало книги');
     final secondAdded = await layout.loadPrevious();
     expect(secondAdded, greaterThan(0));
@@ -109,17 +110,24 @@ void main() {
       expect(page, same(suffix[i]));
       expect(pieces(page), seen[i]);
     }
+    var overlaps = 0;
     for (final block in book.blocks) {
       var at = 0;
-      for (final page in layout.pages) {
+      for (var i = 0; i < layout.pages.length; i++) {
+        final page = layout.pages[i];
         for (final f in page.fragments.where((f) => f.block == block.index)) {
-          expect(f.start, at, reason: 'каждый знак встречается ровно один раз');
+          if (f.start != at) {
+            expect(i, layout.chapterFirstPage[page.chapter] + 1, reason: 'перекрытие только у первой границы главы');
+            expect(f.start, lessThan(at), reason: 'пропусков текста нет');
+            overlaps++;
+          }
           expect(f.end, greaterThan(f.start));
           at = f.end;
         }
       }
       expect(at, block.text.length);
     }
+    expect(overlaps, 1);
   });
 
   testWidgets('экран листает назад через неизвестную границу главы и возвращается к тому же тексту', (tester) async {
@@ -135,7 +143,8 @@ void main() {
     await tester.pumpAndSettle();
     await back;
     expect(st.layout.pages[st.page].chapter, 1);
-    expect(st.layout.pages[st.page].lastEnd, 123);
+    expect(st.layout.pages[st.page].firstOffset, 0);
+    expect(st.layout.pages[st.page].lastEnd, greaterThan(123), reason: 'первая страница полна, часть строк повторится на следующей');
     back = st.goToPage(-1);
     await tester.pumpAndSettle();
     await back;

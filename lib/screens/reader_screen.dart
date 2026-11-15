@@ -215,9 +215,10 @@ class ReaderScreenState extends State<ReaderScreen> {
         : held == null ? _anchor : ReadingPosition(held.block, 0);
     final previous = _previousLayout;
     final goal = held ?? from;
-    final target = previous?.layout.findPage(goal.block, goal.offset);
+    final preferred = visible == null ? null : previous?.layout.findPage(visible.firstBlock, visible.firstOffset);
+    final target = previous?.layout.findPage(goal.block, goal.offset, preferredPage: preferred);
     if (previous != null && previous.metrics.style == style && previous.metrics.column == column &&
-        target != null && !previous.layout.pages[target].endsAtLayoutStart) {
+        target != null) {
       _cancelPending();
       _cancelPageRequest();
       _installLayout(previous.layout, target, _wantedMetrics,
@@ -297,7 +298,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     if (!mounted) return;
     final pending = _pendingLayout!;
     final goal = _pendingGoal!;
-    final target = pending.findPage(goal.block, goal.offset);
+    final target = pending.findPage(goal.block, goal.offset, preferredPage: identical(pending, _layout) ? _page : null);
     if (target == null && !pending.isComplete) {
       setState(() {});
       return;
@@ -404,9 +405,9 @@ class ReaderScreenState extends State<ReaderScreen> {
   }
 
   void _goToPlace(int block, int offset, {bool user = true}) {
-    final target = layout.findPage(block, offset);
+    final target = layout.findPage(block, offset, preferredPage: _page);
     final changingMetrics = _pendingLayout != null && _pendingMetrics != _shownMetrics;
-    if (!changingMetrics && target != null && !layout.pages[target].endsAtLayoutStart &&
+    if (!changingMetrics && target != null &&
         (!user || target == _page)) {
       // Возврат к любому уже посчитанному месту сохраняет страницу и положение текста (А§5).
       _goToCalculatedPage(target, user: user);
@@ -439,9 +440,9 @@ class ReaderScreenState extends State<ReaderScreen> {
 
   /// Готовое место голоса сохраняет страницу; новая цель ищется от начала блока без разрыва слова.
   void goToPosition(ReadingPosition place, {bool user = true}) {
-    final shown = layout.findPage(place.block, place.offset);
+    final shown = layout.findPage(place.block, place.offset, preferredPage: _page);
     final changingMetrics = _pendingLayout != null && _pendingMetrics != _shownMetrics;
-    if (!user && !changingMetrics && shown != null && !layout.pages[shown].endsAtLayoutStart) {
+    if (!user && !changingMetrics && shown != null) {
       _goToCalculatedPage(shown, user: user);
       return;
     }
@@ -450,15 +451,12 @@ class ReaderScreenState extends State<ReaderScreen> {
       _selectedBlock = null;
       _selectedAt = null;
       if (user) _userMoved();
-      final candidateLayout = _pendingLayout ?? layout;
-      final candidate = candidateLayout.findPage(place.block, place.offset);
-      final cut = candidate != null && candidateLayout.pages[candidate].endsAtLayoutStart;
-      if (!cut && _pendingGoal?.block == place.block) {
+      if (_pendingGoal?.block == place.block) {
         _pendingGoal = place;
         _pendingMove = true;
         _pendingUser = user;
         _onPendingLayout();
-      } else if (!cut && _pendingLayout == null && layout.pages.first.firstBlock == place.block &&
+      } else if (_pendingLayout == null && layout.pages.first.firstBlock == place.block &&
           layout.pages.first.firstOffset == 0) {
         // Этот блок уже считается с начала: продолжаем его очередь, не измеряя готовый префикс заново.
         _pendingLayout = layout;
@@ -1140,7 +1138,7 @@ class ReaderScreenState extends State<ReaderScreen> {
             onChanged: (v) => setState(() => _sliderDrag = v),
             onChangeEnd: (v) {
               final (b, o) = book.placeAt(v);
-              final target = _layout!.findPage(b, o);
+              final target = _layout!.findPage(b, o, preferredPage: _page);
               // Ползунок отпущен на другой странице — ручное перемещение, следование выключается. Касание без
               // сдвига (та же страница) ничего не меняет (решение H, FR-P4, FR-R5).
               setState(() {

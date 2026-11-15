@@ -39,14 +39,10 @@ class PageFragment {
 
 /// Страница: пара «начало» и «конец» (А§5) плюс раскладка кусков.
 class BookPageLayout {
-  const BookPageLayout({required this.chapter, required this.fragments, this.endsAtLayoutStart = false});
+  const BookPageLayout({required this.chapter, required this.fragments});
 
   final int chapter;
   final List<PageFragment> fragments;
-
-  /// Префикс оборван перед уже показанным началом раскладки. Его можно листать назад,
-  /// но нельзя выбирать как полную страницу произвольной цели (А§5).
-  final bool endsAtLayoutStart;
 
   int get firstBlock => fragments.first.block;
   int get firstOffset => fragments.first.start;
@@ -84,7 +80,7 @@ class ChapterPagination extends ChangeNotifier {
       (_pages.first.firstBlock > _bookStart || _pages.first.firstOffset > 0);
   bool get isLoadingPrevious => _backIterator != null;
   Timer? _backTimer;
-  Iterator<BookPageLayout>? _backIterator;
+  Iterator<BookPageLayout?>? _backIterator;
   final List<BookPageLayout> _before = [];
   Completer<int>? _backDone;
   int _backChapter = 0;
@@ -130,13 +126,24 @@ class ChapterPagination extends ChangeNotifier {
 
   final List<int> chapterFirstPage = [];
 
-  /// Готовая страница места. Последняя известная страница ещё не означает конец книги.
-  int? findPage(int block, int offset) {
+  /// Готовая страница места. В перекрытии выбирается следующая, кроме удерживаемой первой [preferredPage].
+  /// Последняя известная страница ещё не означает конец книги.
+  int? findPage(int block, int offset, {int? preferredPage}) {
     if (_pages.isEmpty) return null;
     final place = _place(block, offset);
     if (place.$1 == _book.blocks.length) return endsBook(_pages.last) ? _pages.length - 1 : null;
     block = place.$1;
     offset = place.$2;
+    // Перекрытие есть только у первой страницы главы. Пока читатель на ней, голос её не меняет.
+    // В остальных случаях двоичный поиск выбирает следующую страницу с этим местом.
+    if (preferredPage != null && preferredPage >= 0 && preferredPage < _pages.length) {
+      final preferred = _pages[preferredPage];
+      final chapterStart = _place(_book.chapters[preferred.chapter].firstBlock, 0);
+      if (preferred.firstBlock == chapterStart.$1 && preferred.firstOffset == 0 &&
+          preferred.contains(block, offset)) {
+        return preferredPage;
+      }
+    }
     final i = pageOf(block, offset);
     final page = _pages[i];
     return page.contains(block, offset) ||
@@ -195,7 +202,7 @@ class ChapterPagination extends ChangeNotifier {
     _advance(_generation);
   }
 
-  /// Предыдущий участок считается от начала своей главы до уже показанного начала страницы.
+  /// Строки префикса измеряются порциями, страницы собираются с конца до уже показанного начала.
   /// Страницы добавляются одной вставкой: видимый кусок и его границы никогда не заменяются.
   Future<int> loadPrevious() {
     if (_backDone != null) return _backDone!.future;
@@ -207,7 +214,7 @@ class ChapterPagination extends ChangeNotifier {
     _backChapter = chapter;
     _before.clear();
     _backDone = Completer<int>();
-    _backIterator = _Paginator(_book, _style, _column, _imageSizes).chapter(chapter,
+    _backIterator = _Paginator(_book, _style, _column, _imageSizes).before(chapter,
         stopBlock: first.firstBlock, stopOffset: first.firstOffset).iterator;
     final generation = _generation;
     _backTimer = Timer(const Duration(milliseconds: 1), () => _advanceBack(generation));
@@ -219,18 +226,19 @@ class ChapterPagination extends ChangeNotifier {
     final iterator = _backIterator;
     if (iterator == null) return;
     if (iterator.moveNext()) {
-      _before.add(iterator.current);
+      final page = iterator.current;
+      if (page != null) _before.add(page);
       _backTimer = Timer(const Duration(milliseconds: 1), () => _advanceBack(generation));
     } else {
       if (_before.isEmpty && _backChapter > 0) {
         // Пустая глава или пустой префикс собственной главы не задерживает продвижение назад.
-        _backIterator = _Paginator(_book, _style, _column, _imageSizes).chapter(--_backChapter).iterator;
+        _backIterator = _Paginator(_book, _style, _column, _imageSizes).before(--_backChapter).iterator;
         _backTimer = Timer(const Duration(milliseconds: 1), () => _advanceBack(generation));
         notifyListeners();
         return;
       }
       final count = _before.length;
-      _pages.insertAll(0, _before);
+      _pages.insertAll(0, _before.reversed);
       _prepended += count;
       _before.clear();
       _backIterator = null;
@@ -336,8 +344,8 @@ class _Paginator {
   late double _y;
   late int _chapter;
 
-  BookPageLayout _flush({bool endsAtLayoutStart = false}) {
-    final page = BookPageLayout(chapter: _chapter, fragments: _cur, endsAtLayoutStart: endsAtLayoutStart);
+  BookPageLayout _flush() {
+    final page = BookPageLayout(chapter: _chapter, fragments: _cur);
     _cur = <PageFragment>[];
     _y = 0;
     return page;
@@ -365,16 +373,13 @@ class _Paginator {
     _chapter = c;
     BlockKind? prevKind;
 
-    // Раздел только из заголовка («Ионыч» перед главой I) — страница-заглавие: заголовок ниже обычного.
-    final titleOnly = ch.blockCount == 1 && book.blocks[ch.firstBlock].kind == BlockKind.heading;
-
     for (var i = firstBlock ?? ch.firstBlock; i < ch.endBlock; i++) {
       if (stopBlock != null && (i > stopBlock || (i == stopBlock && stopOffset == 0))) break;
       final block = book.blocks[i];
       final start = i == firstBlock ? firstOffset : 0;
       switch (block.kind) {
         case BlockKind.heading:
-          final top = start > 0 ? 0.0 : titleOnly ? column.height * 0.28 : (i == ch.firstBlock ? lh * 1.0 : lh * 1.5);
+          final top = _headingBefore(c, i, start);
           yield* _placeText(i, start,
               before: top, beforeAtPageTop: true, after: lh * 1.2, keepTogether: true);
         case BlockKind.image:
@@ -397,10 +402,116 @@ class _Paginator {
       prevKind = block.kind;
     }
     if (_cur.isNotEmpty) {
-      final cut = stopBlock != null && stopBlock < ch.endBlock &&
-          (stopBlock < ch.endBlock - 1 || stopOffset < book.blocks[stopBlock].text.length);
-      yield _flush(endsAtLayoutStart: cut);
+      yield _flush();
     }
+  }
+
+  /// Пустая порция отдаёт кадр после измерения одной страницы. Готовые страницы идут от ближайшей назад.
+  Iterable<BookPageLayout?> before(int c, {int? stopBlock, int stopOffset = 0}) sync* {
+    final prefix = <BookPageLayout>[];
+    for (final page in chapter(c, stopBlock: stopBlock, stopOffset: stopOffset)) {
+      prefix.add(page);
+      yield null;
+    }
+    if (stopBlock == null || stopBlock >= book.chapters[c].endBlock) {
+      // Предыдущая глава показывается в своей обычной прямой раскладке, включая её короткий конец.
+      yield* prefix.reversed;
+      return;
+    }
+    final units = <_BackUnit>[];
+    for (final page in prefix) {
+      units.addAll(_backUnits(page));
+      yield null;
+    }
+    final current = ListQueue<_BackUnit>();
+    var height = 0.0;
+    for (final unit in units.reversed) {
+      double withUnit() => unit.topBefore + unit.height + (current.isEmpty ? 0 :
+          unit.after + current.first.before + height - current.first.topBefore);
+      if (current.isNotEmpty && withUnit() > column.height + 0.01) {
+        yield _backPage(c, current);
+        current.clear();
+        height = 0;
+      }
+      height = withUnit();
+      current.addFirst(unit);
+    }
+    if (current.isNotEmpty) {
+      // Остаток у начала главы не показывается коротким: обычная первая страница может
+      // повторить последние строки на следующей. Другие границы остаются непересекающимися.
+      yield _Paginator(book, style, column, imageSizes).chapter(c).first;
+    }
+  }
+
+  List<_BackUnit> _backUnits(BookPageLayout page) {
+    final out = <_BackUnit>[];
+    final ch = book.chapters[page.chapter];
+    for (final f in page.fragments) {
+      final b = book.blocks[f.block];
+      if (f.isImage) {
+        out.add(_BackUnit([PageFragment(block: f.block, start: 0, end: 0, top: 0,
+            height: f.height, imageSize: f.imageSize)], f.height, before: lh * 0.6,
+            after: b.text.isEmpty ? lh * 0.6 : 0));
+        continue;
+      }
+      if (b.kind == BlockKind.separator) {
+        out.add(_BackUnit([PageFragment(block: f.block, start: f.start, end: f.end, top: 0, height: lh)],
+            lh, before: lh, after: lh));
+        continue;
+      }
+      final heading = b.kind == BlockKind.heading;
+      final before = f.start > 0 ? 0.0 : heading ? _headingBefore(page.chapter, f.block, f.start)
+          : b.kind == BlockKind.image ? lh * 0.3
+          : _spacingBefore(f.block == ch.firstBlock ? null : book.blocks[f.block - 1].kind, b.kind);
+      final after = f.end != b.text.length ? 0.0 : heading ? lh * 1.2 : b.kind == BlockKind.image ? lh * 0.6 : 0.0;
+      // Небольшой заголовок остаётся целым, как в прямой раскладке.
+      if (heading && f.start == 0 && f.end == b.text.length && before + f.height <= column.height) {
+        out.add(_BackUnit([PageFragment(block: f.block, start: f.start, end: f.end, top: 0, height: f.height)],
+            f.height, before: before, topBefore: before, after: after));
+        continue;
+      }
+      final measured = _measure(b, f.start, f.end);
+      for (var i = 0; i < measured.lineStarts.length; i++) {
+        final row = PageFragment(block: f.block, start: measured.lineStarts[i],
+            end: i + 1 < measured.lineStarts.length ? measured.lineStarts[i + 1] : f.end,
+            top: 0, height: measured.lineHeights[i]);
+        final first = i == 0;
+        final last = i == measured.lineStarts.length - 1;
+        if (b.kind == BlockKind.image && row.start == 0 && out.isNotEmpty && out.last.fragments.last.isImage) {
+          // Картинка и первая строка подписи переносятся вместе.
+          final image = out.removeLast();
+          out.add(_BackUnit([...image.fragments, PageFragment(block: row.block, start: row.start, end: row.end,
+              top: image.height + before, height: row.height)], image.height + before + row.height,
+              before: image.before, after: last ? after : 0));
+        } else {
+          out.add(_BackUnit([row], row.height, before: first ? before : 0,
+              topBefore: heading && first ? before : 0, after: last ? after : 0));
+        }
+      }
+    }
+    return out;
+  }
+
+  BookPageLayout _backPage(int c, Iterable<_BackUnit> units) {
+    final fragments = <PageFragment>[];
+    var y = 0.0;
+    for (final unit in units) {
+      y += fragments.isEmpty ? unit.topBefore : unit.before;
+      for (final f in unit.fragments) {
+        final top = y + f.top;
+        final previous = fragments.isEmpty ? null : fragments.last;
+        if (!f.isImage && previous != null && !previous.isImage && previous.block == f.block &&
+            previous.end == f.start && (previous.top + previous.height - top).abs() < 0.01) {
+          fragments[fragments.length - 1] = PageFragment(block: f.block, start: previous.start, end: f.end,
+              top: previous.top, height: previous.height + f.height);
+        } else {
+          fragments.add(PageFragment(block: f.block, start: f.start, end: f.end,
+              top: top, height: f.height, imageSize: f.imageSize));
+        }
+      }
+      y += unit.height + unit.after;
+    }
+    return BookPageLayout(chapter: c, fragments: fragments);
   }
 
   /// Даже один огромный абзац измеряется окнами. Незавершённую последнюю строку окна измеряем заново
@@ -514,6 +625,12 @@ class _Paginator {
     return 0;
   }
 
+  double _headingBefore(int c, int block, int start) {
+    final ch = book.chapters[c];
+    // Раздел только из заголовка — страница-заглавие: заголовок ниже обычного.
+    return start > 0 ? 0 : ch.blockCount == 1 ? column.height * 0.28 : block == ch.firstBlock ? lh : lh * 1.5;
+  }
+
   /// Картинка во всю ширину колонки, но не выше 62 % страницы и не выше [maxHeight].
   Size _imageBox(Block block, double maxHeight) {
     final natural = imageSizes[block.imageId] ?? const Size(4, 3);
@@ -558,6 +675,13 @@ class _Measured {
   final List<double> lineHeights;
   final List<int> lineStarts;
   final int end;
+}
+
+/// Неделимая часть обратной страницы: строка, небольшой заголовок или картинка с началом подписи.
+class _BackUnit {
+  _BackUnit(this.fragments, this.height, {this.before = 0, this.topBefore = 0, this.after = 0});
+  final List<PageFragment> fragments;
+  final double height, before, topBefore, after;
 }
 
 /// Красная строка — только у абзаца и только в его начале.
