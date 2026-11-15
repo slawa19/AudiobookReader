@@ -98,6 +98,7 @@ class NativeApplication extends AppAssembly {
       openUrl: (context, url) =>
           ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(context.l10n.linkStub(url)))),
       spentByMonth: () => [],
+      fakeTts: useFakeTts,
       themePreviews: {
         for (final c in ThemeChoice.values)
           c: (
