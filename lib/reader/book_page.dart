@@ -99,7 +99,7 @@ class BookPage extends StatelessWidget {
               image: imageFor(block.imageId ?? ''),
               width: size.width,
               height: size.height,
-              fit: BoxFit.cover,
+              fit: BoxFit.contain,
               semanticLabel: block.text,
             ),
           ),
@@ -163,16 +163,19 @@ PageHit hitTestPage({
   var bestDistance = double.infinity;
   for (final f in page.fragments) {
     final b = book.blocks[f.block];
-    if (b.kind != BlockKind.paragraph && b.kind != BlockKind.verse && b.kind != BlockKind.cite) continue;
+    if (f.isImage || b.kind == BlockKind.separator) continue;
     if (p.dy < f.top - noteTarget || p.dy > f.top + f.height + noteTarget) continue;
-    final refs = b.spans.where((s) => s.style == SpanStyle.noteRef && s.start >= f.start && s.end <= f.end);
+    final refs = b.spans.where((s) => s.style == SpanStyle.noteRef && s.start < f.end && s.end > f.start);
     if (refs.isEmpty) continue;
     final tp = piecePainter(style, b, f.start, f.end, width: columnWidth);
     final shift = hasIndent(b, f.start) ? 1 : 0;
     final inset = fragmentInset(style, b);
     for (final r in refs) {
       final boxes = tp.getBoxesForSelection(
-          TextSelection(baseOffset: r.start - f.start + shift, extentOffset: r.end - f.start + shift));
+          TextSelection(
+            baseOffset: math.max(r.start, f.start) - f.start + shift,
+            extentOffset: math.min(r.end, f.end) - f.start + shift,
+          ));
       for (final box in boxes) {
         final glyph = box.toRect().shift(Offset(inset, f.top));
         final target = Rect.fromCenter(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
@@ -58,8 +59,7 @@ class BookPageLayout {
 
 /// Вся книга, разбитая на страницы для одного размера колонки и одной типографики.
 ///
-/// Прототип считает книгу целиком и сразу (≈ 100 тыс. знаков — доли секунды). Расчёт порциями от текущей
-/// позиции (А§5, FR-R1) — работа этапа 1. Пустых глав нет: модель их отбрасывает (класс [Book]).
+/// Синхронный расчёт оставлен для прототипа и пакетных проверок. Для чтения от позиции — [ChapterPagination].
 class BookLayout {
   BookLayout._(this.pages, this.chapterFirstPage);
 
@@ -99,6 +99,66 @@ class BookLayout {
   }
 }
 
+/// Расчёт главы от сохранённого места. Первая страница готова после [start], каждая следующая считается
+/// отдельным событием главного изолята. Экран может рисовать [pages], не дожидаясь [isComplete].
+/// Повторный [start] отменяет прежнюю работу; место передаётся явно, а не выводится из новой типографики.
+class ChapterPagination extends ChangeNotifier {
+  final List<BookPageLayout> _pages = [];
+  List<BookPageLayout> get pages => List.unmodifiable(_pages);
+  bool get isCalculating => _iterator != null;
+  bool get isComplete => _complete;
+  bool _complete = false;
+  Timer? _timer;
+  Iterator<BookPageLayout>? _iterator;
+  int _generation = 0;
+
+  void start({
+    required Book book,
+    required PageStyle style,
+    required Size column,
+    required int block,
+    required int offset,
+    Map<String, Size> imageSizes = const {},
+  }) {
+    cancel();
+    _complete = false;
+    _pages.clear();
+    final chapter = book.chapterOf(block);
+    _iterator = _Paginator(book, style, column, imageSizes)
+        .chapter(chapter, firstBlock: block, firstOffset: offset).iterator;
+    _advance(_generation);
+  }
+
+  void _advance(int generation) {
+    if (generation != _generation) return;
+    final iterator = _iterator;
+    if (iterator == null) return;
+    if (iterator.moveNext()) {
+      _pages.add(iterator.current);
+      _timer = Timer(Duration.zero, () => _advance(generation));
+    } else {
+      _iterator = null;
+      _timer = null;
+      _complete = true;
+    }
+    notifyListeners();
+  }
+
+  /// После отмены ни измерений, ни уведомлений от старого расчёта больше нет.
+  void cancel() {
+    _generation++;
+    _timer?.cancel();
+    _timer = null;
+    _iterator = null;
+  }
+
+  @override
+  void dispose() {
+    cancel();
+    super.dispose();
+  }
+}
+
 class _Paginator {
   _Paginator(this.book, this.style, this.column, this.imageSizes);
 
@@ -109,20 +169,19 @@ class _Paginator {
 
   double get lh => style.lineHeight;
 
-  late List<BookPageLayout> _pages;
   late List<PageFragment> _cur;
   late double _y;
   late int _chapter;
 
-  void _flush() {
-    if (_cur.isNotEmpty) _pages.add(BookPageLayout(chapter: _chapter, fragments: _cur));
+  BookPageLayout _flush() {
+    final page = BookPageLayout(chapter: _chapter, fragments: _cur);
     _cur = <PageFragment>[];
     _y = 0;
+    return page;
   }
 
-  List<BookPageLayout> chapter(int c) {
+  Iterable<BookPageLayout> chapter(int c, {int? firstBlock, int firstOffset = 0}) sync* {
     final ch = book.chapters[c];
-    _pages = [];
     _cur = [];
     _y = 0;
     _chapter = c;
@@ -131,41 +190,77 @@ class _Paginator {
     // Раздел только из заголовка («Ионыч» перед главой I) — страница-заглавие: заголовок ниже обычного.
     final titleOnly = ch.blockCount == 1 && book.blocks[ch.firstBlock].kind == BlockKind.heading;
 
-    for (var i = ch.firstBlock; i < ch.endBlock; i++) {
+    for (var i = firstBlock ?? ch.firstBlock; i < ch.endBlock; i++) {
       final block = book.blocks[i];
+      final start = i == firstBlock ? firstOffset : 0;
       switch (block.kind) {
         case BlockKind.heading:
-          final top = titleOnly ? column.height * 0.28 : (i == ch.firstBlock ? lh * 1.0 : lh * 1.5);
-          _placeLines(i, _measure(block, 0, block.text.length),
+          final top = start > 0 ? 0.0 : titleOnly ? column.height * 0.28 : (i == ch.firstBlock ? lh * 1.0 : lh * 1.5);
+          yield* _placeText(i, start,
               before: top, beforeAtPageTop: true, after: lh * 1.2, keepTogether: true);
         case BlockKind.image:
-          _placeImage(i, block, gap: _cur.isEmpty ? 0.0 : lh * 0.6);
+          if (start == 0) {
+            yield* _placeImage(i, block, gap: _cur.isEmpty ? 0.0 : lh * 0.6);
+          } else {
+            yield* _placeText(i, start, after: lh * 0.6);
+          }
         case BlockKind.separator:
           final sp = _cur.isEmpty ? 0.0 : lh;
-          if (_cur.isNotEmpty && _y + sp + lh > column.height) _flush();
+          if (_cur.isNotEmpty && _y + sp + lh > column.height) yield _flush();
           final spNow = _cur.isEmpty ? 0.0 : sp;
           _cur.add(PageFragment(block: i, start: 0, end: block.text.length, top: _y + spNow, height: lh));
           _y += spNow + lh * 2;
         case BlockKind.paragraph:
         case BlockKind.verse:
         case BlockKind.cite:
-          _placeLines(i, _measure(block, 0, block.text.length), before: _spacingBefore(prevKind, block.kind));
+          yield* _placeText(i, start, before: _spacingBefore(prevKind, block.kind));
       }
       prevKind = block.kind;
     }
-    _flush();
-    return _pages;
+    if (_cur.isNotEmpty) yield _flush();
+  }
+
+  /// Даже один огромный абзац измеряется окнами. Незавершённую последнюю строку окна измеряем заново
+  /// со следующим окном: граница окна не становится искусственным переносом строки.
+  Iterable<BookPageLayout> _placeText(int i, int start,
+      {double before = 0, bool beforeAtPageTop = false, double after = 0, bool keepTogether = false}) sync* {
+    final block = book.blocks[i];
+    var at = start;
+    do {
+      var end = math.min(at + 4096, block.text.length);
+      // Окно не разрезает суррогатную пару UTF-16.
+      if (end < block.text.length && end > at && block.text.codeUnitAt(end - 1) >= 0xD800 &&
+          block.text.codeUnitAt(end - 1) <= 0xDBFF) {
+        end--;
+      }
+      // Незавершённое слово может изменить перенос и предпоследней строки окна. По возможности
+      // заканчиваем окно на пробеле; последняя строка всё равно остаётся для следующего измерения.
+      if (end < block.text.length) {
+        final boundary = block.text.substring(at, end).lastIndexOf(RegExp(r'\s'));
+        if (boundary >= 0) end = at + boundary + 1;
+      }
+      var measured = _measure(block, at, end);
+      if (end < block.text.length && measured.lineStarts.length > 1) {
+        end = measured.lineStarts.last;
+        measured = _Measured(measured.lineHeights.sublist(0, measured.lineHeights.length - 1),
+            measured.lineStarts.sublist(0, measured.lineStarts.length - 1), end);
+      }
+      yield* _placeLines(i, measured, before: at == start ? before : 0,
+          beforeAtPageTop: beforeAtPageTop, after: end == block.text.length ? after : 0,
+          keepTogether: keepTogether && at == start && end == block.text.length);
+      at = end;
+    } while (at < block.text.length);
   }
 
   /// Кладёт строки куска на страницы. [before] — отступ перед первой строкой (у начала страницы — только при
   /// [beforeAtPageTop]); [keepTogether] — не делить, если целиком помещается на пустую страницу.
-  void _placeLines(int i, _Measured m,
-      {double before = 0, bool beforeAtPageTop = false, double after = 0, bool keepTogether = false}) {
+  Iterable<BookPageLayout> _placeLines(int i, _Measured m,
+      {double before = 0, bool beforeAtPageTop = false, double after = 0, bool keepTogether = false}) sync* {
     if (m.lineHeights.isEmpty) return;
     final total = m.lineHeights.fold(0.0, (a, b) => a + b);
     if (keepTogether && _cur.isNotEmpty) {
       final fitsEmpty = before + total <= column.height;
-      if (fitsEmpty && _y + before + total > column.height) _flush();
+      if (fitsEmpty && _y + before + total > column.height) yield _flush();
     }
     var line = 0;
     while (line < m.lineHeights.length) {
@@ -179,7 +274,7 @@ class _Paginator {
       }
       if (k == 0) {
         if (_cur.isNotEmpty) {
-          _flush();
+          yield _flush();
           continue;
         }
         // Строка выше пустой страницы (огромный кегль) — кладём одну, иначе разбивка не продвинется.
@@ -191,23 +286,23 @@ class _Paginator {
       _cur.add(PageFragment(block: i, start: start, end: end, top: _y + sp, height: h));
       _y += sp + h;
       line += k;
-      if (line < m.lineHeights.length) _flush();
+      if (line < m.lineHeights.length) yield _flush();
     }
     _y += after;
   }
 
   /// Картинка вписывается в страницу вместе с первой строкой подписи; длинная подпись продолжается кусками.
-  void _placeImage(int i, Block block, {required double gap}) {
-    final caption = block.text.isEmpty ? null : _measure(block, 0, block.text.length);
+  Iterable<BookPageLayout> _placeImage(int i, Block block, {required double gap}) sync* {
+    final caption = block.text.isEmpty ? null : _measure(block, 0, math.min(4096, block.text.length));
     final captionGap = caption == null ? 0.0 : lh * 0.3;
     final firstLine = caption == null ? 0.0 : caption.lineHeights.first;
     var size = _imageBox(block, column.height - captionGap - firstLine);
-    if (_cur.isNotEmpty && _y + gap + size.height + captionGap + firstLine > column.height) _flush();
+    if (_cur.isNotEmpty && _y + gap + size.height + captionGap + firstLine > column.height) yield _flush();
     final g = _cur.isEmpty ? 0.0 : gap;
     if (_cur.isEmpty) size = _imageBox(block, column.height - captionGap - firstLine);
     _cur.add(PageFragment(block: i, start: 0, end: 0, top: _y + g, height: size.height, imageSize: size));
     _y += g + size.height;
-    if (caption != null) _placeLines(i, caption, before: captionGap);
+    if (caption != null) yield* _placeText(i, 0, before: captionGap);
     _y += lh * 0.6;
   }
 
@@ -278,9 +373,12 @@ InlineSpan pieceSpan(PageStyle style, Block block, int start, int end, {Color? c
   if (end > start && block.text.codeUnitAt(end - 1) == 0x0A) end--;
   switch (block.kind) {
     case BlockKind.heading:
-      return _headingSpan(style, block, start, end, color: color, subColor: subColor);
+      return _headingSpan(style, block, start, end, color: color, subColor: subColor, noteColor: noteColor);
     case BlockKind.image:
-      return TextSpan(text: block.text.substring(start, end), style: style.caption.copyWith(color: subColor ?? color));
+      return TextSpan(
+        style: style.caption.copyWith(color: subColor ?? color),
+        children: style.spans(block, start, end, noteColor: noteColor),
+      );
     default:
       return TextSpan(
         style: style.textStyleFor(block.kind).copyWith(color: color),
@@ -327,7 +425,7 @@ TextPainter piecePainter(PageStyle style, Block block, int start, int end, {requ
 
 /// Заголовок: первая строка — крупно, остальные (после `\n`) — курсивом. Кусок [start, end) сохраняет стиль
 /// своей строки, поэтому длинный заголовок делится по строкам, как абзац.
-InlineSpan _headingSpan(PageStyle style, Block block, int start, int end, {Color? color, Color? subColor}) {
+InlineSpan _headingSpan(PageStyle style, Block block, int start, int end, {Color? color, Color? subColor, Color? noteColor}) {
   final text = block.text;
   final children = <InlineSpan>[];
   var lineStart = 0;
@@ -339,7 +437,7 @@ InlineSpan _headingSpan(PageStyle style, Block block, int start, int end, {Color
     final b = math.min(end, lineEnd);
     if (a < b) {
       children.add(TextSpan(
-        text: text.substring(a, b),
+        children: style.spans(block, a, b, noteColor: noteColor),
         style: lineNo == 0 ? style.headingTitle.copyWith(color: color) : style.headingSub.copyWith(color: subColor ?? color),
       ));
     }
