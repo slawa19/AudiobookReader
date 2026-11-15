@@ -13,6 +13,13 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      # Раннер приходит почти полным: своих SDK и NDK сборке не хватало места («No space left on device»,
+      # найдено 2026-11-15). Предустановленные Android SDK, .NET, GHC и образы Docker нам не нужны.
+      - name: Освободить место на диске
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force > /dev/null || true
+          df -h /
       # Версия Flutter и суммы архивов берутся из scripts/env.sh, как и локально.
       - name: Flutter 3.50.0, JDK и Android SDK
         run: bash scripts/setup-wsl.sh
