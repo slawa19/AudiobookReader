@@ -174,6 +174,22 @@ void main() {
     expect(b.notes, isEmpty);
   });
 
+  for (final ncx in [false, true]) {
+    test(
+      'BF06: navigation stays outside main text in EPUB${ncx ? 2 : 3} samples',
+      () {
+        final b = checked(epub(ncx: ncx)).book;
+        expect(b.blocks.map((b) => b.text), defaultEpubText);
+        expect(chapters(b), [
+          ('', 1, 0, 1),
+          ('Первая', 1, 1, 1),
+          ('Вложенная', 2, 2, 5),
+        ]);
+        expect(b.notes, isEmpty);
+      },
+    );
+  }
+
   test('BF07: empty TOC document cannot name next chapter, true duplicate keeps first', () {
     for (final coverHasText in [false, true]) {
       final b = checked(

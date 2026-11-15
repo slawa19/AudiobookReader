@@ -24,8 +24,10 @@ List<int> epub({
   Map<String, List<int>> raw = const {},
   String encryption = '',
   bool cover3 = true,
-  List<String> spine = const ['text', 'nav'],
+  List<String>? spine,
 }) {
+  // NCX — оглавление, а не XHTML-документ чтения. В EPUB3 nav в spine допустим.
+  spine ??= ncx ? const ['text'] : const ['text', 'nav'];
   final files = <String, String>{
     'mimetype': 'application/epub+zip',
     'META-INF/container.xml': fixture('container.xml'),
