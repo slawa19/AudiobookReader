@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="216" height="216" role="img" aria-label="AudiobookReader">
+  <!-- Знак приложения: раскрытая книга, строки левой страницы на правой становятся звуком.
+       Те же контуры — в android/app/src/main/res/drawable/ic_launcher_foreground.xml. -->
+  <rect width="108" height="108" rx="24" fill="#A8431F"/>
+  <path fill="#FFFDF9" d="M52,37C44,32 32,32 23,35.5L23,73.5C32,70 44,70 52,75Z"/>
+  <path fill="#FFFDF9" d="M56,37C64,32 76,32 85,35.5L85,73.5C76,70 64,70 56,75Z"/>
+  <g fill="none" stroke="#A8431F" stroke-width="3.4" stroke-linecap="round">
+    <path d="M30,45.5H45M30,53.5H45M30,61.5H40"/>
+    <path d="M63,50V58M69.5,43.5V64.5M76,48V60M81,51.5V56.5" stroke-width="3.6"/>
+  </g>
+</svg>
