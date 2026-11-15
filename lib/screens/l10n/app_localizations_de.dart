@@ -10,6 +10,15 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
+  String get mediaChannel => 'Buchwiedergabe';
+
+  @override
+  String get mediaPrevious => 'Vorheriger Abschnitt';
+
+  @override
+  String get mediaNext => 'Nächster Abschnitt';
+
+  @override
   String get shelfTitle => 'Bücher';
 
   @override

@@ -3,8 +3,13 @@ import 'dart:io';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:audio_service/audio_service.dart';
+import 'package:audio_session/audio_session.dart';
+import 'package:http/http.dart' as http;
 
-import '../audio/audio_store.dart';
+import '../audio/audio_encoder.dart';
+import '../audio/file_audio_store.dart';
+import '../book/model.dart';
 import '../library/file_library.dart';
 import '../library/incoming_files.dart';
 import '../library/library.dart';
@@ -12,18 +17,35 @@ import '../library/secret_store.dart';
 import '../library/settings.dart';
 import '../platform/platform.dart';
 import '../platform/secret_store.dart';
-import '../playback/chapter_download.dart';
-import '../playback/fake_narration.dart';
+import '../platform/audio_encoder.dart';
+import '../platform/external_links.dart';
+import '../playback/file_chapter_download.dart';
+import '../playback/clock.dart';
+import '../playback/controller.dart';
+import '../playback/file_voice_sample.dart';
+import '../playback/just_audio_player.dart';
+import '../playback/media_session.dart';
+import '../playback/player.dart';
+import '../playback/screen_awake.dart';
+import '../playback/synthesis_queue.dart';
 import '../playback/tariffs.dart';
-import '../playback/voice_sample.dart';
 import '../screens/common.dart';
+import '../screens/l10n/app_localizations.dart';
 import '../screens/reader_screen.dart';
 import '../screens/services.dart';
 import '../tts/voices.dart';
+import '../tts/engine.dart';
+import '../tts/fake_engine.dart';
+import 'app.dart' show resolveLocale, supportedLocales;
 import 'assembly.dart';
+import 'current_key_engine.dart';
+import 'media_lifecycle.dart';
+import 'native_settings.dart';
+import 'notification_artwork.dart';
+import 'screen_awake.dart';
 import 'theme.dart';
 
-/// Этап 1: настоящие файлы и настройки, прежние подставные службы озвучки.
+/// Корень Android: файлы, синтез, плееры и медиасессия живут дольше экранов.
 class NativeApplication extends AppAssembly {
   final FileLibrary library;
   @override
@@ -38,6 +60,16 @@ class NativeApplication extends AppAssembly {
   bool _picking = false;
   Future<void>? _flushing;
   int _opening = 0;
+  late final SynthesisQueue queue;
+  late final FileChapterDownloads downloads;
+  late final ScreenAwakePort _screenAwake;
+  final _books = <String, Book>{};
+  late final PlayerPort player, samplePlayer;
+  late final NarrationMediaHandler media;
+  NarrationAudioFocus? _focus;
+  http.Client? _transport;
+  Book? _openedBook;
+  Uri? _art;
 
   /// В тестах меняются только источник входящих файлов и каталог хранения.
   static Future<NativeApplication> create({
@@ -47,11 +79,20 @@ class NativeApplication extends AppAssembly {
     DateTime Function()? clock,
     LibraryTimer? timer,
     SecretStore? secretStore,
+    AudioEncoder? encoder,
+    PlayerPort? player,
+    PlayerPort? samplePlayer,
+    TtsEngine? engine,
+    PlaybackClock playbackClock = const SystemPlaybackClock(),
+    bool fakeTts = useFakeTts,
+    MediaServiceLifecycle? mediaLifecycle,
+    ScreenAwakePort? screenAwake,
   }) async {
-    final settings = AppSettings(
+    final settings = NativeSettings(
       voice: defaultVoiceName,
       modelId: TtsModel.flash.id,
       secretStore: secretStore ?? AndroidSecretStore(),
+      fakeTts: fakeTts,
     );
     final library = FileLibrary(
       root ?? await getApplicationSupportDirectory(),
@@ -61,29 +102,74 @@ class NativeApplication extends AppAssembly {
       timer: timer,
     );
     await library.ready;
-    return NativeApplication.fromLibrary(library, incoming ?? AndroidIncomingFiles(), clock: clock);
+    return NativeApplication.fromLibrary(
+      library,
+      incoming ?? AndroidIncomingFiles(),
+      clock: clock,
+      encoder: encoder,
+      player: player,
+      samplePlayer: samplePlayer,
+      engine: engine,
+      playbackClock: playbackClock,
+      fakeTts: fakeTts,
+      mediaLifecycle: mediaLifecycle,
+      screenAwake: screenAwake,
+    );
   }
 
   /// Готовая полка передаётся в конструктор; [create] выбирает Android-хранилище.
-  NativeApplication.fromLibrary(this.library, this.incoming, {DateTime Function()? clock})
-    : settings = library.settings {
-    final audio = FakeAudioStore({});
+  NativeApplication.fromLibrary(
+    this.library,
+    this.incoming, {
+    DateTime Function()? clock,
+    AudioEncoder? encoder,
+    PlayerPort? player,
+    PlayerPort? samplePlayer,
+    TtsEngine? engine,
+    PlaybackClock playbackClock = const SystemPlaybackClock(),
+    bool fakeTts = useFakeTts,
+    MediaServiceLifecycle? mediaLifecycle,
+    ScreenAwakePort? screenAwake,
+  }) : settings = library.settings {
+    final audio = FileAudioStore(library.root, encoder: encoder ?? const AndroidAudioEncoder());
     final tariffs = Tariffs(today: clock ?? DateTime.now);
-    final downloads = FakeChapterDownloads(
-      settings: settings,
+    final TtsEngine synthesis;
+    if (engine != null) {
+      synthesis = engine;
+    } else if (fakeTts) {
+      synthesis = FakeTtsEngine(delay: const Duration(seconds: 2));
+    } else {
+      _transport = http.Client();
+      synthesis = CurrentKeyEngine(settings, _transport!);
+    }
+    queue = SynthesisQueue(engine: synthesis, audio: audio, library: library, settings: settings, clock: playbackClock);
+    _screenAwake = screenAwake ?? NativeScreenAwake((error) => library.recordFileFailure('screen_awake', error));
+    downloads = FileChapterDownloads(
+      queue: queue,
       tariffs: tariffs,
-      bookVoice: library.bookVoice,
-      audio: audio,
+      bookFor: (id) => _books[id] ?? (throw StateError('Книга не открыта: $id')),
+      screenAwake: _screenAwake,
     );
-    library.addListener(downloads.profileChanged);
-    final sampler = FakeVoiceSampler(audio: audio);
-    final narration = FakeNarrationController(
+    this.player = player ?? JustAudioPlayer(beforePlay: () async => await _focus?.activateNarration() ?? false);
+    this.samplePlayer =
+        samplePlayer ?? JustAudioPlayer(beforePlay: () async => await _focus?.activateSample() ?? false);
+    final sampler = FileVoiceSampler(queue: queue, player: this.samplePlayer);
+    final narration = FileNarrationController(
       library: library,
-      audio: audio,
-      downloads: downloads,
+      queue: queue,
+      player: this.player,
       sampler: sampler,
       settings: settings,
+      clock: playbackClock,
+      downloads: downloads,
     );
+    media = NarrationMediaHandler(
+      controller: narration,
+      strings: _mediaStrings,
+      card: () => narration.bookId == null ? null : _mediaCard(),
+      lifecycle: mediaLifecycle ?? AndroidMediaServiceLifecycle(),
+    );
+    settings.addListener(media.publish);
     services = AppServices(
       library: library,
       settings: settings,
@@ -95,10 +181,9 @@ class NativeApplication extends AppAssembly {
       addBook: _pick,
       onFlush: flush,
       openBook: _open,
-      openUrl: (context, url) =>
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(context.l10n.linkStub(url)))),
-      spentByMonth: () => [],
-      fakeTts: useFakeTts,
+      openUrl: (context, url) => unawaited(_openUrl(context, url)),
+      spentByMonth: () => spentByMonth(library, (clock ?? DateTime.now)()),
+      fakeTts: fakeTts,
       themePreviews: {
         for (final c in ThemeChoice.values)
           c: (
@@ -108,6 +193,94 @@ class NativeApplication extends AppAssembly {
           ),
       },
     );
+  }
+
+  MediaStrings _mediaStrings() {
+    final preferred = settings.language;
+    final locale = resolveLocale(
+      preferred == null ? WidgetsBinding.instance.platformDispatcher.locales : [Locale(preferred)],
+      supportedLocales,
+    );
+    final l = lookupAppLocalizations(locale);
+    return MediaStrings(
+      channel: l.mediaChannel,
+      preparing: l.preparing,
+      waiting: l.waiting,
+      paused: l.pause,
+      ended: l.endOfBook,
+      play: l.listen,
+      pause: l.pause,
+      previous: l.mediaPrevious,
+      next: l.mediaNext,
+    );
+  }
+
+  MediaCard? _mediaCard() {
+    final id = media.controller.bookId;
+    if (id == null) return null;
+    final entry = library.entry(id);
+    final book = _openedBook;
+    final block = media.controller.block;
+    return MediaCard(
+      id: id,
+      title: entry.title,
+      chapter: book?.id == id && block != null ? chapterLabel(book!, book.chapterOf(block)) : entry.chapterTitle ?? '',
+      art: _art,
+    );
+  }
+
+  /// Вызывается main до runApp. Тесты подставляют порты без запуска Android.
+  Future<void> connectMedia() async {
+    await AudioService.init(
+      builder: () => media,
+      config: AudioServiceConfig(
+        androidNotificationChannelId: 'audiobook_reader.playback',
+        androidNotificationChannelName: _mediaStrings().channel,
+        androidStopForegroundOnPause: false,
+        androidNotificationIcon: 'drawable/ic_stat_book',
+        preloadArtwork: false,
+      ),
+    );
+    final session = await AudioSession.instance;
+    await session.configure(const AudioSessionConfiguration.speech());
+    _focus = NarrationAudioFocus(
+      controller: services.narration,
+      sampler: services.sampler,
+      session: SystemAudioFocusSession(session),
+      media: media,
+      failed: (error, stack) {
+        services.narration.pause();
+        library.recordFileFailure(_mediaStrings().channel, error);
+      },
+    );
+  }
+
+  Future<void> _openUrl(BuildContext context, String url) async {
+    try {
+      await AndroidExternalLinks.open(url);
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    }
+  }
+
+  Future<void> disposePlayback() async {
+    settings.removeListener(media.publish);
+    media.dispose();
+    await _focus?.dispose();
+    services.narration.dispose();
+    services.sampler.dispose();
+    services.downloads.dispose();
+    if (_screenAwake case final NativeScreenAwake native) await native.flush();
+    queue.dispose();
+    queue.invalidateAll();
+    await queue.drain();
+    for (final p in [player, samplePlayer]) {
+      if (p is JustAudioPlayer) await p.dispose();
+    }
+    services.audio.dispose();
+    _transport?.close();
   }
 
   @override
@@ -126,6 +299,9 @@ class NativeApplication extends AppAssembly {
     _subscription = null;
     _navigator = null;
   }
+
+  @override
+  void setForeground(bool foreground) => downloads.setForeground(foreground);
 
   void _failure(Object error, [String? name]) {
     _opening++;
@@ -195,6 +371,15 @@ class NativeApplication extends AppAssembly {
     if (opening != _opening) return;
     final navigator = _navigator?.currentState;
     if (navigator == null) return;
+    _openedBook = book;
+    _books[book.id] = book;
+    // Обложка готова до нажатия «Слушать»: старт службы не ждёт рисования PNG.
+    _art = await notificationArtwork(
+      library.root,
+      entry,
+      paletteFor(settings.theme, WidgetsBinding.instance.platformDispatcher.platformBrightness),
+    );
+    if (opening != _opening) return;
     library.markOpened(entry.id);
     unawaited(
       navigator.push(

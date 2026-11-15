@@ -6,12 +6,19 @@ import 'package:audiobook_reader/app/app.dart';
 import 'package:audiobook_reader/app/native_application.dart';
 import 'package:audiobook_reader/library/file_library.dart';
 import 'package:audiobook_reader/library/incoming_files.dart';
+import 'package:audiobook_reader/audio/wav_audio_encoder.dart';
+import 'package:audiobook_reader/playback/clock.dart';
+import 'package:audiobook_reader/playback/fake_player.dart';
+import 'package:audiobook_reader/playback/screen_awake.dart';
+import 'package:audiobook_reader/playback/player.dart';
+import 'package:audiobook_reader/tts/fake_engine.dart';
 import 'package:audiobook_reader/screens/reader_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'book_samples.dart';
 import 'library_time.dart';
+import 'secret_store.dart';
 
 /// Одиночный поток хранит события до подписки, как Android при холодном запуске.
 class TestIncomingFiles implements IncomingFiles {
@@ -55,8 +62,28 @@ class AppHarness {
   TestIncomingFiles files = TestIncomingFiles();
   final time = LibraryTime();
   int _copies = 0;
+  final playbackClock = ManualPlaybackClock();
+  late FakePlayer player, samplePlayer;
+  late FakeTtsEngine engine;
+  bool fakeTts = false;
+  final secretStore = TestSecretStore(null);
+  final screenAwake = TestScreenAwake();
+  FakeTtsEngine? _synthesis;
+  PlayerPort? _playerPort, _samplePort;
 
-  Future<void> start({LibraryParser? parser, bool mount = true, double textScale = 1}) async {
+  Future<void> start({
+    LibraryParser? parser,
+    bool mount = true,
+    double textScale = 1,
+    bool fakeTts = false,
+    FakeTtsEngine? synthesis,
+    PlayerPort? playerPort,
+    PlayerPort? samplePort,
+  }) async {
+    this.fakeTts = fakeTts;
+    _synthesis = synthesis;
+    _playerPort = playerPort;
+    _samplePort = samplePort;
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(360, 800);
     tester.view.padding = const FakeViewPadding(top: 32, bottom: 48);
@@ -71,9 +98,9 @@ class AppHarness {
     addTearDown(() async {
       await tester.pumpWidget(const SizedBox());
       await finish(app.library.flush());
-      app.services.narration.dispose();
-      app.services.downloads.dispose();
-      app.services.sampler.dispose();
+      await finish(app.disposePlayback());
+      await player.dispose();
+      await samplePlayer.dispose();
       app.library.dispose();
       app.settings.dispose();
       await finish(files.events.close());
@@ -87,21 +114,32 @@ class AppHarness {
   }
 
   Future<void> create({LibraryParser? parser}) async {
+    player = FakePlayer(clock: playbackClock);
+    samplePlayer = FakePlayer(clock: playbackClock);
+    engine = _synthesis ?? FakeTtsEngine(sampleRate: 100, secondsPerCharacter: 0.1);
     app = await NativeApplication.create(
       root: root,
       incoming: files,
       parser: parser,
       clock: time.call,
       timer: time.timer,
+      encoder: const WavAudioEncoder(),
+      player: _playerPort ?? player,
+      samplePlayer: _samplePort ?? samplePlayer,
+      engine: engine,
+      playbackClock: playbackClock,
+      fakeTts: fakeTts,
+      secretStore: secretStore,
+      screenAwake: screenAwake,
     );
   }
 
   Future<void> restart() async {
     await tester.pumpWidget(const SizedBox());
     await finish(app.library.flush());
-    app.services.narration.dispose();
-    app.services.downloads.dispose();
-    app.services.sampler.dispose();
+    await finish(app.disposePlayback());
+    await player.dispose();
+    await samplePlayer.dispose();
     app.library.dispose();
     app.settings.dispose();
     await finish(files.events.close());
@@ -163,4 +201,10 @@ class AppHarness {
 
   Map<String, dynamic> diskState(String id) =>
       jsonDecode(File('${root.path}/books/$id/state.json').readAsStringSync()) as Map<String, dynamic>;
+}
+
+class TestScreenAwake implements ScreenAwakePort {
+  final values = <bool>[];
+  @override
+  void setEnabled(bool enabled) => values.add(enabled);
 }

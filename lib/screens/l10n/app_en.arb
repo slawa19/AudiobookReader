@@ -1,4 +1,7 @@
 {
+  "mediaChannel": "Book playback",
+  "mediaPrevious": "Previous segment",
+  "mediaNext": "Next segment",
   "@@locale": "en",
   "shelfTitle": "Books",
   "settings": "Settings",
