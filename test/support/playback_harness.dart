@@ -223,7 +223,21 @@ class PlaybackHarness {
     '$count запросов (сейчас ${engine.calls.length})',
   );
   Future<void> release(int index) async {
-    engine.calls[index].release();
+    final call = engine.calls[index];
+    call.release();
+    // Ждём сам результат — файл звука в хранилище, а не фиксированную паузу: на загруженной машине (CI,
+    // 2026-11-15) кодирование и запись не укладывались в неё. Если файла не будет (тест на отказ записи,
+    // сменённый голос), ожидание кончается по пределу.
+    String? stored;
+    try {
+      stored = key(call.text);
+    } on Object {
+      // Книга уже удалена с полки: файла не будет, ждать нечего.
+    }
+    final limit = DateTime.now().add(const Duration(seconds: 2));
+    while (stored != null && !audio.has(stored, bookId: book.id) && DateTime.now().isBefore(limit)) {
+      await Future<void>.delayed(const Duration(milliseconds: 2));
+    }
     await ioSettled();
   }
 
