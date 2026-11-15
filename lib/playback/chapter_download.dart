@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../audio/audio_store.dart';
 import '../book/model.dart';
 import '../library/settings.dart';
+import '../tts/engine.dart';
 import '../tts/voices.dart';
 import 'tariffs.dart';
 
@@ -31,6 +32,9 @@ class ChapterDownloadTask {
 
   /// Текст Google как есть.
   String? googleMessage;
+
+  /// Причина постоянной ошибки, включая модель и ссылку на оплату; текст — в googleMessage.
+  TtsError? error;
 
   double get fraction => totalSeconds == 0 ? 1 : (readySeconds / totalSeconds).clamp(0.0, 1.0);
 }

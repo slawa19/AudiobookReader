@@ -9,6 +9,7 @@ import '../tts/engine.dart';
 import '../tts/segments.dart';
 import '../tts/sentences.dart';
 import '../tts/voices.dart';
+import 'chapter_download.dart';
 import 'clock.dart';
 import 'narration.dart';
 import 'player.dart';
@@ -37,6 +38,7 @@ class FileNarrationController extends NarrationController {
     required this.queue,
     required this.player,
     required this.sampler,
+    this.downloads,
     this.clock = const SystemPlaybackClock(),
   }) {
     _subscription = player.events.listen(_event);
@@ -47,6 +49,7 @@ class FileNarrationController extends NarrationController {
   final SynthesisQueue queue;
   final PlayerPort player;
   final VoiceSampler sampler;
+  final ChapterDownloads? downloads;
   final PlaybackClock clock;
   late final StreamSubscription<PlayerEvent> _subscription;
   NarrationState _state = NarrationState.idle;
@@ -584,6 +587,7 @@ class FileNarrationController extends NarrationController {
 
   @override
   void clearAllNarration() {
+    downloads?.forget();
     close();
     queue.invalidateAll();
     sampler.clearCache();
@@ -592,6 +596,7 @@ class FileNarrationController extends NarrationController {
 
   @override
   void deleteBookNarration(String bookId) {
+    downloads?.forget(bookId: bookId);
     if (this.bookId == bookId) close();
     queue.invalidateBook(bookId);
     queue.audio.removeBook(bookId);
