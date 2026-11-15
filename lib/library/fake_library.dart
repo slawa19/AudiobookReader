@@ -57,6 +57,13 @@ class FakeLibrary extends Library {
   List<AddJob> get addJobs => List.unmodifiable(_jobs);
 
   @override
+  void recordFileFailure(String fileName, Object error) {
+    _jobs.insert(0, AddJob(fileName: fileName, status: AddJobStatus.failed,
+        failure: AddFailure.unreadable, technical: error.toString()));
+    notifyListeners();
+  }
+
+  @override
   ShelfEntry entry(String bookId) => _entries.firstWhere((e) => e.id == bookId);
 
   Book? cachedBook(String bookId) => _books[bookId] ?? (_entries.any((e) => e.id == bookId) ? _stub(bookId) : null);

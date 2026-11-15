@@ -15,7 +15,8 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        incomingFiles.accept(intent)
+        // При восстановлении исходный VIEW уже был обработан предыдущим экземпляром.
+        if (savedInstanceState == null) incomingFiles.accept(intent)
     }
 
     override fun onNewIntent(intent: Intent) {

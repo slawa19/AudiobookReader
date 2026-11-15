@@ -34,6 +34,7 @@ class NativeApplication extends AppAssembly {
   Future<void> _imports = Future.value();
   Future<void> _shelfReady = Future.value();
   bool _picking = false;
+  Future<void>? _flushing;
   int _opening = 0;
 
   /// В тестах меняются только источник входящих файлов и каталог хранения.
@@ -148,7 +149,7 @@ class NativeApplication extends AppAssembly {
     _picking = true;
     try {
       final file = await incoming.pickFile();
-      if (file != null) await _enqueueImport(file, open: false);
+      if (file != null) unawaited(_enqueueImport(file, open: false));
     } catch (error) {
       _failure(error);
     } finally {
@@ -162,7 +163,7 @@ class NativeApplication extends AppAssembly {
     final existing = library.shelf.map((e) => e.id).toSet();
     try {
       try {
-        entry = await library.addBytes(await file.readAsBytes(), incomingFile.name);
+        entry = await library.addFile(incomingFile.path, incomingFile.name);
       } finally {
         // Копия принадлежит получателю: также после отказа и обнаружения повтора.
         if (await file.exists()) await file.delete();
@@ -196,11 +197,13 @@ class NativeApplication extends AppAssembly {
     );
   }
 
-  Future<void> flush() async {
+  Future<void> flush() => _flushing ??= _flush().whenComplete(() => _flushing = null);
+
+  Future<void> _flush() async {
     try {
       await library.flush();
     } catch (error) {
-      _failure(error, 'state.json / settings.json');
+      library.recordFileFailure('state.json / settings.json', error);
     }
   }
 }

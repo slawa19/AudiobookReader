@@ -52,12 +52,12 @@ class AppSettings extends ChangeNotifier {
   };
 
   void restore(Map<String, Object?> json) {
-    _theme = ThemeChoice.values.byName(json['theme']! as String);
-    _fontStep = (json['fontStep']! as int).clamp(0, fontSteps.length - 1);
-    _speed = (json['speed']! as num).toDouble();
-    _voice = json['voice']! as String;
-    _modelId = json['modelId']! as String;
-    _language = json['language'] as String?;
+    _theme = ThemeChoice.values.where((v) => v.name == json['theme']).firstOrNull ?? _theme;
+    if (json['fontStep'] case final int step) _fontStep = step.clamp(0, fontSteps.length - 1);
+    if (json['speed'] case final num value) _speed = value.toDouble();
+    if (json['voice'] case final String value) _voice = value;
+    if (json['modelId'] case final String value) _modelId = value;
+    _language = json['language'] is String ? json['language']! as String : null;
     notifyListeners();
   }
 

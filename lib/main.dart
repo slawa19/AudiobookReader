@@ -18,8 +18,15 @@ Future<void> main() async {
       ),
     );
   } else {
-    final application = await NativeApplication.create();
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    runApp(AudiobookApp.application(assembly: application));
+    try {
+      final application = await NativeApplication.create();
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      runApp(AudiobookApp.application(assembly: application));
+    } catch (error) {
+      // Ошибка хранилища остаётся видна даже без готовых настроек и полки.
+      runApp(MaterialApp(home: Scaffold(body: SafeArea(
+        child: SingleChildScrollView(padding: const EdgeInsets.all(24), child: Text(error.toString())),
+      ))));
+    }
   }
 }

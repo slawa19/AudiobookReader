@@ -3,12 +3,15 @@ import 'dart:io';
 
 import 'package:audiobook_reader/library/library.dart';
 import 'package:audiobook_reader/library/settings.dart';
+import 'package:audiobook_reader/screens/common.dart';
+import 'package:audiobook_reader/screens/reader_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'support/app_harness.dart';
 import 'support/flows.dart';
 import 'support/harness.dart';
+import 'support/library_time.dart';
 
 ReadingPosition shown(WidgetTester tester) {
   final st = reader(tester);
@@ -27,6 +30,30 @@ Future<String> openLongBook(AppHarness h) async {
 }
 
 void main() {
+  testWidgets('один уход в фон: одна ошибка записи, книга остаётся открытой', (tester) async {
+    final h = AppHarness(tester);
+    await h.start();
+    final id = await openLongBook(h);
+    final blocked = Directory('${h.root.path}/books/$id/state.json.new');
+    await tester.runAsync(() => blocked.create());
+    try {
+      await tapRightThird(tester);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await h.until(() => h.app.library.addJobs.isNotEmpty);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pumpAndSettle();
+      expect(find.byType(ReaderScreen), findsOneWidget);
+      expect(h.app.library.addJobs, hasLength(1));
+    } finally {
+      await tester.runAsync(() => blocked.delete());
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await h.finish(h.app.flush());
+    }
+    expect(h.diskState(id)['position'], isNotNull);
+  });
+
   testWidgets('FR-R7,I1: закрытие немедленно пишет место; новая полка сохраняет шрифт, тему, язык и страницу', (
     tester,
   ) async {
@@ -118,7 +145,21 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Удалить книгу'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Краткая'), findsWidgets);
+    final dialog = find.byType(AlertDialog);
+    expect(dialog, findsOneWidget);
+    final l10n = tester.element(dialog).l10n;
+    final body = l10n.deleteBookBody(entry.title, formatBytes(l10n, entry.bookBytes));
+    expect(find.descendant(of: dialog, matching: find.text(body)), findsOneWidget);
+    await tester.tap(find.descendant(of: dialog, matching: find.text(l10n.cancel)));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(dir.existsSync(), isTrue);
+    expect(h.app.library.shelf.single.id, entry.id);
+    await tester.longPress(find.text('Краткая'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Удалить книгу'));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byType(AlertDialog), matching: find.text(body)), findsOneWidget);
     await tester.tap(find.byKey(const Key('confirm-delete')));
     await tester.pumpAndSettle();
     await h.until(() => !dir.existsSync() && h.app.library.shelf.isEmpty);
@@ -134,7 +175,7 @@ void main() {
           final bytes = utf8.encode(
             utf8.decode(shortBook()).replaceFirst('Краткая', 'Длинное название книги номер $i'),
           );
-          await h.app.library.addBytes(bytes, '$i.fb2');
+          await h.app.library.addTestBytes(bytes, '$i.fb2');
         }
       });
       await tester.pumpAndSettle();

@@ -12,13 +12,29 @@ import '../book/parse.dart';
 import 'library.dart';
 import 'settings.dart';
 
-typedef LibraryParser = Future<ParsedBook> Function(List<int> bytes);
+typedef LibraryParser = Future<ParsedBook> Function(String path);
 typedef LibraryTimer = Timer Function(Duration delay, void Function() callback);
 
-Future<ParsedBook> _parse(List<int> bytes) =>
-    Isolate.run(() => parseBook(bytes));
-Future<String> _bookId(List<int> bytes) =>
-    Isolate.run(() => sha256.convert(bytes).toString().substring(0, 12));
+// 256 МиБ оставляют запас для иллюстрированного EPUB, но отсекают гигабайтные архивы
+// до чтения в память. Исходник и разбор живут только в рабочем изоляте.
+const maxBookFileBytes = 256 * 1024 * 1024;
+
+Future<void> _checkSize(File file) async {
+  if (await file.length() > maxBookFileBytes) {
+    throw const BookParseException(ParseFailure.unsupported);
+  }
+}
+
+Future<ParsedBook> _parse(String path) => Isolate.run(() async {
+  final file = File(path);
+  await _checkSize(file);
+  return parseBook(await file.readAsBytes());
+});
+Future<String> _bookId(String path) => Isolate.run(() async {
+  final file = File(path);
+  await _checkSize(file);
+  return (await sha256.bind(file.openRead()).first).toString().substring(0, 12);
+});
 
 Future<Book> _readBook(String path) => Isolate.run(
   () async => Book.fromJson(
@@ -77,13 +93,25 @@ class FileLibrary extends Library {
     await tmp.create();
     final books = await Directory('${root.path}/books').create();
     final config = File('${root.path}/settings.json');
-    if (await config.exists()) settings.restore(await _json(config));
+    if (await config.exists()) {
+      try {
+        settings.restore(await _json(config));
+      } on FormatException {
+        // Пустой или оборванный JSON не лишает пользователя полки.
+      } on TypeError {
+        // Корень JSON должен быть объектом настроек.
+      }
+    }
     await for (final dir in books.list()) {
       if (dir is! Directory) continue;
-      final meta = await _json(File('${dir.path}/meta.json'));
-      final state = await _json(File('${dir.path}/state.json'));
-      final id = meta['id']! as String;
-      _stored[id] = _StoredBook(meta, state, await _bytes(dir), dir);
+      try {
+        final meta = await _json(File('${dir.path}/meta.json'));
+        final state = await _json(File('${dir.path}/state.json'));
+        final id = meta['id']! as String;
+        _stored[id] = _StoredBook(meta, state, await _bytes(dir), dir);
+      } catch (_) {
+        // Повреждённую запись пропускаем целиком, исходник оставляем для восстановления.
+      }
     }
     if (!_closed) {
       settings.addListener(_settingsChanged);
@@ -110,6 +138,7 @@ class FileLibrary extends Library {
   List<AddJob> get addJobs => List.unmodifiable(_jobs);
 
   /// Отказ до разбора: например, Android не смог скопировать выбранный файл.
+  @override
   void recordFileFailure(String fileName, Object error) {
     _jobs.insert(0, AddJob(
       fileName: fileName,
@@ -124,28 +153,37 @@ class FileLibrary extends Library {
   ShelfEntry entry(String bookId) => _stored[bookId]!.entry;
 
   @override
-  Future<ShelfEntry?> addBytes(List<int> bytes, String fileName) async {
-    // Копия принадлежит добавлению: вызывающий код может повторно использовать свой буфер.
-    final source = List<int>.of(bytes);
+  Future<ShelfEntry?> addFile(String path, String fileName) async {
     await ready;
     if (_closed) throw StateError('Библиотека закрыта');
-    final id = await _bookId(source);
+    final String id;
+    try {
+      id = await _bookId(path);
+    } on BookParseException catch (error) {
+      _jobs.insert(0, AddJob(
+        fileName: fileName,
+        status: AddJobStatus.failed,
+        failure: AddFailure.values.byName(error.reason.name),
+        technical: error.technical,
+      ));
+      notifyListeners();
+      return null;
+    }
     if (_stored.containsKey(id)) return entry(id);
-    return _adding[id] ??= _add(source, fileName, id).whenComplete(() {
+    return _adding[id] ??= _add(path, fileName, id).whenComplete(() {
       _adding.remove(id);
     });
   }
 
-  Future<ShelfEntry?> _add(List<int> bytes, String fileName, String id) async {
+  Future<ShelfEntry?> _add(String path, String fileName, String id) async {
     final job = AddJob(fileName: fileName, status: AddJobStatus.adding);
     _jobs.insert(0, job);
     notifyListeners();
     Directory? work;
     try {
       work = await Directory('${root.path}/tmp').createTemp('add-');
-      final source = File('${work.path}/source');
-      await source.writeAsBytes(bytes, flush: true);
-      final parsed = await _parser(await source.readAsBytes());
+      final source = await File(path).copy('${work.path}/source');
+      final parsed = await _parser(source.path);
       if (_closed) return null;
       await source.rename('${work.path}/original.${parsed.format.extension}');
       await _writeBook('${work.path}/book.json', parsed.book);
@@ -250,7 +288,7 @@ class FileLibrary extends Library {
             (f) => f is File && f.uri.pathSegments.last.startsWith('original.'),
           )
           .first;
-      final parsed = await _parser(await File(original.path).readAsBytes());
+      final parsed = await _parser(original.path);
       book = parsed.book;
       final next = book;
       await _enqueue(() async {
@@ -372,13 +410,7 @@ class FileLibrary extends Library {
 
   Future<void> _enqueue(Future<void> Function() operation) {
     final result = _writer.then((_) => operation());
-    _writer = result.then<void>(
-      (_) {},
-      onError: (Object e, StackTrace s) {
-        _writeError ??= e;
-        _writeStack ??= s;
-      },
-    );
+    _writer = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
     return result;
   }
 
@@ -390,7 +422,14 @@ class FileLibrary extends Library {
       _pending?.cancel();
       _pending = null;
       // Ошибки фоновой записи сохраняет писатель; flush отдаёт их вызывающему коду.
-      unawaited(_enqueue(_writeDirty).catchError((Object _) {}));
+      unawaited(_enqueue(() async {
+        try {
+          await _writeDirty();
+        } catch (error, stack) {
+          _writeError ??= error;
+          _writeStack ??= stack;
+        }
+      }));
     } else {
       _pending ??= _timer(const Duration(seconds: 1) - elapsed, () {
         _pending = null;
@@ -414,16 +453,27 @@ class FileLibrary extends Library {
     }
     _lastWrite = _clock();
     final ids = _dirty.toList();
-    _dirty.clear();
     for (final id in ids) {
       final state = _stored[id]?.state;
+      // Пока идёт запись, новое изменение может снова пометить книгу грязной.
+      _dirty.remove(id);
       if (state != null) {
-        await _atomic(File('${_dir(id).path}/state.json'), state);
+        try {
+          await _atomic(File('${_dir(id).path}/state.json'), state);
+        } catch (_) {
+          _dirty.add(id);
+          rethrow;
+        }
       }
     }
     if (_settingsDirty) {
       _settingsDirty = false;
-      await _atomic(File('${root.path}/settings.json'), settings.toJson());
+      try {
+        await _atomic(File('${root.path}/settings.json'), settings.toJson());
+      } catch (_) {
+        _settingsDirty = true;
+        rethrow;
+      }
     }
   }
 
@@ -432,17 +482,14 @@ class FileLibrary extends Library {
     await ready;
     _pending?.cancel();
     _pending = null;
-    await _enqueue(() => _writeDirty(force: true));
-    await _writer;
-    if (_writeError != null) {
-      Error.throwWithStackTrace(_writeError!, _writeStack!);
-    }
-  }
-
-  @override
-  Future<int> deletionBytes(String bookId) async {
-    await flush();
-    return _bytes(_dir(bookId));
+    await _enqueue(() async {
+      final error = _writeError;
+      final stack = _writeStack;
+      _writeError = null;
+      _writeStack = null;
+      if (error != null) Error.throwWithStackTrace(error, stack!);
+      await _writeDirty(force: true);
+    });
   }
 
   @override
@@ -451,11 +498,13 @@ class FileLibrary extends Library {
     final loading = _loads[bookId];
     if (loading != null) await loading;
     await _enqueue(() async {
-      await _dir(bookId).delete(recursive: true);
+      final tomb = await Directory('${root.path}/tmp').createTemp('delete-');
+      await _dir(bookId).rename('${tomb.path}/book');
       _stored.remove(bookId);
       _books.remove(bookId);
       _dirty.remove(bookId);
       notifyListeners();
+      await tomb.delete(recursive: true);
     });
   }
 

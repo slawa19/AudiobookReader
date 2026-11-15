@@ -25,6 +25,12 @@ class IncomingFilesChannel(private val activity: Activity, messenger: BinaryMess
     private var picker: MethodChannel.Result? = null
 
     init {
+        // Первая задача работника чистит хвосты прошлого процесса до любого нового копирования.
+        worker.execute {
+            runCatching { prepareCache() }.exceptionOrNull()?.let { error ->
+                main.post { emit(Result.failure(error)) }
+            }
+        }
         methods.setMethodCallHandler { call, result ->
             if (call.method == "pickFile") pickFile(result) else result.notImplemented()
         }
@@ -51,6 +57,7 @@ class IncomingFilesChannel(private val activity: Activity, messenger: BinaryMess
             type = "*/*"
             putExtra(Intent.EXTRA_MIME_TYPES, arrayOf(
                 "application/epub+zip", "application/x-fictionbook+xml",
+                "application/x-fictionbook", "application/fb2+zip",
                 "application/x-fictionbook+zip", "application/fb2",
                 "application/zip", "application/x-zip-compressed",
                 "application/octet-stream", "application/xml", "text/xml"
@@ -83,6 +90,8 @@ class IncomingFilesChannel(private val activity: Activity, messenger: BinaryMess
     }
 
     fun accept(intent: Intent) {
+        // Возврат из «Недавних» не является новой доставкой файла.
+        if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return
         val uri = when (intent.action) {
             Intent.ACTION_VIEW -> intent.data
             Intent.ACTION_SEND -> streamUri(intent) ?: intent.clipData?.let {
@@ -113,8 +122,10 @@ class IncomingFilesChannel(private val activity: Activity, messenger: BinaryMess
         if (uri == null || uri.scheme != "content") throw IOException("Не передан content-URI файла")
         val resolver = activity.contentResolver
         val name = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
-            if (it.moveToFirst()) it.getString(it.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)) else null
-        } ?: throw IOException("Источник не сообщил DISPLAY_NAME файла")
+            val column = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (column >= 0 && it.moveToFirst()) it.getString(column) else null
+        }?.takeIf { it.isNotBlank() } ?: uri.lastPathSegment ?: uri.toString()
+        prepareCache()
         val directory = File(activity.cacheDir, "incoming_books")
         if (!directory.isDirectory && !directory.mkdirs()) throw IOException("Не удалось создать временную папку")
         // Имя от провайдера — только метаданные, никогда не часть пути к нашей копии.
@@ -126,6 +137,18 @@ class IncomingFilesChannel(private val activity: Activity, messenger: BinaryMess
         } catch (error: Exception) {
             target.delete()
             throw error
+        }
+    }
+
+    private fun prepareCache() {
+        synchronized(CACHE_LOCK) {
+            if (cachePrepared) return
+            val directory = File(activity.cacheDir, "incoming_books")
+            if (directory.exists() && !directory.deleteRecursively()) {
+                throw IOException("Не удалось удалить временные копии входящих книг")
+            }
+            // Один раз на процесс: пересоздание Activity не стирает ещё обрабатываемые копии.
+            cachePrepared = true
         }
     }
 
@@ -150,5 +173,7 @@ class IncomingFilesChannel(private val activity: Activity, messenger: BinaryMess
 
     private companion object {
         const val PICK_FILE = 4101
+        val CACHE_LOCK = Any()
+        var cachePrepared = false
     }
 }

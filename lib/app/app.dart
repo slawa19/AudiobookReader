@@ -135,6 +135,7 @@ class AudiobookApp extends StatefulWidget {
 
 class _AudiobookAppState extends State<AudiobookApp> with WidgetsBindingObserver {
   final _navigator = GlobalKey<NavigatorState>();
+  bool _backgroundFlushed = false;
 
   @override
   void initState() {
@@ -149,7 +150,10 @@ class _AudiobookAppState extends State<AudiobookApp> with WidgetsBindingObserver
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed) {
+      _backgroundFlushed = false;
+    } else if (!_backgroundFlushed) {
+      _backgroundFlushed = true;
       unawaited(widget.assembly.services.flush());
     }
   }
