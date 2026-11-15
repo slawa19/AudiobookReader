@@ -30,7 +30,10 @@ Future<void> turn(WidgetTester tester, {bool forward = false}) async {
   final area = tester.getRect(find.byKey(const Key('page-area')));
   await tester.tapAt(Offset(forward ? area.right - 12 : area.left + 12, st.pagePadding.top + 120));
   await tester.pumpAndSettle();
-  expect(st.layout.pages[st.page], isNot(same(before)), reason: 'касание действительно перелистнуло страницу');
+  final after = st.layout.pages[st.page];
+  expect((after.firstBlock, after.firstOffset, after.lastBlock, after.lastEnd),
+      isNot((before.firstBlock, before.firstOffset, before.lastBlock, before.lastEnd)),
+      reason: 'касание действительно перелистнуло текст страницы');
   expectFullProsePage(st);
 }
 

@@ -48,8 +48,8 @@ List<int> navigationBook({int repetitions = 14}) => utf8.encode('''<?xml version
 
 /// Инвариант экрана для прозы: если глава ещё продолжается, следующая строка не помещается.
 /// Конец главы/книги разрешает короткую страницу; искусственное место старта — нет.
-void expectFullProsePage(ReaderScreenState st) {
-  final page = st.layout.pages[st.page];
+void expectFullProsePage(ReaderScreenState st, {BookPageLayout? shown}) {
+  final page = shown ?? st.layout.pages[st.page];
   final book = st.widget.book;
   final last = page.fragments.last;
   final atChapterEnd = page.lastBlock == book.chapters[page.chapter].endBlock - 1 &&

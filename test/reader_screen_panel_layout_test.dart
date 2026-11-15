@@ -8,11 +8,11 @@ import 'support/app_harness.dart';
 import 'support/flows.dart';
 import 'support/harness.dart' show reader;
 
-Future<AppHarness> panelApp(WidgetTester tester, {bool wrapped = true}) async {
+Future<AppHarness> panelApp(WidgetTester tester, {bool wrapped = true, bool narrow = false}) async {
   final h = AppHarness(tester);
-  await h.start(fakeTts: true);
+  await h.start(fakeTts: true, textScale: narrow ? 1.3 : 1);
   if (wrapped) {
-    // Физический экран Samsung; 4 пикселя на dp. Длинное имя настоящего голоса переносит кнопку ниже.
+    // Физический экран Samsung; 4 пикселя на dp. Длинное имя не вытесняет значки из верхней строки.
     tester.view.devicePixelRatio = 4;
     tester.view.physicalSize = const Size(1440, 3120);
     tester.view.padding = const FakeViewPadding(top: 128, bottom: 192);
@@ -21,6 +21,13 @@ Future<AppHarness> panelApp(WidgetTester tester, {bool wrapped = true}) async {
   } else {
     tester.view.physicalSize = const Size(360, 640);
     h.app.settings.voice = 'Aoede';
+  }
+  if (narrow) {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 900);
+    tester.view.padding = const FakeViewPadding(top: 32, bottom: 48);
+    tester.view.viewPadding = const FakeViewPadding(top: 32, bottom: 48);
+    h.app.settings.language = 'de';
   }
   final file = await h.copy(navigationBook());
   h.files.events.add(file);
@@ -48,7 +55,55 @@ Future<void> swipePage(WidgetTester tester, int direction) async {
 }
 
 void main() {
-  testWidgets('геометрия второго круга: короткое имя голоса оставляет кнопку в одной строке', (tester) async {
+  testWidgets('320 dp ×1,3 de: значки, preparing и системный отступ не меняют геометрию', (tester) async {
+    final h = await panelApp(tester, narrow: true);
+    final st = reader(tester);
+    final height = st.columnSize.height;
+    final voice = tester.getRect(find.byKey(const Key('voice-chip')));
+    final close = tester.getRect(find.byKey(const Key('player-close')));
+    final original = st.layout;
+    await swipePage(tester, 1);
+    final shown = st.layout.pages[st.page];
+    final bounds = (shown.firstBlock, shown.firstOffset, shown.lastBlock, shown.lastEnd);
+    for (var i = 0; i < 3; i++) {
+      tester.view.viewPadding = const FakeViewPadding();
+      tester.view.padding = const FakeViewPadding();
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(st.columnSize.height, height);
+      expect(tester.getRect(find.byKey(const Key('voice-chip'))), voice);
+      expect(tester.getRect(find.byKey(const Key('player-close'))), close);
+      final size = tester.getSize(find.byKey(const Key('to-reading-place')));
+      expect(size.width, greaterThanOrEqualTo(48));
+      expect(size.height, greaterThanOrEqualTo(48));
+      expect(st.layout, same(original));
+      final p = st.layout.pages[st.page];
+      expect((p.firstBlock, p.firstOffset, p.lastBlock, p.lastEnd), bounds);
+    }
+    await h.until(() => h.app.queue.inFlight == 0);
+    h.engine.enqueue(delay: const Duration(seconds: 1));
+    h.app.settings.voice = 'Achernar';
+    h.app.services.narration.restartSession();
+    h.app.services.narration.resume();
+    expect(h.app.services.narration.state, NarrationState.preparing);
+    for (var frame = 0; frame < 28; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(st.columnSize.height, height);
+    }
+    final preparing = st.layout.pages[st.page];
+    final stable = (preparing.firstBlock, preparing.firstOffset, preparing.lastBlock, preparing.lastEnd);
+    for (var frame = 0; frame < 140; frame++) {
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(st.columnSize.height, height);
+      expect(tester.getRect(find.byKey(const Key('player-close'))), close);
+      final p = st.layout.pages[st.page];
+      expect((p.firstBlock, p.firstOffset, p.lastBlock, p.lastEnd), stable);
+    }
+    expect(h.app.services.narration.state, NarrationState.playing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('постоянная геометрия с коротким именем голоса', (tester) async {
     final h = await panelApp(tester, wrapped: false);
     final height = reader(tester).columnSize.height;
     await swipePage(tester, 1);
@@ -58,7 +113,7 @@ void main() {
   });
 
   for (final action in ['resume', 'back', 'next', 'previous', 'backward', 'auto']) {
-    testWidgets('панель меняет высоту: $action возвращает прежнюю раскладку', (tester) async {
+    testWidgets('постоянная панель: $action сохраняет прежнюю раскладку', (tester) async {
       final h = await panelApp(tester);
       final st = reader(tester);
       if (action == 'previous') {
@@ -79,9 +134,9 @@ void main() {
       await swipePage(tester, direction);
       expect(st.following, isFalse);
       expect(find.byKey(const Key('to-reading-place')), findsOneWidget);
-      expect(st.columnSize.height, lessThan(height), reason: 'кнопка действительно уменьшает страницу');
+      expect(st.columnSize.height, height, reason: 'значок не меняет область страницы');
       final detachedHeight = st.columnSize.height;
-      expect(tester.getSize(find.byKey(const Key('player-panel'))).height, greaterThan(panelHeight));
+      expect(tester.getSize(find.byKey(const Key('player-panel'))).height, panelHeight);
       await swipePage(tester, direction);
       var expected = original;
       if (action == 'back') {
@@ -99,8 +154,7 @@ void main() {
         await tester.pump();
         await tester.pump();
         if (action == 'next') {
-          expect(st.columnSize.height, greaterThan(detachedHeight), reason: 'кнопка ушла, появилась строка preparing');
-          expect(st.columnSize.height, lessThan(height), reason: 'это третий, промежуточный размер панели');
+          expect(st.columnSize.height, detachedHeight, reason: 'preparing не меняет область страницы');
         }
         await h.until(() => h.app.services.narration.state == NarrationState.playing);
       } else if (action == 'auto') {
@@ -140,7 +194,7 @@ void main() {
       final size = st.columnSize;
       final font = st.pageStyle.fontSize;
       await swipePage(tester, 1);
-      expect(st.columnSize.height, lessThan(size.height));
+      expect(st.columnSize.height, size.height);
       if (change == 'font') {
         h.app.settings.fontStep++;
       } else if (change == 'window') {

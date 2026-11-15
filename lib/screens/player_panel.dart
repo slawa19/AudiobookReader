@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../library/settings.dart';
@@ -27,11 +29,11 @@ class PlayerPanel extends StatelessWidget {
     required this.onNext,
     this.header,
     this.download,
-    this.onBodyHeight,
+    required this.bottomInset,
+    this.onMessageHeight,
   });
 
-  /// Оценка высоты тела панели в обычном состоянии без отступа под жесты: 8 + 52 + 4 + 76 + 10. Точную высоту
-  /// экран получает через [onBodyHeight].
+  /// Постоянное тело управления без системного отступа: 8 + 52 + 4 + 76 + 10.
   static const controlsHeight = 150.0;
 
   final NarrationController narration;
@@ -62,13 +64,15 @@ class PlayerPanel extends StatelessWidget {
   /// Строка «Скачать главу», пока задача идёт.
   final Widget? download;
 
-  /// Высота тела панели (без [header]) — по ней страница кончается над панелью.
-  final ValueChanged<double>? onBodyHeight;
+  final double bottomInset;
+
+  /// Только сообщение об ошибке, конец книги и строка скачивания имеют высоту по содержимому.
+  final ValueChanged<double>? onMessageHeight;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final bottom = MediaQuery.viewPaddingOf(context).bottom;
+    final bottom = bottomInset;
     final state = narration.state;
     final Widget content;
     if (state == NarrationState.stopped && narration.stopReason == StopReason.error && narration.error != null) {
@@ -124,7 +128,10 @@ class PlayerPanel extends StatelessWidget {
             Padding(padding: const EdgeInsets.only(top: 10), child: header!),
             Divider(indent: 24, endIndent: 24, color: scheme.outlineVariant),
           ],
-          if (onBodyHeight == null) body else MeasureSize(onChange: (s) => onBodyHeight!(s.height), child: body),
+          if ((state == NarrationState.stopped || download != null) && onMessageHeight != null)
+            MeasureSize(onChange: (s) => onMessageHeight!(s.height), child: body)
+          else
+            body,
         ]),
       ),
     );
@@ -173,53 +180,39 @@ class _Controls extends StatelessWidget {
             ? l10n.endOfChapterShort
             : l10n.minutesShort((sleep.remaining(narration.now()).inSeconds / 60).ceil());
 
-    // Чип голоса и «К месту чтения» есть во всех состояниях со звуком и без (правило k): «Жду связь…» может
-    // длиться долго, а вернуться к месту и сменить голос нужно и тогда.
-    final Widget chips = Wrap(
-      spacing: 8,
-      runSpacing: 4,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        VoiceChip(key: const Key('voice-chip'), voiceName: voiceName, onPressed: onVoice),
-        if (!following)
-          FilledButton.tonalIcon(
-            key: const Key('to-reading-place'),
-            style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-            onPressed: onBackToReading,
-            icon: const Icon(Icons.my_location_rounded),
-            label: Text(l10n.toReadingPlace),
-          ),
-      ],
-    );
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 52),
-          child: Row(children: [
-            Expanded(child: chips),
-            IconButton(key: const Key('player-close'), tooltip: l10n.close, icon: const Icon(Icons.close_rounded), onPressed: onClose),
-          ]),
-        ),
-        // Состояние без звука — отдельной строкой под чипами (FR-P6).
-        if (busy)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-            child: Row(
-              key: const Key('player-status'),
-              children: [
-                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5)),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Text(
-                    state == NarrationState.preparing ? l10n.preparing : l10n.waiting,
-                    style: theme.textTheme.titleSmall?.copyWith(color: scheme.onSurface),
-                  ),
+        SizedBox(
+          height: 52,
+          child: LayoutBuilder(builder: (context, constraints) {
+            // Место обоих значков постоянно. Состояние уступает ширину голосу, но не кнопкам.
+            final voiceWidth = math.min(180.0, (constraints.maxWidth - 96) * 0.55);
+            return Row(children: [
+              SizedBox(width: voiceWidth, child: VoiceChip(
+                  key: const Key('voice-chip'), voiceName: voiceName, onPressed: onVoice)),
+              Expanded(child: busy ? Tooltip(
+                message: state == NarrationState.preparing ? l10n.preparing : l10n.waiting,
+                child: Text(
+                  state == NarrationState.preparing ? l10n.preparing : l10n.waiting,
+                  key: const Key('player-status'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurface),
                 ),
-              ],
-            ),
-          ),
+              ) : const SizedBox()),
+              SizedBox(width: 48, height: 48, child: following ? null : IconButton(
+                key: const Key('to-reading-place'),
+                tooltip: l10n.toReadingPlace,
+                icon: const Icon(Icons.my_location_rounded),
+                onPressed: onBackToReading,
+              )),
+              SizedBox(width: 48, height: 48, child: IconButton(
+                key: const Key('player-close'), tooltip: l10n.close,
+                icon: const Icon(Icons.close_rounded), onPressed: onClose)),
+            ]);
+          }),
+        ),
         const SizedBox(height: 4),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

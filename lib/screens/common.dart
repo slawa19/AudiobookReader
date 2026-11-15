@@ -262,8 +262,8 @@ class ButtonPair extends StatelessWidget {
   }
 }
 
-/// Сообщает размер ребёнка после раскладки — чтобы страница кончалась над панелью, высота которой зависит от
-/// состояния, языка и масштаба шрифта.
+/// Измеряет сообщение об ошибке, конец книги или скачивание. Панель управления не измеряется:
+/// её постоянная высота не зависит от состояния и следования.
 class MeasureSize extends SingleChildRenderObjectWidget {
   const MeasureSize({super.key, required this.onChange, required super.child});
 
@@ -306,7 +306,7 @@ class VoiceChip extends StatelessWidget {
     return ActionChip(
       avatar: Icon(Icons.record_voice_over_rounded, color: scheme.primary),
       label: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text(voiceName),
+          Flexible(child: Text(voiceName, maxLines: 1, overflow: TextOverflow.ellipsis)),
         const SizedBox(width: 2),
         Icon(Icons.expand_more_rounded, size: 18, color: scheme.onSurfaceVariant),
       ]),
