@@ -90,7 +90,7 @@ class AppSettings extends ChangeNotifier {
   set voice(String v) => _set(() => _voice = v);
   set modelId(String v) => _set(() => _modelId = v);
   set apiKey(String? v) {
-    final value = v?.trim();
+    final value = v?.replaceAll(RegExp(r'[\s\p{Cc}\p{Default_Ignorable_Code_Point}]', unicode: true), '');
     _apiKey = value == null || value.isEmpty ? null : value;
     final store = _secretStore;
     if (store != null && value != null && value.isNotEmpty) {

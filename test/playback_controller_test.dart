@@ -14,6 +14,12 @@ import 'support/playback_harness.dart';
 
 const page = PageRange(ReadingPosition(0, 0), ReadingPosition(100, 0));
 
+// Каждое предложение длиннее 80 и короче 200 знаков: у сцен с двумя частями остаётся отдельный хвост.
+const firstSentence =
+    'Первое предложение достаточно длинное, чтобы первая часть старта содержала текст для непрерывного звучания. ';
+const secondSentence =
+    'Второе предложение достаточно длинное, чтобы первая часть старта содержала текст для непрерывного звучания. ';
+
 void main() {
   test('8 счётчик и новое место наблюдаются вместе, включая снятие истёкшего таймера и смену книги', () async {
     final h = await PlaybackHarness.create(
@@ -409,7 +415,7 @@ void main() {
   test(
     '5 две части старта повторно используются при непрерывном проходе',
     () async {
-      const text = 'Первое предложение. Второе предложение с остатком.';
+      const text = '$firstSentenceВторое предложение с остатком.';
       final h = await PlaybackHarness.create(
         playbackBook([
           ['Заголовок'],
@@ -420,7 +426,7 @@ void main() {
       c.readFrom(h.book, 1);
       await h.calls(2);
       expect(h.engine.calls.map((c) => c.text), [
-        'Первое предложение. ',
+        firstSentence,
         'Второе предложение с остатком.',
       ]);
       await h.release(0);
@@ -438,13 +444,13 @@ void main() {
   );
 
   test('5 одна готовая часть — только недостающая; целый файл — вообще без синтеза', () async {
-    const text = 'Первое предложение. Второе предложение.';
+    const text = '$firstSentenceВторое предложение.';
     final h = await PlaybackHarness.create(
       playbackBook([
         [text],
       ], kind: BlockKind.paragraph),
     );
-    await h.cache('Первое предложение. ');
+    await h.cache(firstSentence);
     h.controller.listen(h.book, page);
     await h.calls(1);
     expect(h.engine.calls.single.text, 'Второе предложение.');
@@ -463,14 +469,14 @@ void main() {
     () async {
       final h = await PlaybackHarness.create(
         playbackBook([
-          ['Первый абзац.', 'Второй абзац.', 'Третий абзац.'],
+          ['Первый абзац.', secondSentence.trimRight(), 'Третий абзац.'],
         ], kind: BlockKind.paragraph),
       );
-      await h.cache('Первый абзац.\nВторой абзац.\nТретий абзац.');
+      await h.cache('Первый абзац.\n${secondSentence.trimRight()}\nТретий абзац.');
       h.controller.readFrom(h.book, 1);
       await h.calls(2);
       expect(h.engine.calls.map((c) => c.text), [
-        'Второй абзац.\n',
+        '${secondSentence.trimRight()}\n',
         'Третий абзац.',
       ]);
       await h.release(0);
@@ -483,7 +489,7 @@ void main() {
     '8 FR-P3 три старта, Закрыть, место переживает новую FileLibrary',
     () async {
       const text =
-          'Первое предложение. Второе предложение. Третье предложение.';
+          'Первое предложение. $secondSentenceТретье предложение.';
       final h = await PlaybackHarness.create(
         playbackBook([
           [text],
@@ -566,7 +572,7 @@ void main() {
   });
 
   test('10 профиль книги важнее общего; смена из паузы с того же предложения, без лишнего restart', () async {
-    const text = 'Первое предложение. Второе предложение. Третье.';
+    const text = 'Первое предложение. $secondSentenceТретье.';
     final h = await PlaybackHarness.create(
       playbackBook([
         [text],
@@ -597,7 +603,7 @@ void main() {
     await h.release(1);
     c.resume();
     await h.calls(4);
-    expect(h.engine.calls[2].text, 'Второе предложение. ');
+    expect(h.engine.calls[2].text, secondSentence);
     expect(h.engine.calls[2].profile.voice, 'Kore');
     expect(c.state, NarrationState.preparing);
     await h.release(2);
@@ -608,5 +614,25 @@ void main() {
           .length,
       2,
     );
+  });
+
+  test('5 старт с отрезка короче 80 знаков делает один запрос', () async {
+    const text = 'Первое предложение. Второе предложение.';
+    final h = await PlaybackHarness.create(
+      playbackBook([
+        [text],
+      ], kind: BlockKind.paragraph),
+    );
+    expect(text.length, lessThan(firstPartMin));
+    h.controller.listen(h.book, page);
+    await h.calls(1);
+    await ioSettled();
+    expect(h.engine.calls.map((call) => call.text), [text]);
+    expect(h.controller.state, NarrationState.preparing);
+    await h.release(0);
+    expect(h.engine.calls.length, 1);
+    expect(h.player.items.length, 1);
+    expect(h.controller.state, NarrationState.playing);
+    expect(h.controller.unitStart, const ReadingPosition(0, 0));
   });
 }

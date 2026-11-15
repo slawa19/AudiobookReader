@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:audiobook_reader/tts/engine.dart';
 import 'package:audiobook_reader/tts/gemini.dart';
@@ -31,6 +33,120 @@ Future<TtsError> errorOf(Future<TtsResult> future) async {
 }
 
 void main() {
+  test('транспорт: чужой текст исключения никогда не попадает в TtsError', () async {
+    for (final failure in [
+      FormatException('Invalid HTTP header field value: "$key\\n"'),
+      StateError('чужой текст ${Uri.encodeComponent(key)}'),
+    ]) {
+      final e = await errorOf(engine((_) => throw failure).synthesize('Да.', profile));
+      expect(e, isA<TemporaryTtsError>());
+      expect(e.reason, TtsErrorReason.network);
+      expect(e.message, contains(failure.runtimeType.toString()));
+      expect(e.message, isNot(contains('чужой текст')));
+      expect(e.message, isNot(contains('Invalid HTTP header')));
+      expect(e.toString(), isNot(contains(key)));
+      expect(e.toString(), isNot(contains(Uri.encodeComponent(key))));
+    }
+    expect((await engine((_) => jsonResponse(audioResponse())).synthesize('Да.', profile)).pcm, isNotEmpty);
+  });
+
+  test('ключ вне печатного ASCII отклоняется до транспорта; печатный ASCII отправляется', () async {
+    for (final value in ['fake\nkey', 'fake\u200bkey', 'fakeékey', 'fake\u007fkey']) {
+      var sent = false;
+      final tts = GeminiTtsEngine(apiKey: value, transport: MockClient((_) async {
+        sent = true;
+        return jsonResponse(audioResponse());
+      }));
+      final e = await errorOf(tts.synthesize('Да.', profile));
+      expect(e.reason, TtsErrorReason.invalidKey);
+      expect(e, isNot(isA<TemporaryTtsError>()));
+      expect(e.toString(), isNot(contains(value)));
+      expect(sent, isFalse);
+    }
+    var sent = false;
+    await GeminiTtsEngine(apiKey: 'fake-ASCII_09+~', transport: MockClient((r) async {
+      sent = true;
+      expect(r.headers['x-goog-api-key'], 'fake-ASCII_09+~');
+      return jsonResponse(audioResponse());
+    })).synthesize('Да.', profile);
+    expect(sent, isTrue);
+  });
+
+  for (final readingBody in [false, true]) {
+    for (final failure in [
+      const SocketException('fake socket secret'),
+      const HandshakeException('fake handshake secret'),
+      const TlsException('fake tls secret'),
+      const HttpException('fake http secret'),
+    ]) {
+      test('сеть: ${failure.runtimeType}, чтение тела=$readingBody — временная ошибка', () async {
+        var calls = 0;
+        final tts = GeminiTtsEngine(apiKey: key, transport: MockClient.streaming((_, _) async {
+          calls++;
+          if (!readingBody) throw failure;
+          return http.StreamedResponse(Stream<List<int>>.error(failure), 200);
+        }));
+        final e = await errorOf(tts.synthesize('Да.', profile));
+        expect(e, isA<TemporaryTtsError>());
+        expect(e.reason, TtsErrorReason.network);
+        expect(e.toString(), isNot(contains('secret')));
+        expect(calls, 1);
+      });
+    }
+  }
+
+  test('оплата: постоянный адрес независимо от ссылок и пунктуации Google', () async {
+    for (final message in ['payment_required', 'See https://aistudio.google.com/billing).',
+      'Docs https://example.test/help, then https://aistudio.google.com/billing']) {
+      final e = await errorOf(engine((_) => jsonResponse({'error': {'message': message}}, status: 402))
+          .synthesize('Да.', profile));
+      expect(e.billingUrl, 'https://aistudio.google.com/billing');
+      expect(e.message, message);
+    }
+    final e = await errorOf(engine((_) => jsonResponse({'error': {'message': 'See https://example.test'}}, status: 403))
+        .synthesize('Да.', profile));
+    expect(e.billingUrl, isNull);
+  });
+
+  test('отказ по ключу: 401 всегда; 400/403 только message/status, ссылки и details молчат', () async {
+    for (final status in [400, 401, 403, 418]) {
+      for (final (error, denied) in <(Map<String, Object>, bool)>[
+        ({'message': 'Denied'}, false),
+        ({'message': 'API key invalid'}, true),
+        ({'message': 'Denied', 'status': 'API_KEY_INVALID'}, true),
+        ({'message': 'Denied', 'details': [{'url': 'https://example.test/api-key', 'reason': 'API_KEY_INVALID'}]}, false),
+      ]) {
+        final e = await errorOf(engine((_) => jsonResponse({
+          'error': error, 'url': 'https://example.test/api-key',
+        }, status: status)).synthesize('Да.', profile));
+        expect(e.reason, status == 401 || (status == 400 || status == 403) && denied
+            ? TtsErrorReason.invalidKey : TtsErrorReason.other);
+      }
+    }
+  });
+
+  for (final size in [0, 0xffffffff]) {
+    test('WAV: потоковый data=$size читается до конца', () async {
+      final bytes = wav();
+      ByteData.sublistView(bytes).setUint32(50, size, Endian.little);
+      final result = await engine((_) => jsonResponse(audioResponse(bytes: bytes, mime: 'audio/wav')))
+          .synthesize('Да.', profile);
+      expect(result.pcm, [123, 0, 56, 254]);
+      expect(result.sampleRate, 16000);
+    });
+  }
+
+  test('WAV: обычный размер ограничивает data, обрезанный чанк отклоняется', () async {
+    final bounded = wav();
+    ByteData.sublistView(bounded).setUint32(50, 2, Endian.little);
+    expect((await engine((_) => jsonResponse(audioResponse(bytes: bounded, mime: 'audio/wav')))
+        .synthesize('Да.', profile)).pcm, [123, 0]);
+    final truncated = wav();
+    ByteData.sublistView(truncated).setUint32(50, 6, Endian.little);
+    expect((await errorOf(engine((_) => jsonResponse(audioResponse(bytes: truncated, mime: 'audio/wav')))
+        .synthesize('Да.', profile))).reason, TtsErrorReason.invalidResponse);
+  });
+
   test('FR-T1/T2: точное тело запроса, стиль только в metadata, ключ только в заголовке', () async {
     final tts = engine((r) {
       expect(r.method, 'POST');
@@ -170,7 +286,7 @@ void main() {
     gate.complete(jsonResponse(audioResponse()));
   });
 
-  test('402: ссылка Google либо запасная; 404 несёт модель запроса', () async {
+  test('402: постоянная ссылка; 404 несёт модель запроса', () async {
     for (final link in ['', ' https://aistudio.google.com/custom-billing']) {
       final e = await errorOf(
         engine(
@@ -181,7 +297,7 @@ void main() {
         ).synthesize('Да.', profile),
       );
       expect(e.reason, TtsErrorReason.paymentRequired);
-      expect(e.billingUrl, link.isEmpty ? defaultBillingUrl : link.trim());
+      expect(e.billingUrl, defaultBillingUrl);
       expect(e.usage!.inputTokens, 3);
     }
     final e = await errorOf(
@@ -216,9 +332,7 @@ void main() {
         (_) => jsonResponse({
           'error': {
             'message': 'Denied',
-            'details': [
-              {'reason': 'API_KEY_INVALID'},
-            ],
+            'status': 'API_KEY_INVALID',
           },
         }, status: 403),
       ).synthesize('Да.', profile),

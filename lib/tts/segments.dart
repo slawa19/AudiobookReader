@@ -7,6 +7,9 @@ import 'voices.dart';
 const segmentLength = 600;
 const minimumGroupLength = 200;
 const firstPartLength = 200;
+const firstPartMin = 80;
+
+final _spokenCharacters = RegExp(r'[\p{L}\p{N}]', unicode: true);
 
 /// Полуоткрытые диапазоны. Каждый диапазон линейный: удалённые знаки разрывают соответствие.
 class SpeechMapping {
@@ -108,7 +111,7 @@ List<SpeechSegment> chapterSegments(List<Block> blocks, {int l = segmentLength, 
   for (final block in blocks) {
     if (!block.isSpoken) continue;
     final s = _blockSegment(block, l, lmin);
-    if (s.text.isEmpty) continue;
+    if (!_spokenCharacters.hasMatch(s.text)) continue;
     if (block.kind == BlockKind.heading || s.text.length >= lmin || s.text.length > l) {
       flush();
       var offset = 0;
@@ -167,7 +170,8 @@ List<SpeechSegment> segmentsFrom(
 List<SpeechSegment> segmentParts(SpeechSegment segment) {
   if (segment.text.isEmpty) return [];
   final starts = sentenceStarts(segment.text);
-  final sentenceEnd = starts.length > 1 ? starts[1] : segment.text.length;
+  // Берём минимум целых предложений, достаточный для первой части; предел 200 применяет правило 2.
+  final sentenceEnd = starts.skip(1).where((end) => end >= firstPartMin).firstOrNull ?? segment.text.length;
   final end = splitSpeech(segment.text.substring(0, sentenceEnd), firstPartLength).first.length;
   return [segment.slice(0, end), if (end < segment.text.length) segment.slice(end, segment.text.length)];
 }

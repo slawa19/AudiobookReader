@@ -44,6 +44,25 @@ void main() {
     await root.delete(recursive: true);
   });
 
+  test('ввод ключа удаляет пробелы и невидимые знаки внутри; ASCII и видимые знаки сохраняются', () async {
+    for (final invisible in [' ', '\n', '\r', '\t', '\u00a0', '\u200b', '\ufeff', '\u202f', '\u2060', '\u034f', '\ufe0f']) {
+      library.settings.apiKey = '${invisible}fake$invisible-key$invisible';
+      await library.flush();
+      expect(library.settings.apiKey, 'fake-key');
+      expect(store.value, 'fake-key');
+    }
+    for (final visible in ['fake-ASCII_09+~', 'fake-é-key']) {
+      library.settings.apiKey = visible;
+      await library.flush();
+      expect(library.settings.apiKey, visible);
+      expect(store.value, visible);
+    }
+    library.settings.apiKey = '\n\u200b\ufeff\u00a0';
+    await library.flush();
+    expect(library.settings.hasApiKey, isFalse);
+    expect(store.value, 'fake-é-key');
+  });
+
   test('ключ прочитан до ready; запуск не записывает его обратно', () {
     expect(store.reads, 1);
     expect(store.writes, isEmpty);

@@ -61,6 +61,21 @@ void main() {
   });
   tearDown(() => root.deleteSync(recursive: true));
 
+  test('пустой готовый файл недоступен и перезаписывается; непустой доступен', () async {
+    final store = FileAudioStore(root, encoder: const WavAudioEncoder());
+    for (final id in [null, 'book-a']) {
+      final directory = id == null ? getSamples() : audio(id);
+      directory.createSync(recursive: true);
+      final target = File('${directory.path}/empty.wav')..writeAsBytesSync([]);
+      expect(store.has('empty', bookId: id), isFalse);
+      expect(store.file('empty', bookId: id), isNull);
+      await store.put('empty', pcm, 24000, bookId: id);
+      expect(target.lengthSync(), pcm.length + 44);
+      expect(store.has('empty', bookId: id), isTrue);
+      expect(store.file('empty', bookId: id)!.readAsBytesSync().sublist(44), pcm);
+    }
+  });
+
   test(
     'отрезок виден только после завершения кодирования; PCM не меняется',
     () async {

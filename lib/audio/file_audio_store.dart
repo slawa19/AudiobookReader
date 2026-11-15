@@ -47,7 +47,7 @@ class FileAudioStore extends AudioStore {
   @override
   File? file(String fingerprint, {String? bookId}) {
     final target = _target(fingerprint, bookId);
-    return target.existsSync() ? target : null;
+    return target.existsSync() && target.lengthSync() > 0 ? target : null;
   }
 
   @override
