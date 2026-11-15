@@ -12,7 +12,7 @@ class PlayerItem {
   final Duration duration;
 }
 
-enum PlayerEventKind { started, progress, drained, interrupted }
+enum PlayerEventKind { started, progress, drained, interrupted, failed }
 
 class PlayerEvent {
   const PlayerEvent(this.kind, this.generation, {this.item});
@@ -27,6 +27,15 @@ class PlayerEvent {
 /// События должны отражать фактический звук. play не возвращает Future до конца файла.
 /// append после drained разрешён: следующий play начинает добавленное с нуля.
 /// Прерывание сначала останавливает звук, затем сообщает interrupted; автопродолжения нет.
+/// Контракт адаптера:
+/// - current == null сразу после drained и clear; append в пустой список задаёт его синхронно.
+/// - current и item в событиях — исходный экземпляр PlayerItem, переданный append.
+/// - position относится к current и неподвижна после pause().
+/// - play() идемпотентен; после drained и append следующий play() запускает добавленное.
+/// - retainThrough не удаляет и не прерывает текущий элемент.
+/// - progress приходит регулярно, пока идёт звук; started — при фактическом начале элемента.
+/// - failed несёт несыгранный item: звук остановлен, последующие элементы не начинаются;
+///   потребитель очистит список и решит, можно ли повторить файл. Текста исключения в событии нет.
 abstract interface class PlayerPort {
   Stream<PlayerEvent> get events;
   PlayerItem? get current;
