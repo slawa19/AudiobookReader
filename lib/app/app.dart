@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../audio/audio_store.dart';
@@ -12,6 +14,7 @@ import '../screens/l10n/app_localizations.dart';
 import '../screens/services.dart';
 import '../screens/shelf_screen.dart';
 import '../tts/voices.dart';
+import 'assembly.dart';
 import 'prototype/add_book.dart';
 import 'prototype/demo_states.dart';
 import 'prototype/phone_chrome.dart';
@@ -31,7 +34,7 @@ Locale resolveLocale(List<Locale>? preferred, Iterable<Locale> supported) {
 }
 
 /// Прототип целиком: все реализации подставные (А§2 — за интерфейсами модулей), сети нет.
-class Prototype {
+class Prototype extends AppAssembly {
   Prototype._({
     required this.library,
     required this.settings,
@@ -43,12 +46,14 @@ class Prototype {
   });
 
   final FakeLibrary library;
+  @override
   final AppSettings settings;
   final FakeNarrationController narration;
   final FakeChapterDownloads downloads;
   final FakeVoiceSampler sampler;
   final FakeAudioStore audio;
   final Tariffs tariffs;
+  @override
   late final AppServices services;
 
   /// [clock] — часы приложения: тарифы на сегодня и таймер сна. По умолчанию — настенные.
@@ -116,9 +121,10 @@ class Prototype {
 }
 
 class AudiobookApp extends StatefulWidget {
-  const AudiobookApp({super.key, required this.prototype, this.phoneChrome = false});
+  const AudiobookApp({super.key, required Prototype prototype, this.phoneChrome = false}) : assembly = prototype;
+  const AudiobookApp.application({super.key, required this.assembly, this.phoneChrome = false});
 
-  final Prototype prototype;
+  final AppAssembly assembly;
 
   /// Рисовать строку состояния и полоску жестов (браузер и снимки экранов; на телефоне их рисует Android).
   final bool phoneChrome;
@@ -127,17 +133,37 @@ class AudiobookApp extends StatefulWidget {
   State<AudiobookApp> createState() => _AudiobookAppState();
 }
 
-class _AudiobookAppState extends State<AudiobookApp> {
+class _AudiobookAppState extends State<AudiobookApp> with WidgetsBindingObserver {
+  final _navigator = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
     // Первая версия — только портретная ориентация (решение F проверки жестов, А§7); то же в манифесте.
     lockPortrait();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.assembly.attach(_navigator);
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      unawaited(widget.assembly.services.flush());
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    widget.assembly.detach();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final prototype = widget.prototype;
+    final prototype = widget.assembly;
     final phoneChrome = widget.phoneChrome;
     final settings = prototype.settings;
     return ListenableBuilder(
@@ -153,6 +179,7 @@ class _AudiobookAppState extends State<AudiobookApp> {
         };
         final language = settings.language;
         return MaterialApp(
+          navigatorKey: _navigator,
           onGenerateTitle: (context) => context.l10n.shelfTitle,
           debugShowCheckedModeBanner: false,
           theme: light,
