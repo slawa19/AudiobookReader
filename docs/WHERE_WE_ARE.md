@@ -39,6 +39,7 @@
 - [reviews/](reviews/) — записи ревью Codex: архитектуры, спеки, макета и прототипа, все 2026-11-14.
 - [prototype/README.md](prototype/README.md) — прототип: запуск, жесты, палитра, языки, снимки экранов.
 - [GEMINI_TTS.md](GEMINI_TTS.md) — проверенная в AudiobookStudio форма запроса, голоса, тарифы.
+- [GOOGLE_PLAY_PLAN.md](GOOGLE_PLAY_PLAN.md) — планы на потом: публикация в Google Play и платный сервис; не решение.
 - [CODEX_INDEPENDENT_REVIEW.md](CODEX_INDEPENDENT_REVIEW.md) — как запускать независимое ревью.
 - `AGENTS.md` — правила работы агентов.
 
