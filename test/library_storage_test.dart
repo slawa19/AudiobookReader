@@ -609,10 +609,12 @@ void main() {
     'FB2.ZIP: настоящий разбор и декодирование сохранённой модели',
     () async {
       // Настоящий путь без подставного parser: модель проходит границу изолята и хранится на диске.
-      final id = await add(zip({'nested/book.fb2': sample()}));
+      // Повторное создание ZIP получает новую временную метку; сравниваем с точным входом.
+      final input = zip({'nested/book.fb2': sample()});
+      final id = await add(input);
       expect(
         await File('${root.path}/books/$id/original.fb2.zip').readAsBytes(),
-        zip({'nested/book.fb2': sample()}),
+        input,
       );
       expect((await library.loadBook(id)).blocks.map((b) => b.text), [
         'А',
