@@ -205,7 +205,7 @@ class FakeNarrationController extends NarrationController {
     if (_book == null || _block == null) return;
     if (_state != NarrationState.paused && !isActive) return;
     final elapsed = _duration(_book!.blocks[_block!]).inMilliseconds * _progress;
-    final atStart = _state != NarrationState.playing || elapsed < _blockStartWindow.inMilliseconds;
+    final atStart = elapsed < _blockStartWindow.inMilliseconds;
     final from = forward ? _block! + 1 : atStart ? _block! - 1 : _block!;
     final target = _spokenFrom(from, forward: forward);
     if (target == null) return;

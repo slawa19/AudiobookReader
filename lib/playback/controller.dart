@@ -381,8 +381,8 @@ class FileNarrationController extends NarrationController {
     final current = _position!.block;
     // Это оценка места, а не время текущего файла: один абзац может занимать несколько файлов.
     final seconds = _position!.offset * secondsPerChar / speed;
-    final atStart = _state == NarrationState.paused || !_heard ||
-        seconds < blockStartWindow.inMilliseconds / 1000;
+    // Пауза посреди абзаца началом не считается: «назад» возвращает к началу этого абзаца.
+    final atStart = !_heard || seconds < blockStartWindow.inMilliseconds / 1000;
     var target = forward ? current + 1 : atStart ? current - 1 : current;
     while (target >= 0 && target < book.blocks.length) {
       // Те же правила пригодности текста, что у синтеза, включая сноски и блоки из одних знаков.

@@ -64,7 +64,7 @@ void main() {
     expect(c.unitStart, const ReadingPosition(4, 0));
   });
 
-  test('назад: до трёх секунд — предыдущий блок, позже — текущий; второй шаг и пауза — предыдущий', () async {
+  test('назад: до трёх секунд — предыдущий блок, позже — текущий; второй шаг — предыдущий; пауза не считается началом', () async {
     final h = await PlaybackHarness.create(playbackBook([[paragraph(0), paragraph(1)]], kind: BlockKind.paragraph));
     for (final s in chapterSegments(h.book.blocks)) {
       await h.cache(s.text, seconds: (s.text.length * secondsPerChar).ceilToDouble());
@@ -93,7 +93,10 @@ void main() {
     h.clock.advance(const Duration(seconds: 5));
     c.pause();
     c.previous();
+    expect(c.unitStart, const ReadingPosition(1, 0), reason: 'пауза посреди абзаца: назад — к его началу');
+    c.previous();
     expect(c.unitStart, const ReadingPosition(0, 0));
+    expect(c.state, NarrationState.paused);
     expect(h.engine.calls, isEmpty);
   });
 
