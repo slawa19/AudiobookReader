@@ -30,3 +30,6 @@ captures/
 !.vscode/extensions.json
 .DS_Store
 Thumbs.db
+
+# книги владельца для локальной проверки разбора (спека 001, раздел 6)
+test/local_books/
