@@ -38,7 +38,7 @@ class ReaderScreenState extends State<ReaderScreen> {
 
   ChapterPagination? _layout;
   ChapterPagination? _pendingLayout;
-  ({ChapterPagination layout, ({PageStyle style, Size column, EdgeInsets pad}) metrics})? _previousLayout;
+  ({ChapterPagination layout, int page, ({PageStyle style, Size column, EdgeInsets pad}) metrics})? _previousLayout;
   Object? _layoutEnvironment;
   Object? _shownEnvironment;
   ReadingPosition? _pendingGoal;
@@ -48,6 +48,8 @@ class ReaderScreenState extends State<ReaderScreen> {
   bool _pendingSave = true;
   bool _pendingMove = false;
   bool _pendingUser = false;
+  // Близкая программная цель продолжает раскладку вместо нового старта от блока.
+  static const _nearbyLayoutChars = 30000;
   int _seenPrepend = 0;
   int? _waitingPage;
   bool _waitingUser = true;
@@ -217,13 +219,16 @@ class ReaderScreenState extends State<ReaderScreen> {
     final goal = held ?? from;
     final preferred = visible == null ? null : previous?.layout.findPage(visible.firstBlock, visible.firstOffset);
     final target = previous?.layout.findPage(goal.block, goal.offset, preferredPage: preferred);
+    final direction = previous != null && follow && !pendingUser
+        ? _nearbyDirection(goal, source: previous.layout) : 0;
     if (previous != null && previous.metrics.style == style && previous.metrics.column == column &&
-        target != null) {
+        (target != null || direction != 0)) {
       _cancelPending();
       _cancelPageRequest();
-      _installLayout(previous.layout, target, _wantedMetrics,
+      _installLayout(previous.layout, target ?? previous.page, _wantedMetrics,
           savePosition: !closing && (pending == null || pendingSave),
           move: pending != null && pendingMove, user: pending != null && pendingUser);
+      if (target == null) _waitOnLayout(goal, user: false, backwards: direction < 0);
       return;
     }
     // «Закрыть» уже передал позицию контроллером (FR-P8); одна перераскладка её не перезаписывает.
@@ -278,6 +283,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     pending.removeListener(_onPendingLayout);
     if (identical(pending, _layout)) {
       // Поиск мог временно забрать слушателя у показанной раскладки. Любая отмена возвращает его.
+      pending.removeListener(_onLayout);
       pending.addListener(_onLayout);
     } else {
       pending.dispose();
@@ -299,7 +305,14 @@ class ReaderScreenState extends State<ReaderScreen> {
     final pending = _pendingLayout!;
     final goal = _pendingGoal!;
     final target = pending.findPage(goal.block, goal.offset, preferredPage: identical(pending, _layout) ? _page : null);
-    if (target == null && !pending.isComplete) {
+    if (target == null && identical(pending, _layout) && !pending.isLoadingPrevious &&
+        (pending.isComplete || pending.pages.last.chapter > book.chapterOf(goal.block))) {
+      // Досчёт исчерпал главу без цели — обычный поиск от её блока.
+      _startLayout(ReadingPosition(goal.block, 0), retain: goal,
+          savePosition: _pendingSave, move: _pendingMove, user: _pendingUser);
+      return;
+    }
+    if (target == null && (pending.isLoadingPrevious || !pending.isComplete)) {
       setState(() {});
       return;
     }
@@ -311,15 +324,16 @@ class ReaderScreenState extends State<ReaderScreen> {
       ({PageStyle style, Size column, EdgeInsets pad}) metrics,
       {required bool savePosition, required bool move, required bool user}) {
     next.removeListener(_onPendingLayout);
+    next.removeListener(_onLayout);
     if (identical(next, _previousLayout?.layout)) _previousLayout = null;
     final old = _layout;
     if (old != null && !identical(old, next)) {
       old.removeListener(_onLayout);
-      if (_mine && !_following && _shownEnvironment == _layoutEnvironment && _shownMetrics != null &&
+      if (_mine && _shownEnvironment == _layoutEnvironment && _shownMetrics != null &&
           _shownMetrics!.column.height != metrics.column.height && _previousLayout == null) {
         // Один прежний размер держится до возврата: промежуточная панель preparing его не вытесняет.
         old.pause();
-        _previousLayout = (layout: old, metrics: _shownMetrics!);
+        _previousLayout = (layout: old, page: _page, metrics: _shownMetrics!);
       } else {
         old.dispose();
       }
@@ -380,6 +394,10 @@ class ReaderScreenState extends State<ReaderScreen> {
       }
     });
     _markLastAfterFrame();
+    if (identical(_pendingLayout, _layout)) {
+      _onPendingLayout();
+      return;
+    }
     final waiting = _waitingPage;
     if (waiting == null) return;
     if (waiting < 0 && layout.hasPrevious) {
@@ -438,7 +456,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     }
   }
 
-  /// Готовое место голоса сохраняет страницу; новая цель ищется от начала блока без разрыва слова.
+  /// Готовое место сохраняет страницу, близкое досчитывается, далёкое ищется от начала блока.
   void goToPosition(ReadingPosition place, {bool user = true}) {
     final shown = layout.findPage(place.block, place.offset, preferredPage: _page);
     final changingMetrics = _pendingLayout != null && _pendingMetrics != _shownMetrics;
@@ -446,11 +464,21 @@ class ReaderScreenState extends State<ReaderScreen> {
       _goToCalculatedPage(shown, user: user);
       return;
     }
+    final direction = !user && !changingMetrics ? _nearbyDirection(place) : 0;
+    if (direction != 0) {
+      setState(() {
+        _selectedBlock = null;
+        _selectedAt = null;
+        _waitOnLayout(place, user: user, backwards: direction < 0);
+      });
+      return;
+    }
     setState(() {
       _cancelPageRequest();
       _selectedBlock = null;
       _selectedAt = null;
       if (user) _userMoved();
+      if (identical(_pendingLayout, _layout)) _cancelPending();
       if (_pendingGoal?.block == place.block) {
         _pendingGoal = place;
         _pendingMove = true;
@@ -459,20 +487,50 @@ class ReaderScreenState extends State<ReaderScreen> {
       } else if (_pendingLayout == null && layout.pages.first.firstBlock == place.block &&
           layout.pages.first.firstOffset == 0) {
         // Этот блок уже считается с начала: продолжаем его очередь, не измеряя готовый префикс заново.
-        _pendingLayout = layout;
-        _pendingGoal = place;
-        _pendingMetrics = _shownMetrics;
-        _pendingSave = true;
-        _pendingMove = true;
-        _pendingUser = user;
-        layout.removeListener(_onLayout);
-        layout.addListener(_onPendingLayout);
-        _resetPages();
+        _waitOnLayout(place, user: user);
         _onPendingLayout();
       } else {
         _startLayout(ReadingPosition(place.block, 0), retain: place, move: true, user: user);
       }
     });
+  }
+
+  int _nearbyDirection(ReadingPosition place, {ChapterPagination? source}) {
+    final pagination = source ?? layout;
+    final at = book.charsBefore(place.block) + place.offset;
+    final first = pagination.pages.first;
+    final last = pagination.pages.last;
+    final chapter = book.chapterOf(place.block);
+    final after = at - book.charsBefore(last.lastBlock) - last.lastEnd;
+    if (!pagination.isComplete && chapter == last.chapter && after >= 0 && after <= _nearbyLayoutChars) return 1;
+    final before = book.charsBefore(first.firstBlock) + first.firstOffset - at;
+    if (pagination.hasPrevious && chapter == first.chapter && before > 0 && before <= _nearbyLayoutChars) return -1;
+    return 0;
+  }
+
+  /// Пока цель не готова, остаётся прежняя страница. Новая команда заменяет цель того же досчёта.
+  void _waitOnLayout(ReadingPosition place, {required bool user, bool backwards = false}) {
+    final continuing = identical(_pendingLayout, _layout);
+    if (!continuing) {
+      _cancelPending();
+      _cancelPageRequest();
+    }
+    _pendingLayout = layout;
+    _pendingGoal = place;
+    _pendingMetrics = _shownMetrics;
+    _pendingSave = true;
+    _pendingMove = true;
+    _pendingUser = user;
+    layout.removeListener(_onPendingLayout);
+    layout.removeListener(_onLayout);
+    layout.addListener(_onLayout);
+    layout.resume();
+    if (backwards) {
+      if (!layout.isLoadingPrevious) unawaited(layout.loadPrevious());
+    } else {
+      layout.cancelPrevious();
+    }
+    if (!continuing) _resetPages();
   }
 
   BookPageLayout get _current => _layout!.pages[_page];
@@ -870,7 +928,12 @@ class ReaderScreenState extends State<ReaderScreen> {
     if (listening) {
       // Во время прослушивания выбор главы — новое место звука: голос к началу главы (и текущей тоже), следование
       // включает команда контроллера, страницу ведёт голос — переход не ручное листание (№1 проверки путей, a).
-      narration.moveIfListening(book, book.chapters[chapter].firstBlock);
+      final block = book.chapters[chapter].firstBlock;
+      if (layout.findPage(block, 0) == null) {
+        // Оглавление явно выбирает новое начало, а не продолжение близкого участка.
+        setState(() => _startLayout(ReadingPosition(block, 0), move: true));
+      }
+      narration.moveIfListening(book, block);
     } else {
       _goToPlace(book.chapters[chapter].firstBlock, 0);
     }
