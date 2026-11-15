@@ -105,7 +105,7 @@ class IncomingFilesChannel(private val context: Context, messenger: BinaryMessen
                 if (it.itemCount > 0) it.getItemAt(0).uri else null
             }
             else -> return
-        }
+        } ?: return
         copy(uri, ::emit)
     }
 

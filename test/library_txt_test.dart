@@ -38,6 +38,28 @@ void main() {
     await root.delete(recursive: true);
   });
 
+  for (final (name, title) in [
+    ('Война и мир. Том 1', 'Война и мир. Том 1'),
+    ('Книга.bin', 'Книга.bin'),
+    ('Моя.книга.tXt', 'Моя.книга'),
+    ('Книга.txt.bak', 'Книга.txt.bak'),
+    ('.txt', ''),
+  ]) {
+    test('название TXT: «$name» → «$title»', () async {
+      final source = await File('${root.path}/source').writeAsString('Текст.');
+      final entry = (await library.addFile(source.path, name))!;
+      expect(entry.title, title);
+      expect((await library.loadBook(entry.id)).title, title);
+      final modelFile = File('${root.path}/books/${entry.id}/book.json');
+      final model =
+          jsonDecode(await modelFile.readAsString()) as Map<String, Object?>;
+      model['parserVersion'] = 0;
+      await modelFile.writeAsString(jsonEncode(model));
+      await restart();
+      expect((await library.loadBook(entry.id)).title, title);
+    });
+  }
+
   test('FR-B5/L2: TXT добавляется, открывается, делится для речи и сохраняет позицию', () async {
     final bytes = utf8.encode('Первый\nабзац.\n\nВторой абзац.\n\n***');
     final source = await File('${root.path}/provider-copy.tmp')
@@ -120,7 +142,7 @@ void main() {
     }
     await source.writeAsBytes(utf8.encode('Настоящий текст.'));
     final entry = (await library.addFile(source.path, 'Книга.bin'))!;
-    expect(entry.title, 'Книга');
+    expect(entry.title, 'Книга.bin');
     expect(
       (await library.loadBook(entry.id)).blocks.single.text,
       'Настоящий текст.',

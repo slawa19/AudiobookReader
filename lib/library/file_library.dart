@@ -48,16 +48,19 @@ Future<void> _writeBook(String path, Book book) => Isolate.run(() async {
   await temp.rename(path);
 });
 
-// У TXT нет метаданных: имя приходит от провайдера, а не от временной копии.
-ParsedBook _txtTitle(ParsedBook parsed, String title) {
-  if (parsed.format != SourceFormat.txt) return parsed;
+// У TXT имя приходит от провайдера; язык без метаданных фиксируется полкой.
+ParsedBook _libraryMetadata(
+  ParsedBook parsed, {
+  required String txtTitle,
+  required String language,
+}) {
   final book = parsed.book;
   return ParsedBook(
     book: Book(
       id: book.id,
-      title: title,
+      title: parsed.format == SourceFormat.txt ? txtTitle : book.title,
       author: book.author,
-      language: book.language,
+      language: language,
       chapters: book.chapters,
       blocks: book.blocks,
       notes: book.notes,
@@ -72,6 +75,7 @@ ParsedBook _txtTitle(ParsedBook parsed, String title) {
 /// Файловая полка этапа 1. После конструктора нужно дождаться [ready].
 /// Перед записью позиций книга должна быть открыта через [loadBook].
 /// [parser], [clock] и [timer] подставляются в тестах; обычный разбор идёт в Isolate.run.
+/// [interfaceLanguage] возвращает текущий язык интерфейса, включая системное умолчание из app.
 class FileLibrary extends Library {
   FileLibrary(
     this.root, {
@@ -79,9 +83,12 @@ class FileLibrary extends Library {
     DateTime Function()? clock,
     LibraryTimer? timer,
     LibraryParser? parser,
+    String Function()? interfaceLanguage,
   }) : _clock = clock ?? DateTime.now,
        _timer = timer ?? Timer.new,
-       _parser = parser ?? _parse {
+       _parser = parser ?? _parse,
+       _interfaceLanguage =
+           interfaceLanguage ?? (() => settings.language ?? 'en') {
     ready = _start();
   }
 
@@ -90,6 +97,8 @@ class FileLibrary extends Library {
   final DateTime Function() _clock;
   final LibraryTimer _timer;
   final LibraryParser _parser;
+  // Корень сборки разрешает «Как в системе», не связывая полку с экранами.
+  final String Function() _interfaceLanguage;
   late final Future<void> ready;
   final Map<String, _StoredBook> _stored = {};
   final Map<String, Book> _books = {};
@@ -235,12 +244,15 @@ class FileLibrary extends Library {
   /// Отказ до разбора: например, Android не смог скопировать выбранный файл.
   @override
   void recordFileFailure(String fileName, Object error) {
-    _jobs.insert(0, AddJob(
-      fileName: fileName,
-      status: AddJobStatus.failed,
-      failure: AddFailure.unreadable,
-      technical: error.toString(),
-    ));
+    _jobs.insert(
+      0,
+      AddJob(
+        fileName: fileName,
+        status: AddJobStatus.failed,
+        failure: AddFailure.unreadable,
+        technical: error.toString(),
+      ),
+    );
     notifyListeners();
   }
 
@@ -255,12 +267,15 @@ class FileLibrary extends Library {
     try {
       id = await _bookId(path);
     } on BookParseException catch (error) {
-      _jobs.insert(0, AddJob(
-        fileName: fileName,
-        status: AddJobStatus.failed,
-        failure: AddFailure.values.byName(error.reason.name),
-        technical: error.technical,
-      ));
+      _jobs.insert(
+        0,
+        AddJob(
+          fileName: fileName,
+          status: AddJobStatus.failed,
+          failure: AddFailure.values.byName(error.reason.name),
+          technical: error.technical,
+        ),
+      );
       notifyListeners();
       return null;
     }
@@ -271,6 +286,7 @@ class FileLibrary extends Library {
   }
 
   Future<ShelfEntry?> _add(String path, String fileName, String id) async {
+    final language = _interfaceLanguage();
     final job = AddJob(fileName: fileName, status: AddJobStatus.adding);
     _jobs.insert(0, job);
     notifyListeners();
@@ -278,9 +294,16 @@ class FileLibrary extends Library {
     try {
       work = await Directory('${root.path}/tmp').createTemp('add-');
       final source = await File(path).copy('${work.path}/source');
-      final parsed = _txtTitle(
-        await _parser(source.path),
-        fileName.replaceFirst(RegExp(r'\.[^.]*$'), ''),
+      final sourceBook = await _parser(source.path);
+      final parsed = _libraryMetadata(
+        sourceBook,
+        txtTitle: fileName.replaceFirst(
+          RegExp(r'\.txt$', caseSensitive: false),
+          '',
+        ),
+        language: sourceBook.book.language.isEmpty
+            ? language
+            : sourceBook.book.language,
       );
       if (_closed) return null;
       await source.rename('${work.path}/original.${parsed.format.extension}');
@@ -386,9 +409,11 @@ class FileLibrary extends Library {
             (f) => f is File && f.uri.pathSegments.last.startsWith('original.'),
           )
           .first;
-      final parsed = _txtTitle(
+      final parsed = _libraryMetadata(
         await _parser(original.path),
-        stored.meta['title']! as String,
+        txtTitle: stored.meta['title']! as String,
+        // Сохраняем и прежний пустой язык: от него зависит отпечаток оплаченного звука.
+        language: book.language,
       );
       book = parsed.book;
       final next = book;
@@ -523,14 +548,16 @@ class FileLibrary extends Library {
       _pending?.cancel();
       _pending = null;
       // Ошибки фоновой записи сохраняет писатель; flush отдаёт их вызывающему коду.
-      unawaited(_enqueue(() async {
-        try {
-          await _writeDirty();
-        } catch (error, stack) {
-          _writeError ??= error;
-          _writeStack ??= stack;
-        }
-      }));
+      unawaited(
+        _enqueue(() async {
+          try {
+            await _writeDirty();
+          } catch (error, stack) {
+            _writeError ??= error;
+            _writeStack ??= stack;
+          }
+        }),
+      );
     } else {
       _pending ??= _timer(const Duration(seconds: 1) - elapsed, () {
         _pending = null;
