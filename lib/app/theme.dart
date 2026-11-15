@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../library/settings.dart';
@@ -125,6 +126,19 @@ ColorScheme schemeFor(Palette p) {
   );
 }
 
+/// При edge-to-edge фон рисует Flutter. Android не должен добавлять свою серую
+/// подложку к трём кнопкам; яркость значков следует выбранной теме приложения.
+SystemUiOverlayStyle systemBarsFor(Brightness brightness) => SystemUiOverlayStyle(
+  statusBarColor: Colors.transparent,
+  systemNavigationBarColor: Colors.transparent,
+  systemNavigationBarDividerColor: Colors.transparent,
+  statusBarBrightness: brightness,
+  statusBarIconBrightness: brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+  systemNavigationBarIconBrightness: brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+  systemNavigationBarContrastEnforced: false,
+  systemStatusBarContrastEnforced: false,
+);
+
 ThemeData buildTheme(Palette p) {
   final scheme = schemeFor(p);
   final base = ThemeData(
@@ -141,6 +155,7 @@ ThemeData buildTheme(Palette p) {
   );
   return base.copyWith(
     appBarTheme: AppBarThemeData(
+      systemOverlayStyle: systemBarsFor(p.brightness),
       backgroundColor: p.bg,
       foregroundColor: p.ink,
       surfaceTintColor: Colors.transparent,

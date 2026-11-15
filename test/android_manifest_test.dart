@@ -3,17 +3,14 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  final manifest = File('android/app/src/main/AndroidManifest.xml')
-      .readAsStringSync();
+  final manifest = File('android/app/src/main/AndroidManifest.xml').readAsStringSync();
   final filters = RegExp(r'<intent-filter>[\s\S]*?</intent-filter>')
       .allMatches(manifest)
       .map((match) => match.group(0)!)
       .toList();
 
-  Set<String> values(String filter, String attribute) => RegExp('android:$attribute="([^"]+)"')
-      .allMatches(filter)
-      .map((match) => match.group(1)!)
-      .toSet();
+  Set<String> values(String filter, String attribute) =>
+      RegExp('android:$attribute="([^"]+)"').allMatches(filter).map((match) => match.group(1)!).toSet();
 
   const bookTypes = {
     'application/epub+zip',
@@ -23,29 +20,36 @@ void main() {
     'application/fb2',
     'application/fb2+zip',
   };
-  const genericTypes = {
-    'application/zip',
-    'application/x-zip-compressed',
-    'application/octet-stream',
-    'application/xml',
-    'text/xml',
-  };
+  const genericTypes = {'application/zip', 'application/x-zip-compressed', 'application/xml', 'text/xml'};
+
+  test('Android: непрозрачный URI MediaStore с octet-stream принимается, архивы и XML требуют суффикс', () {
+    final opaque = Uri.parse('content://media/external/file/20334');
+    bool accepts(Uri uri, String type) => filters.any((filter) {
+      if (!filter.contains('android.intent.action.VIEW')) return false;
+      final suffixes = values(filter, 'pathSuffix');
+      return values(filter, 'scheme').contains(uri.scheme) &&
+          values(filter, 'mimeType').contains(type) &&
+          (suffixes.isEmpty || suffixes.any(uri.path.endsWith));
+    });
+    expect(accepts(opaque, 'application/octet-stream'), isTrue);
+    expect(accepts(opaque, 'application/x-fictionbook+xml'), isTrue);
+    for (final type in genericTypes) {
+      expect(accepts(opaque, type), isFalse, reason: type);
+      expect(accepts(Uri.parse('content://files/book.fb2'), type), isTrue, reason: type);
+      expect(accepts(Uri.parse('content://files/data.xml'), type), isFalse, reason: type);
+    }
+    expect(accepts(Uri.parse('file:///book.fb2'), 'application/octet-stream'), isFalse);
+  });
 
   test('Android: резервное копирование выключено', () {
     expect(manifest, contains('android:allowBackup="false"'));
-    expect(
-      manifest,
-      contains('android:dataExtractionRules="@xml/data_extraction_rules"'),
-    );
+    expect(manifest, contains('android:dataExtractionRules="@xml/data_extraction_rules"'));
   });
 
   test('Android: облако и перенос исключают все хранилища', () {
-    final rules = File('android/app/src/main/res/xml/data_extraction_rules.xml')
-        .readAsStringSync();
+    final rules = File('android/app/src/main/res/xml/data_extraction_rules.xml').readAsStringSync();
     for (final section in ['cloud-backup', 'device-transfer']) {
-      final content = RegExp('<$section>([\\s\\S]*?)</$section>')
-          .firstMatch(rules)
-          ?.group(1);
+      final content = RegExp('<$section>([\\s\\S]*?)</$section>').firstMatch(rules)?.group(1);
       expect(content, isNotNull, reason: section);
       for (final domain in [
         'root',
@@ -58,11 +62,7 @@ void main() {
         'device_database',
         'device_sharedpref',
       ]) {
-        expect(
-          content,
-          contains('<exclude domain="$domain" path="." />'),
-          reason: '$section: $domain',
-        );
+        expect(content, contains('<exclude domain="$domain" path="." />'), reason: '$section: $domain');
       }
       expect(content, isNot(contains('<include')));
     }
@@ -76,7 +76,7 @@ void main() {
     final view = filters.where((filter) => filter.contains('android.intent.action.VIEW'));
     expect(view, hasLength(2));
     final typed = view.singleWhere((filter) => !filter.contains('android:pathSuffix'));
-    expect(values(typed, 'mimeType'), bookTypes);
+    expect(values(typed, 'mimeType'), {...bookTypes, 'application/octet-stream'});
     expect(values(typed, 'scheme'), {'content'});
     expect(values(typed, 'name'), contains('android.intent.category.DEFAULT'));
     expect(typed, isNot(contains('android:host')));
@@ -97,10 +97,10 @@ void main() {
     }
   });
 
-  test('Android: SEND принимает книжные MIME, не перехватывает любые архивы и двоичные файлы', () {
+  test('Android: SEND принимает книжные MIME и octet-stream, но не любые архивы и XML', () {
     final send = filters.singleWhere((filter) => filter.contains('android.intent.action.SEND'));
     expect(values(send, 'name'), contains('android.intent.category.DEFAULT'));
-    expect(values(send, 'mimeType'), bookTypes);
+    expect(values(send, 'mimeType'), {...bookTypes, 'application/octet-stream'});
     expect(values(send, 'mimeType').intersection(genericTypes), isEmpty);
     expect(send, isNot(contains('android:scheme')));
     expect(send, isNot(contains('android:path')));

@@ -17,6 +17,10 @@ import 'support/harness.dart';
 import 'support/gated_file_library.dart';
 import 'support/library_time.dart';
 
+// Начало безымянной главы есть также в шапке. Здесь проверяем саму страницу.
+Finder pageText(String text) => find.descendant(
+  of: find.byType(BookPage), matching: find.textContaining(text, findRichText: true));
+
 void main() {
   testWidgets('+ доступен во время разбора предыдущего выбора', (tester) async {
     final gate = Completer<ParsedBook>();
@@ -57,7 +61,7 @@ void main() {
     await tester.tap(find.text('Краткая'));
     await h.opened();
     expect(find.byType(BookPage), findsWidgets);
-    expect(find.textContaining('Один.', findRichText: true), findsOneWidget);
+    expect(pageText('Один.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -127,7 +131,7 @@ void main() {
       if (cold) await h.pump();
       await h.opened();
       await h.deleted(file);
-      expect(find.textContaining('Один.', findRichText: true), findsOneWidget);
+      expect(pageText('Один.'), findsOneWidget);
       expect(h.files.subscriptions, 1);
       await tapCenter(tester);
       await tester.tap(find.byTooltip('Назад'));
@@ -169,7 +173,7 @@ void main() {
     h.files.events.add(file);
     await h.opened();
     await h.deleted(file);
-    expect(find.textContaining('Текст EPUB.', findRichText: true), findsOneWidget);
+    expect(pageText('Текст EPUB.'), findsOneWidget);
     expect(h.files.subscriptions, 1);
     expect(tester.takeException(), isNull);
   });
@@ -187,7 +191,7 @@ void main() {
     await h.deleted(second);
     await tester.pumpAndSettle();
     expect(find.byType(ReaderScreen), findsOneWidget);
-    expect(find.textContaining('Один.', findRichText: true), findsOneWidget);
+    expect(pageText('Один.'), findsOneWidget);
     expect(systemBarsHidden.value, isTrue);
   });
 
@@ -239,7 +243,7 @@ void main() {
         } else {
           expect(find.byType(ReaderScreen), findsOneWidget);
           expect(reader(tester).widget.book.id, externalId);
-          expect(find.textContaining('Один.', findRichText: true), findsOneWidget);
+          expect(pageText('Один.'), findsOneWidget);
         }
         expect(library.entry(library.delayedId!).opened, isFalse);
         expect(tester.takeException(), isNull);

@@ -102,12 +102,26 @@ void setImmersive(bool hidden) {
   }
 }
 
-/// Название главы с родительским разделом: «Дама с собачкой · II». Название — текст книги, не переводится.
-String chapterLabel(Book book, int chapter) {
+/// Подпись только для показа: у безымянной главы — первый непустой блок её текста.
+/// Модель книги не меняется. Берём до 12 слов для однострочной подписи, чтобы
+/// шапка не раскладывала целиком блок в сотни тысяч знаков; виджет добавляет обрезку по ширине.
+String chapterLabel(Book book, int chapter, {bool includeParent = true}) {
   final ch = book.chapters[chapter];
-  if (ch.level > 1) {
+  if (ch.title.trim().isEmpty) {
+    for (var i = ch.firstBlock; i < ch.endBlock; i++) {
+      final words = RegExp(r'\S+').allMatches(book.blocks[i].text).take(13).map((m) => m.group(0)!).toList();
+      if (words.isNotEmpty) {
+        return words.length > 12 ? '${words.take(12).join(' ')}…' : words.join(' ');
+      }
+    }
+    return '';
+  }
+  if (includeParent && ch.level > 1) {
     for (var j = chapter - 1; j >= 0; j--) {
-      if (book.chapters[j].level < ch.level) return '${book.chapters[j].title} · ${ch.title}';
+      if (book.chapters[j].level < ch.level) {
+        final parent = book.chapters[j].title;
+        return parent.trim().isEmpty ? ch.title : '$parent · ${ch.title}';
+      }
     }
   }
   return ch.title;
@@ -120,14 +134,14 @@ String formatBytes(AppLocalizations l10n, int bytes) {
   return l10n.megabytes(mb.round());
 }
 
-/// Доля на полке: «новая» у неоткрытой, «100 %» у дочитанной (решение владельца 2026-11-14, FR-L4);
-/// недочитанная никогда не показывает 0 % и 100 %.
+/// Одинаковое округление на полке, внизу чтения и у ползунка. Значение 1 зарезервировано
+/// для дочитанной книги (FR-L4); малая ненулевая позиция может показываться как 0 %.
+double progressForDisplay(double fraction) => fraction >= 1 ? 1 : (fraction * 100).round().clamp(0, 99) / 100;
+
+/// «Новая» у неоткрытой; числовая подпись общая для полки и чтения.
 String shelfProgress(AppLocalizations l10n, double? fraction) {
   if (fraction == null) return l10n.progressNew;
-  var p = (fraction * 100).round();
-  if (fraction > 0 && p == 0) p = 1;
-  if (fraction < 1 && p == 100) p = 99;
-  return l10n.percent(p / 100);
+  return l10n.percent(progressForDisplay(fraction));
 }
 
 /// Название месяца в именительном падеже с заглавной буквы: «Ноябрь», «November», «Listopad».
@@ -315,7 +329,7 @@ Future<T?> showScrollableSheet<T>(BuildContext context, WidgetBuilder builder, {
     builder: (context) => FreshLayerGuard(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.9),
-        child: SingleChildScrollView(child: SafeArea(top: false, child: builder(context))),
+        child: SafeArea(top: false, child: SingleChildScrollView(child: builder(context))),
       ),
     ),
   );

@@ -49,49 +49,56 @@ class _TocScreenState extends State<TocScreen> {
               style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
         ]),
       ),
-      body: ListenableBuilder(
-        listenable: Listenable.merge([downloads, widget.services.settings, widget.services.library]),
-        builder: (context, _) {
-          // Готовность и оценка — для действующего профиля голоса книги (FR-D2, правило g).
-          final profile = downloads.profileFor(book.id);
-          final task = downloads.task;
-          final running = task != null && task.status == DownloadStatus.running;
-          // Блок задачи (ход или ошибка) — у той главы, которой она принадлежит, даже если читатель уже в другой;
-          // предложение скачать — у текущей главы и только когда никакая задача не идёт.
-          int? blockAt(int i) {
-            if (task != null && task.bookId == book.id && task.chapter == i) return i;
-            if (i == widget.current && !running && !downloads.isVoiced(book.id, i, profile)) return i;
-            return null;
-          }
+      body: SafeArea(
+        top: false,
+        child: ListenableBuilder(
+          listenable: Listenable.merge([downloads, widget.services.settings, widget.services.library]),
+          builder: (context, _) {
+            // Готовность и оценка — для действующего профиля голоса книги (FR-D2, правило g).
+            final profile = downloads.profileFor(book.id);
+            final task = downloads.task;
+            final running = task != null && task.status == DownloadStatus.running;
+            // Блок задачи (ход или ошибка) — у той главы, которой она принадлежит, даже если читатель уже в другой;
+            // предложение скачать — у текущей главы и только когда никакая задача не идёт.
+            int? blockAt(int i) {
+              if (task != null && task.bookId == book.id && task.chapter == i) return i;
+              if (i == widget.current && !running && !downloads.isVoiced(book.id, i, profile)) return i;
+              return null;
+            }
 
-          return ListView(
-            padding: EdgeInsets.fromLTRB(12, 4, 12, 24 + MediaQuery.paddingOf(context).bottom),
-            children: [
-              for (var i = 0; i < book.chapters.length; i++) ...[
-                _ChapterTile(
-                  key: i == widget.current ? _currentKey : Key('chapter-$i'),
-                  chapter: book.chapters[i],
-                  current: i == widget.current,
-                  voiced: downloads.isVoiced(book.id, i, profile),
-                  onTap: () => Navigator.pop(context, i),
-                ),
-                if (blockAt(i) != null)
-                  _DownloadBlock(services: widget.services, book: book, chapter: i, profile: profile)
-                else if (i == widget.current)
-                  const SizedBox(height: 4),
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+              children: [
+                for (var i = 0; i < book.chapters.length; i++)
+                  if (chapterLabel(book, i, includeParent: false).isNotEmpty) ...[
+                    _ChapterTile(
+                      key: i == widget.current ? _currentKey : Key('chapter-$i'),
+                      chapter: book.chapters[i],
+                      label: chapterLabel(book, i, includeParent: false),
+                      current: i == widget.current,
+                      voiced: downloads.isVoiced(book.id, i, profile),
+                      onTap: () => Navigator.pop(context, i),
+                    ),
+                    if (blockAt(i) != null)
+                      _DownloadBlock(services: widget.services, book: book, chapter: i, profile: profile)
+                    else if (i == widget.current)
+                      const SizedBox(height: 4),
+                  ],
               ],
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
 }
 
 class _ChapterTile extends StatelessWidget {
-  const _ChapterTile({super.key, required this.chapter, required this.current, required this.voiced, required this.onTap});
+  const _ChapterTile({super.key, required this.chapter, required this.label,
+    required this.current, required this.voiced, required this.onTap});
 
   final Chapter chapter;
+  final String label;
   final bool current;
   final bool voiced;
   final VoidCallback onTap;
@@ -101,6 +108,7 @@ class _ChapterTile extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final top = chapter.level == 1;
+    final excerpt = chapter.title.trim().isEmpty;
     // На подсветке выбранной строки — основной цвет текста: второстепенный на `hl` в сепии даёт 4,2 (№17 ревью).
     final markColor = current ? scheme.onSurface : scheme.onSurfaceVariant;
     return Padding(
@@ -110,9 +118,11 @@ class _ChapterTile extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         minTileHeight: 52,
         title: Text(
-          chapter.title,
+          label,
+          maxLines: excerpt ? 1 : null,
+          overflow: excerpt ? TextOverflow.ellipsis : null,
           style: bookTitleStyle(context, top ? 17 : 16, weight: top || current ? FontWeight.w700 : FontWeight.w400)
-              .copyWith(color: current ? scheme.primary : scheme.onSurface),
+              .copyWith(color: excerpt ? scheme.onSurfaceVariant : current ? scheme.primary : scheme.onSurface),
         ),
         trailing: voiced
             ? Row(key: const Key('voiced-mark'), mainAxisSize: MainAxisSize.min, children: [

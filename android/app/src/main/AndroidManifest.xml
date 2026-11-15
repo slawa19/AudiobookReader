@@ -28,7 +28,9 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Книжный MIME достаточен даже при непрозрачном пути content-URI. -->
+            <!-- Книжный MIME и octet-stream принимаются с любым content-URI:
+                 MediaStore отдаёт FB2 как двоичный файл с непрозрачным путём.
+                 Формат проверяется по содержимому; посторонний файл даёт отказ на полке. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -39,8 +41,9 @@
                 <data android:mimeType="application/x-fictionbook+zip" />
                 <data android:mimeType="application/fb2" />
                 <data android:mimeType="application/fb2+zip" />
+                <data android:mimeType="application/octet-stream" />
             </intent-filter>
-            <!-- Общий MIME принимается только с книжным суффиксом пути (API 31+).
+            <!-- Архивы и XML принимаются только с книжным суффиксом пути (API 31+).
                  DISPLAY_NAME в сопоставлении Android не участвует. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -51,13 +54,12 @@
                 <data android:pathSuffix=".epub" />
                 <data android:mimeType="application/zip" />
                 <data android:mimeType="application/x-zip-compressed" />
-                <data android:mimeType="application/octet-stream" />
                 <data android:mimeType="application/xml" />
                 <data android:mimeType="text/xml" />
             </intent-filter>
             <!-- У SEND файл в EXTRA_STREAM, а не в data: фильтр расширений невозможен.
-                 Общие MIME здесь захватили бы любые двоичные файлы и архивы.
-                 Такие книги добавляются через системный выбор файла. -->
+                 octet-stream нужен для FB2 из MediaStore; содержимое проверяет разборщик.
+                 Общие MIME архивов и XML здесь не принимаются. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -67,6 +69,7 @@
                 <data android:mimeType="application/x-fictionbook+zip" />
                 <data android:mimeType="application/fb2" />
                 <data android:mimeType="application/fb2+zip" />
+                <data android:mimeType="application/octet-stream" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

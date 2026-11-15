@@ -592,7 +592,8 @@ class _StoredBook {
           ? 0
           : (((pos?.charsBefore ?? 0) + (pos?.offset ?? 0)) / total).clamp(
               0.0,
-              1.0,
+              // Конец позиции сам по себе не означает «дочитана» (FR-L4).
+              (total - 1) / total,
             ),
       chapterTitle: label,
       bookBytes: bytes,

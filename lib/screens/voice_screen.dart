@@ -84,36 +84,39 @@ class _VoiceScreenState extends State<VoiceScreen> {
               style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
         ]),
       ),
-      body: ListenableBuilder(
-        listenable: Listenable.merge([s.library, s.settings, s.sampler]),
-        builder: (context, _) => RadioGroup<String>(
-          groupValue: _value,
-          onChanged: _select,
-          child: CustomScrollView(slivers: [
-            if (book != null)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-                  child: _VoiceTile(
-                    value: _asSettings,
-                    selected: _value == _asSettings,
-                    title: l10n.voiceAsSettings,
-                    subtitle: l10n.voiceNow(s.settings.voice),
+      body: SafeArea(
+        top: false,
+        child: ListenableBuilder(
+          listenable: Listenable.merge([s.library, s.settings, s.sampler]),
+          builder: (context, _) => RadioGroup<String>(
+            groupValue: _value,
+            onChanged: _select,
+            child: CustomScrollView(slivers: [
+              if (book != null)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+                    child: _VoiceTile(
+                      value: _asSettings,
+                      selected: _value == _asSettings,
+                      title: l10n.voiceAsSettings,
+                      subtitle: l10n.voiceNow(s.settings.voice),
+                    ),
                   ),
                 ),
+              _header(context, l10n.female(female.length)),
+              _list(context, female),
+              _header(context, l10n.male(male.length)),
+              _list(context, male),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                  child: Text(l10n.probeNote(s.sampler.phraseFor(_language(context))),
+                      style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                ),
               ),
-            _header(context, l10n.female(female.length)),
-            _list(context, female),
-            _header(context, l10n.male(male.length)),
-            _list(context, male),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(24, 16, 24, 24 + MediaQuery.paddingOf(context).bottom),
-                child: Text(l10n.probeNote(s.sampler.phraseFor(_language(context))),
-                    style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
-              ),
-            ),
-          ]),
+            ]),
+          ),
         ),
       ),
     );

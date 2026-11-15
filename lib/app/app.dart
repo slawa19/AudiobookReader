@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../audio/audio_store.dart';
@@ -194,7 +195,10 @@ class _AudiobookAppState extends State<AudiobookApp> with WidgetsBindingObserver
           supportedLocales: supportedLocales,
           locale: language == null ? null : Locale(language),
           localeListResolutionCallback: resolveLocale,
-          builder: phoneChrome ? (context, child) => PhoneChrome(child: child!) : null,
+          builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+            value: systemBarsFor(Theme.of(context).brightness),
+            child: phoneChrome ? PhoneChrome(child: child!) : child!,
+          ),
           home: ShelfScreen(services: prototype.services),
         );
       },
