@@ -53,11 +53,8 @@ void main() {
     p.settings.fontStep++;
     await tester.pump();
     expect(old.isCalculating, isFalse);
-    expect(identical(st.layout, old), isTrue, reason: 'страница удерживается до готовности якоря');
-    final number = st.page;
-    await st.goToPage(number + 1);
-    expect(st.page, number, reason: 'по старой раскладке листать нельзя');
-    await until(tester, () => !identical(st.layout, old));
+    expect(identical(st.layout, old), isFalse, reason: 'якорная страница новой раскладки готова сразу');
+    expect(st.layout.pages[st.page].firstOffset, anchor.$2);
     expect(st.pageStyle.fontSize, greaterThan(oldSize));
     expect(st.layout.pages[st.page].contains(anchor.$1, anchor.$2), isTrue);
     final newPage = st.page;
@@ -67,7 +64,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('ползунок досчитывает ещё неизвестное место, 100 % только на подтверждённом конце', (tester) async {
+  testWidgets('ползунок начинает неизвестное место сразу, 100 % только на подтверждённом конце', (tester) async {
     final (p, book, st) = await openLong(tester, narrow: true);
     // Переход маршрута и защита касаний закончились, но длинная глава ещё считается.
     await tester.pump(const Duration(milliseconds: 360));
@@ -78,14 +75,12 @@ void main() {
     final target = book.placeAt(0.95);
     expect(st.layout.findPage(target.$1, target.$2), isNull);
     expect(p.library.isFinished(book.id), isFalse);
-    final shown = st.page;
     slider.onChangeEnd!(0.95);
     await tester.pump();
-    expect(st.page, shown, reason: 'пока место не готово, остаётся текст прежней страницы');
+    expect(st.layout.pages[st.page].firstOffset, target.$2);
     slider.onChangeEnd!(0);
-    await until(tester, () => st.layout.findPage(target.$1, target.$2) != null);
     await tester.pump();
-    expect(st.page, 0, reason: 'возврат в готовое место отменяет прежнее ожидание 95 %');
+    expect(st.layout.pages[st.page].firstOffset, 0);
     tester.widget<Slider>(find.byKey(const Key('book-slider'))).onChangeEnd!(0.95);
     await tester.pump();
     await until(tester, () => st.layout.pages[st.page].contains(target.$1, target.$2));
@@ -94,11 +89,10 @@ void main() {
     // Вторая сторона: после досчёта можно открыть настоящий конец и получить 100 %.
     final endSlider = tester.widget<Slider>(find.byKey(const Key('book-slider')));
     endSlider.onChangeEnd!(1);
-    await until(tester, () => st.layout.isComplete && st.page == st.layout.pages.length - 1);
     await tester.pump();
     expect(p.library.isFinished(book.id), isTrue);
     expect(tester.widget<Slider>(find.byKey(const Key('book-slider'))).value, 1);
-    await st.goToPage(0);
+    tester.widget<Slider>(find.byKey(const Key('book-slider'))).onChangeEnd!(0);
     await tester.pump();
     expect(p.library.isFinished(book.id), isFalse);
     await tester.pumpWidget(const SizedBox());
@@ -143,7 +137,7 @@ void main() {
     await tester.pump();
     final sounding = st.soundingPosition!;
     expect(sounding.offset, greaterThan(0));
-    expect(st.layout.findPage(sounding.block, sounding.offset), isNull);
+    expect(st.layout.pages[st.page].firstOffset, sounding.offset);
     final waitingPage = st.page;
     await tester.pump();
     expect(st.page, waitingPage, reason: 'голос не листает по прежней раскладке во время её замены');
@@ -153,12 +147,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 20));
     expect(st.page, shown);
     // Противоположная сторона: ручной уход удерживает экран, даже если расчёт и голос продолжаются.
-    await st.goToPage(0);
+    await st.goToPage(2);
     await tester.pump();
     expect(st.following, isFalse);
+    final manual = st.layout.pages[st.page];
     p.narration.demoShow('paused', book: book);
     await tester.pump(const Duration(milliseconds: 20));
-    expect(st.page, 0);
+    expect(st.layout.pages[st.page].firstOffset, manual.firstOffset);
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -217,7 +212,9 @@ void main() {
     await tester.pump();
     final sounding = st.soundingPosition!;
     await until(tester, () => st.layout.pages[st.page].contains(0, sounding.offset));
-    await st.goToPage(0);
+    final move = st.goToPage(2);
+    await tester.pump(const Duration(milliseconds: 10));
+    await move;
     await tester.pump(const Duration(milliseconds: 360));
     await tester.tapAt(tester.getRect(find.byKey(const Key('page-area'))).center);
     await tester.pump();
@@ -246,6 +243,7 @@ void main() {
     final before = st.pagePadding.bottom;
     tester.widget<Slider>(find.byKey(const Key('book-slider'))).onChangeEnd!(0.95);
     await until(tester, () => st.layout.findPage(target.$1, target.$2) != null);
+    await tester.pump();
     await tester.pump();
     expect(st.pagePadding.bottom, greaterThan(before), reason: 'кнопка действительно увеличила панель');
     expect(st.layout.pages[st.page].contains(target.$1, target.$2), isTrue);

@@ -7,7 +7,8 @@ import 'package:audiobook_reader/tts/voices.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
-import 'support/flows.dart';
+import 'support/flows.dart' hide openKapitanskaya;
+import 'support/reference_pages.dart' show openKapitanskaya;
 import 'support/harness.dart';
 import 'support/sentence_oracle.dart';
 

@@ -11,7 +11,8 @@ import 'package:audiobook_reader/playback/narration.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
-import 'support/flows.dart';
+import 'support/flows.dart' hide openDama;
+import 'support/reference_pages.dart' show openDama;
 import 'support/harness.dart';
 
 /// «Ионыч», глава I: вверху страницы — хвост длинного абзаца 22, в середине начинается абзац 23
@@ -50,8 +51,9 @@ void main() {
     final st = reader(tester);
     expect(p.narration.block, 23, reason: 'продолжает с того абзаца, где остановился');
     final page = st.layout.pages[st.page];
-    expect(page.fragments.any((f) => f.block == 23 && f.start == 0), isTrue,
-        reason: 'страница та же — назад не перелистнулась');
+    final sounding = st.soundingPosition!;
+    expect(page.contains(sounding.block, sounding.offset), isTrue,
+        reason: 'на экране тот же звучащий абзац; начало страницы теперь задаётся местом голоса');
     expect(st.following, isTrue);
   });
 

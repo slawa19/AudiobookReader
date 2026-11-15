@@ -185,7 +185,7 @@ void main() {
       final book = st.widget.book;
       final last = book.blocks.length - 1;
       expect(st.page, st.layout.pages.length - 1, reason: 'предусловие: последняя страница');
-      expect(onScreen(tester, last, 0), isTrue, reason: 'предусловие: последний абзац целиком на последней странице');
+      expect(st.layout.endsBook(st.layout.pages[st.page]), isTrue, reason: 'предусловие: показан конец книги');
       await tapCenter(tester);
       await tester.tap(find.byKey(const Key('listen')));
       await advance(tester, const Duration(milliseconds: 300));

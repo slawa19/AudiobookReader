@@ -37,19 +37,10 @@ class ReaderScreenState extends State<ReaderScreen> {
   NarrationController get narration => s.narration;
 
   ChapterPagination? _layout;
-  ChapterPagination? _nextLayout;
-  ReadingPosition? _seek;
-  bool _seekUser = false;
-  bool _seekIsMove = false;
+  int _seenPrepend = 0;
   int? _waitingPage;
   bool _waitingUser = true;
   Completer<void>? _waitingDone;
-  PageStyle? _layoutStyle;
-  Size? _layoutColumn;
-  EdgeInsets? _layoutPad;
-  PageStyle? _nextStyle;
-  Size? _nextColumn;
-  EdgeInsets? _nextPad;
   Object? _layoutKey;
   int _generation = 0;
   PageController? _pc;
@@ -84,6 +75,11 @@ class ReaderScreenState extends State<ReaderScreen> {
   /// действительно сменил страницу (решение по ревью логики 2026-11-14).
   int? _dragStartPage;
   bool _dragWaiting = false;
+  VelocityTracker? _edgeVelocity;
+  double _pointerStartX = 0;
+  double _pointerTravel = 0;
+  int _edgeSide = 0;
+  int _pointerPage = 0;
 
   /// Место выбранного абзаца на странице, где его выбрали: перераскладка держит его на экране (№3 ревью логики).
   ReadingPosition? _selectedAt;
@@ -144,7 +140,6 @@ class ReaderScreenState extends State<ReaderScreen> {
     _guardTimer?.cancel();
     _pc?.dispose();
     _layout?.dispose();
-    _nextLayout?.dispose();
     _waitingDone?.complete();
     super.dispose();
   }
@@ -176,49 +171,34 @@ class ReaderScreenState extends State<ReaderScreen> {
     final key = (style, column, book.id);
     if (key == _layoutKey) return;
     _layoutKey = key;
-    // Пока экран следует за голосом, новая раскладка (появилась или изменилась панель плеера) ставится сразу на
-    // звучащее место, а не на прежний якорь: иначе звучащее оказалось бы на другой странице, и экран догонял бы его
-    // анимацией поверх смены раскладки (замечание владельца 2026-11-14).
-    // Удержанный выбор абзаца важнее следования: страница с ним остаётся на экране (№3 ревью логики).
     final at = soundingPosition;
     final follow = _following && at != null && narration.state != NarrationState.idle;
     _layoutForPlayer = _mine;
-    final pendingMove = _selectedAt == null && !follow && _seek != null;
-    final seekUser = pendingMove && _seekUser;
-    final seekIsMove = pendingMove && _seekIsMove;
-    final place = _selectedAt ?? (follow ? at : _seek ?? _anchor);
-    _layout?.cancel();
-    _nextLayout?.dispose();
-    _nextLayout = null;
+    _startLayout(_selectedAt ?? (follow ? at : _anchor));
+  }
+
+  /// Каждая новая раскладка сразу имеет якорную страницу. Работа до якоря в этот расчёт не входит.
+  void _startLayout(ReadingPosition place) {
+    _layout?.dispose();
     final next = ChapterPagination();
-    next.start(book: book, style: style, column: column, block: 0, offset: 0,
+    next.start(book: book, style: _style, column: _column, block: place.block, offset: place.offset,
         throughBook: true, imageSizes: s.library.imageSizes(book.id));
+    _layout = next;
+    _seenPrepend = 0;
+    _page = 0;
+    _anchor = _pagePosition;
     next.addListener(_onLayout);
-    _seek = place;
-    _seekUser = seekUser;
-    _seekIsMove = seekIsMove;
     _waitingPage = null;
     _waitingDone?.complete();
     _waitingDone = null;
     _flipTarget = null;
     _flipTimer?.cancel();
-    if (_layout == null || next.findPage(place.block, place.offset) != null) {
-      _layout?.dispose();
-      _layout = next;
-      _page = next.findPage(place.block, place.offset) ?? 0;
-      if (next.findPage(place.block, place.offset) != null) _seek = null;
-      _layoutStyle = style;
-      _layoutColumn = column;
-      _layoutPad = _pad;
-    } else {
-      // До готовности якоря рисуется прежняя страница с прежними метриками; листание заблокировано.
-      _nextLayout = next;
-      _nextStyle = style;
-      _nextColumn = column;
-      _nextPad = _pad;
-    }
     _resetPages();
     _markLastAfterFrame();
+    final generation = _generation;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && generation == _generation) _saveScreenPosition();
+    });
   }
 
   void _resetPages() {
@@ -228,9 +208,9 @@ class ReaderScreenState extends State<ReaderScreen> {
     _navOp++;
     _programmatic = false;
     _animatingTo = null;
-    // Жест по прежней раскладке потерян вместе с ней.
     _dragStartPage = null;
     _dragWaiting = false;
+    _edgeSide = 0;
     _userDragging = false;
     _grabbedAuto = false;
     if (old != null) WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
@@ -242,110 +222,71 @@ class ReaderScreenState extends State<ReaderScreen> {
     });
   }
 
-  bool get _reflowing => _nextLayout != null || _seek != null;
-
   void _onLayout() {
     if (!mounted) return;
-    final next = _nextLayout ?? _layout!;
-    final seek = _seek;
-    final target = seek == null ? null : next.findPage(seek.block, seek.offset);
-    if (target != null) {
-      final user = _seekUser;
-      final move = _seekIsMove;
-      setState(() {
-        if (_nextLayout != null) {
-          _layout!.dispose();
-          _layout = _nextLayout;
-          _nextLayout = null;
-          _layoutStyle = _nextStyle;
-          _layoutColumn = _nextColumn;
-          _layoutPad = _nextPad;
-        }
-        _seek = null;
-        _page = target;
+    final added = layout.prependedCount - _seenPrepend;
+    setState(() {
+      if (added > 0) {
+        _seenPrepend = layout.prependedCount;
+        _page += added;
+        if (_waitingPage != null) _waitingPage = _waitingPage! + added;
+        if (_flipTarget != null) _flipTarget = _flipTarget! + added;
+        // Вставка перед массивом меняет только локальный индекс, но не видимый текст.
         _resetPages();
-        if (user) {
-          _selectedBlock = null;
-          _selectedAt = null;
-          _anchor = _pagePosition;
-        }
-      });
-      if (move) _reportShownPage();
-      if (user) _saveScreenPosition();
-    } else {
-      setState(() {});
-    }
+      }
+    });
     _markLastAfterFrame();
     final waiting = _waitingPage;
-    if (!_reflowing && waiting != null && (waiting < layout.pages.length || layout.isComplete)) {
-      final done = _waitingDone;
-      final user = _waitingUser;
-      _waitingPage = null;
-      _waitingDone = null;
-      final generation = _generation;
-      final op = _navOp;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && generation == _generation && op == _navOp) {
-          // У растущего PageView прежний предел прокрутки может жить ещё один кадр. Новая позиция
-          // контроллера сразу строится на готовой странице, без обрезания цели старым пределом.
-          _dragStartPage = null;
-          _userDragging = false;
-          _onPageChanged(waiting.clamp(0, layout.pages.length - 1), programmatic: !user);
-          setState(_resetPages);
-        }
-        done?.complete();
-      });
+    if (waiting == null) return;
+    if (waiting < 0 && layout.hasPrevious) {
+      unawaited(layout.loadPrevious());
+      return;
     }
+    if (waiting >= layout.pages.length && !layout.isComplete) return;
+    final done = _waitingDone;
+    final user = _waitingUser;
+    _waitingPage = null;
+    _waitingDone = null;
+    final generation = _generation;
+    final op = _navOp;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && generation == _generation && op == _navOp) {
+        _dragStartPage = null;
+        _userDragging = false;
+        _onPageChanged(waiting.clamp(0, layout.pages.length - 1), programmatic: !user);
+        setState(_resetPages);
+      }
+      done?.complete();
+    });
   }
 
   void _goToPlace(int block, int offset, {bool user = true}) {
-    final next = _nextLayout;
-    final target = (next ?? layout).findPage(block, offset);
-    if (next == null && target != null && _seek == null && _waitingPage == null) {
+    final target = layout.findPage(block, offset);
+    if (target != null && (target == _page || (!user && (target - _page).abs() == 1) ||
+        (layout.pages[target].firstBlock == block && layout.pages[target].firstOffset == offset))) {
       goToPage(target, user: user);
       return;
     }
-    _waitingPage = null;
-    _waitingDone?.complete();
-    _waitingDone = null;
-    _flipTarget = null;
-    _flipTimer?.cancel();
-    _navOp++;
-    if (next != null) {
-      _seek = ReadingPosition(block, offset);
-      _seekUser = user;
-      _seekIsMove = true;
+    goToPosition(ReadingPosition(block, offset), user: user);
+  }
+
+  /// Явное начало страницы от позиции, независимо от границ уже готовых страниц.
+  void goToPosition(ReadingPosition place, {bool user = true}) {
+    setState(() {
+      _startLayout(place);
+      _selectedBlock = null;
+      _selectedAt = null;
       if (user) _userMoved();
-      _onLayout();
-      return;
-    }
-    if (target != null) {
-      if (_seek != null) {
-        setState(() {
-          _seek = null;
-          _anchor = _pagePosition;
-        });
-        if (user && target == _page) {
-          _reportShownPage();
-          _saveScreenPosition();
-        }
-      }
-      goToPage(target, user: user);
-    } else {
-      setState(() {
-        _seek = ReadingPosition(block, offset);
-        _seekUser = user;
-        _seekIsMove = true;
-        if (user) _userMoved();
-      });
-    }
+    });
+    _reportShownPage();
+    if (user) _saveScreenPosition();
   }
 
   BookPageLayout get _current => _layout!.pages[_page];
 
   ReadingPosition get _pagePosition => ReadingPosition(_current.firstBlock, _current.firstOffset);
 
-  bool get _onLastPage => !_reflowing && layout.isComplete && _page == layout.pages.length - 1;
+  bool get _onLastPage => layout.endsBook(_current);
 
   /// Доля книги на экране; на последней странице книга дочитана — 100 % (FR-L4, правило d).
   double get _fraction => _onLastPage ? 1 : book.fractionAt(_current.firstBlock, _current.firstOffset);
@@ -356,13 +297,13 @@ class ReaderScreenState extends State<ReaderScreen> {
   /// доводится мгновенно, второй идёт от него. Касание пальцем останавливает анимацию прокрутки ещё до того,
   /// как распознано как касание, поэтому цель первого перехода помнится всё время его анимации.
   void _flip(int delta) {
-    if (_reflowing) return;
     final pc = _pc;
     if (pc == null || !pc.hasClients) return;
     final pending = _flipTarget;
-    final requested = math.max(0, (pending ?? _page) + delta);
+    final base = layout.isComplete ? math.min(pending ?? _page, layout.pages.length - 1) : pending ?? _page;
+    final requested = layout.hasPrevious ? base + delta : math.max(0, base + delta);
     final target = layout.isComplete ? math.min(requested, layout.pages.length - 1) : requested;
-    if (pending != null && pending < layout.pages.length && (pc.page ?? _page.toDouble()) != pending) {
+    if (pending != null && pending >= 0 && pending < layout.pages.length && (pc.page ?? _page.toDouble()) != pending) {
       _navOp++;
       _programmatic = false;
       _animatingTo = null;
@@ -380,15 +321,16 @@ class ReaderScreenState extends State<ReaderScreen> {
   Timer? _flipTimer;
 
   Future<void> goToPage(int target, {bool user = true}) async {
-    if (_reflowing) return;
     final pc = _pc;
     if (pc == null || !pc.hasClients) return;
-    if (target >= layout.pages.length && !layout.isComplete) {
+    if (target >= 0) layout.cancelPrevious();
+    if ((target >= layout.pages.length && !layout.isComplete) || (target < 0 && layout.hasPrevious)) {
       _navOp++;
       _waitingPage = target;
       _waitingUser = user;
       if (user) _userMoved();
       _waitingDone ??= Completer<void>();
+      if (target < 0) unawaited(layout.loadPrevious());
       return _waitingDone!.future;
     }
     _waitingPage = null;
@@ -470,12 +412,10 @@ class ReaderScreenState extends State<ReaderScreen> {
       _navOp++;
       _programmatic = false;
       _animatingTo = null;
-    } else if (n is OverscrollNotification && n.dragDetails != null && n.overscroll > 0 &&
-        !_dragWaiting && !layout.isComplete && !_reflowing) {
-      // Смахивание за край готовых страниц — такой же запрос следующей страницы, как касание трети.
-      _dragWaiting = true;
-      _waitingPage = layout.pages.length;
-      _waitingUser = true;
+    } else if (n is OverscrollNotification && n.dragDetails != null && !_dragWaiting &&
+        ((n.overscroll > 0 && !layout.isComplete) || (n.overscroll < 0 && layout.hasPrevious))) {
+      _edgeSide = n.overscroll > 0 ? 1 : -1;
+      if (_pointerTravel.abs() > n.metrics.viewportDimension / 2) _requestEdgePage();
     } else if (n is ScrollEndNotification) {
       final start = _dragStartPage;
       final pc = _pc;
@@ -494,6 +434,30 @@ class ReaderScreenState extends State<ReaderScreen> {
       }
     }
     return false;
+  }
+
+  void _requestEdgePage() {
+    if (_dragWaiting || _edgeSide == 0 || _pointerTravel.sign != -_edgeSide) return;
+    final target = _pointerPage + _edgeSide;
+    if (target >= 0 && target < layout.pages.length) return;
+    _dragWaiting = true;
+    _waitingPage = target;
+    _waitingUser = true;
+    if (target < 0) unawaited(layout.loadPrevious());
+  }
+
+  void _endPagePointer(PointerUpEvent event) {
+    _edgeVelocity?.addPosition(event.timeStamp, event.position);
+    final velocity = _edgeVelocity?.getVelocity().pixelsPerSecond.dx ?? 0;
+    final pc = _pc;
+    if (pc == null || !pc.hasClients) return;
+    // У края ещё нет страницы для обычной физики PageView. Применяем те же пороги броска;
+    // малое перетаскивание с возвратом и остановкой не становится командой назад.
+    final physics = pc.position.physics;
+    if (_pointerTravel.abs() >= physics.minFlingDistance && velocity.abs() >= physics.minFlingVelocity &&
+        velocity.sign == -_edgeSide) {
+      _requestEdgePage();
+    }
   }
 
   /// Позицию пишет экран, только пока прослушивание не активно (А§5).
@@ -536,10 +500,8 @@ class ReaderScreenState extends State<ReaderScreen> {
       final gesture = _dragStartPage != null;
       if (!layoutStale && !choosing && !gesture && _following && at != null && _layout != null &&
           state != NarrationState.idle) {
-        if (_nextLayout != null) {
-          _seek = at;
-          _seekUser = false;
-          if (command) _seekIsMove = true;
+        if (command) {
+          goToPosition(at, user: false);
         } else {
           _goToPlace(at.block, at.offset, user: false);
         }
@@ -552,9 +514,9 @@ class ReaderScreenState extends State<ReaderScreen> {
   void _backToReadingPlace() {
     setState(() {
       _following = true;
-      if (_seek != null) _seekIsMove = true;
     });
-    _onNarration();
+    final at = soundingPosition;
+    if (at != null) goToPosition(at, user: false);
   }
 
   // --- жесты ---------------------------------------------------------------------------------------------
@@ -757,15 +719,6 @@ class ReaderScreenState extends State<ReaderScreen> {
         _pad = EdgeInsets.fromLTRB(24, _topInset + 28, 24, reserved);
         _column = Size(area.width - _pad.horizontal, math.max(_style.lineHeight * 3, area.height - _pad.vertical));
         _ensureLayout(_style, _column);
-        if (_nextLayout != null) {
-          _style = _layoutStyle!;
-          _column = _layoutColumn!;
-          _pad = _layoutPad!;
-        } else {
-          _layoutStyle = _style;
-          _layoutColumn = _column;
-          _layoutPad = _pad;
-        }
         final generation = _generation;
         final highlight = <int>{
           if (playerVisible && narration.block != null) narration.block!,
@@ -778,9 +731,21 @@ class ReaderScreenState extends State<ReaderScreen> {
               child: Listener(
                 // Палец лёг на страницу посреди автоматического переворота за голосом — схватил её (решение C).
                 // Проверяется в момент касания: к началу перетаскивания переворот уже остановлен.
-                onPointerDown: (_) => _grabbedAuto = _programmatic && _animatingTo != null,
-                child: AbsorbPointer(
-                absorbing: _reflowing,
+                onPointerDown: (event) {
+                  _grabbedAuto = _programmatic && _animatingTo != null;
+                  _edgeVelocity = VelocityTracker.withKind(event.kind)..addPosition(event.timeStamp, event.position);
+                  _pointerStartX = event.position.dx;
+                  _pointerTravel = 0;
+                  _pointerPage = _page;
+                  _edgeSide = 0;
+                  _dragWaiting = false;
+                },
+                onPointerMove: (event) {
+                  _pointerTravel = event.position.dx - _pointerStartX;
+                  _edgeVelocity?.addPosition(event.timeStamp, event.position);
+                },
+                onPointerUp: _endPagePointer,
+                onPointerCancel: (_) => _edgeSide = 0,
                 child: GestureDetector(
                 key: const Key('page-area'),
                 behavior: HitTestBehavior.opaque,
@@ -825,7 +790,6 @@ class ReaderScreenState extends State<ReaderScreen> {
                     ),
                   ),
                 ),
-              ),
               ),
               ),
             ),

@@ -9,7 +9,8 @@ import 'package:audiobook_reader/playback/narration.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
-import 'support/flows.dart';
+import 'support/flows.dart' hide openKapitanskaya, openDama;
+import 'support/reference_pages.dart';
 import 'support/harness.dart';
 
 void main() {
@@ -129,6 +130,8 @@ void main() {
       await tester.tap(find.byKey(const Key('listen')));
       await advance(tester, const Duration(seconds: 3));
       await snapshot(tester, '14-listening');
+      // У образца явно подготовлена соседняя страница до жеста; порционное ожидание проверяется отдельно.
+      await tester.pump(const Duration(milliseconds: 16));
       await tester.fling(find.byKey(const Key('page-area')), const Offset(-300, 0), 1000);
       // «К месту чтения» появляется, когда страница после жеста встала (следование выключает смена страницы).
       await advance(tester, const Duration(milliseconds: 1200));

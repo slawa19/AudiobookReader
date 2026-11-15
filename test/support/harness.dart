@@ -3,6 +3,8 @@ import 'package:audiobook_reader/screens/reader_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'reference_pages.dart' show alignReferencePage;
+
 /// Размеры экранов из задания (dp) и плотность снимков.
 const phone412 = Size(412, 915);
 const phone360 = Size(360, 800);
@@ -73,5 +75,6 @@ Future<void> openBook(WidgetTester tester, String title) async {
 ReaderScreenState reader(WidgetTester tester) => tester.state<ReaderScreenState>(find.byType(ReaderScreen));
 
 Future<void> snapshot(WidgetTester tester, String name) async {
+  await alignReferencePage(tester);
   await expectLater(find.byType(AudiobookApp), matchesGoldenFile('../docs/prototype/screens/$name.png'));
 }
