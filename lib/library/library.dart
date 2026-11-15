@@ -6,13 +6,38 @@ import '../book/model.dart';
 /// Позиция чтения (А§5): блок, смещение в нём, число знаков до блока.
 @immutable
 class ReadingPosition {
-  const ReadingPosition(this.block, this.offset);
+  const ReadingPosition(
+    this.block,
+    this.offset, {
+    this.charsBefore = 0,
+    this.anchorText = '',
+  });
 
   final int block;
   final int offset;
+  final int charsBefore;
+  final String anchorText;
+
+  Map<String, Object?> toJson() => {
+    'block': block,
+    'offset': offset,
+    'charsBefore': charsBefore,
+    'anchorText': anchorText,
+  };
+
+  factory ReadingPosition.fromJson(Map<String, Object?> json) =>
+      ReadingPosition(
+        json['block']! as int,
+        json['offset']! as int,
+        charsBefore: json['charsBefore']! as int,
+        anchorText: json['anchorText']! as String,
+      );
 
   @override
-  bool operator ==(Object other) => other is ReadingPosition && other.block == block && other.offset == offset;
+  bool operator ==(Object other) =>
+      other is ReadingPosition &&
+      other.block == block &&
+      other.offset == offset;
 
   @override
   int get hashCode => Object.hash(block, offset);
@@ -63,7 +88,12 @@ enum AddFailure { unsupported, unreadable, protected }
 
 /// Добавляемая книга или отказ добавления (FR-L2, FR-B2, FR-B6): строка на полке до «✕».
 class AddJob {
-  AddJob({required this.fileName, required this.status, this.failure, this.technical});
+  AddJob({
+    required this.fileName,
+    required this.status,
+    this.failure,
+    this.technical,
+  });
 
   final String fileName;
   AddJobStatus status;
@@ -75,6 +105,18 @@ class AddJob {
 
 /// Полка и хранение книг (А§2, `library`). Единственный писатель позиции и настроек книги.
 abstract class Library extends ChangeNotifier {
+  /// Возвращает готовую или уже имеющуюся книгу; при отказе — null и строку в [addJobs].
+  Future<ShelfEntry?> addBytes(List<int> bytes, String fileName) async =>
+      throw UnsupportedError(
+        'Добавление байтов в этой библиотеке не реализовано',
+      );
+
+  /// Записывает последние изменения немедленно и дожидается писателя. Перед фоном, паузой и закрытием.
+  Future<void> flush() async {}
+
+  /// Объём всей папки для подтверждения удаления, включая будущую озвучку.
+  Future<int> deletionBytes(String bookId) async => entry(bookId).bookBytes;
+
   /// Полка (FR-L4): сначала открывавшиеся книги по убыванию времени последнего открытия, затем ни разу не
   /// открытые — новые сверху. Экран ставит первую открывавшуюся в карточку «Продолжить», а неоткрытые — в
   /// начало списка под ней.
@@ -97,7 +139,12 @@ abstract class Library extends ChangeNotifier {
   /// Записывает позицию чтения. Долю и название главы для полки библиотека считает сама по книге, если их не
   /// передали: писатель позиции (экран или контроллер) их знать не обязан. У дочитанной книги доля на полке — 1,
   /// какую бы позицию ни записали.
-  void savePosition(String bookId, ReadingPosition position, {double? fraction, String? chapterTitle});
+  void savePosition(
+    String bookId,
+    ReadingPosition position, {
+    double? fraction,
+    String? chapterTitle,
+  });
 
   /// «Дочитана» (FR-L4, `state.json`) — отдельный факт, а не производная от позиции. Ставят показ последней
   /// страницы (в том числе первой раскладкой одностраничной книги) и конец прослушивания; снимает только показ
@@ -119,7 +166,7 @@ abstract class Library extends ChangeNotifier {
 
   void setBookVoice(String bookId, String? voice);
 
-  void deleteBook(String bookId);
+  Future<void> deleteBook(String bookId);
 
   void dismissAddJob(AddJob job);
 }
