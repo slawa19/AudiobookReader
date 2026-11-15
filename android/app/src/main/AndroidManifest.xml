@@ -23,9 +23,47 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- content-URI принимает наш канал, а не маршрутизатор Flutter. -->
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="false" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- Книжный MIME достаточен даже при непрозрачном пути content-URI. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/epub+zip" />
+                <data android:mimeType="application/x-fictionbook+xml" />
+                <data android:mimeType="application/x-fictionbook+zip" />
+                <data android:mimeType="application/fb2" />
+            </intent-filter>
+            <!-- Общий MIME принимается только с книжным суффиксом пути (API 31+).
+                 DISPLAY_NAME в сопоставлении Android не участвует. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:host="*" />
+                <data android:pathSuffix=".fb2" />
+                <data android:pathSuffix=".fb2.zip" />
+                <data android:pathSuffix=".epub" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/xml" />
+                <data android:mimeType="text/xml" />
+            </intent-filter>
+            <!-- У SEND файл в EXTRA_STREAM, а не в data: фильтр расширений невозможен.
+                 Общие MIME здесь захватили бы любые двоичные файлы и архивы.
+                 Такие книги добавляются через системный выбор файла. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/epub+zip" />
+                <data android:mimeType="application/x-fictionbook+xml" />
+                <data android:mimeType="application/x-fictionbook+zip" />
+                <data android:mimeType="application/fb2" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
