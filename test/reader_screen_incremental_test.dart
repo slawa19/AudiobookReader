@@ -64,7 +64,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('ползунок начинает неизвестное место сразу, 100 % только на подтверждённом конце', (tester) async {
+  testWidgets('поиск в огромном блоке порционный, отменяемый; 100 % только на подтверждённом конце', (tester) async {
     final (p, book, st) = await openLong(tester, narrow: true);
     // Переход маршрута и защита касаний закончились, но длинная глава ещё считается.
     await tester.pump(const Duration(milliseconds: 360));
@@ -75,9 +75,10 @@ void main() {
     final target = book.placeAt(0.95);
     expect(st.layout.findPage(target.$1, target.$2), isNull);
     expect(p.library.isFinished(book.id), isFalse);
+    final shown = st.layout.pages[st.page];
     slider.onChangeEnd!(0.95);
     await tester.pump();
-    expect(st.layout.pages[st.page].firstOffset, target.$2);
+    expect(st.layout.pages[st.page], same(shown), reason: 'длинный абзац не считается синхронно в команде');
     slider.onChangeEnd!(0);
     await tester.pump();
     expect(st.layout.pages[st.page].firstOffset, 0);
@@ -89,6 +90,7 @@ void main() {
     // Вторая сторона: после досчёта можно открыть настоящий конец и получить 100 %.
     final endSlider = tester.widget<Slider>(find.byKey(const Key('book-slider')));
     endSlider.onChangeEnd!(1);
+    await until(tester, () => st.layout.endsBook(st.layout.pages[st.page]));
     await tester.pump();
     expect(p.library.isFinished(book.id), isTrue);
     expect(tester.widget<Slider>(find.byKey(const Key('book-slider'))).value, 1);
@@ -137,7 +139,7 @@ void main() {
     await tester.pump();
     final sounding = st.soundingPosition!;
     expect(sounding.offset, greaterThan(0));
-    expect(st.layout.pages[st.page].firstOffset, sounding.offset);
+    expect(st.layout.findPage(sounding.block, sounding.offset), isNull);
     final waitingPage = st.page;
     await tester.pump();
     expect(st.page, waitingPage, reason: 'голос не листает по прежней раскладке во время её замены');

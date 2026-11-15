@@ -108,6 +108,7 @@ void main() {
       await flingBack(tester);
       await flingBack(tester);
       final top = pageStart(tester);
+      expect(reader(tester).following, isFalse, reason: 'жест назад с единственной последней страницы принят');
       await tester.tap(find.byKey(const Key('player-close')));
       await advance(tester, const Duration(milliseconds: 600));
       expect(p.library.positionOf('kapitanskaya'), top);

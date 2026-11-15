@@ -37,6 +37,14 @@ class ReaderScreenState extends State<ReaderScreen> {
   NarrationController get narration => s.narration;
 
   ChapterPagination? _layout;
+  ChapterPagination? _pendingLayout;
+  ReadingPosition? _pendingGoal;
+  ({PageStyle style, Size column, EdgeInsets pad})? _shownMetrics;
+  ({PageStyle style, Size column, EdgeInsets pad})? _pendingMetrics;
+  late ({PageStyle style, Size column, EdgeInsets pad}) _wantedMetrics;
+  bool _pendingSave = true;
+  bool _pendingMove = false;
+  bool _pendingUser = false;
   int _seenPrepend = 0;
   int? _waitingPage;
   bool _waitingUser = true;
@@ -141,6 +149,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     _guardTimer?.cancel();
     _pc?.dispose();
     _layout?.dispose();
+    if (!identical(_pendingLayout, _layout)) _pendingLayout?.dispose();
     _waitingDone?.complete();
     super.dispose();
   }
@@ -176,48 +185,115 @@ class ReaderScreenState extends State<ReaderScreen> {
     final follow = _following && at != null && narration.state != NarrationState.idle;
     _layoutForPlayer = _mine;
     final closing = _heldAfterClose != null;
-    final held = _selectedAt ?? (follow ? at : _heldAfterClose);
+    final pending = _pendingGoal;
+    final pendingMove = _pendingMove;
+    final pendingUser = _pendingUser;
+    final pendingSave = _pendingSave;
+    final held = _selectedAt ?? (follow ? at : pending ?? _heldAfterClose);
     _heldAfterClose = null;
     final visible = _layout == null ? null : _current;
     final retain = held != null && visible != null && visible.contains(held.block, held.offset);
     // Удерживаемое место задаёт видимость, а начало остаётся от уже показанной страницы.
     final from = visible != null && (held == null || retain)
         ? ReadingPosition(visible.firstBlock, visible.firstOffset)
-        : held ?? _anchor;
+        : held == null ? _anchor : ReadingPosition(held.block, 0);
     // «Закрыть» уже передал позицию контроллером (FR-P8); одна перераскладка её не перезаписывает.
-    _startLayout(from, retain: retain ? held : null, savePosition: !closing);
+    _startLayout(from, retain: held, completeRetain: retain,
+        savePosition: !closing && (pending == null || pendingSave),
+        move: pending != null && pendingMove, user: pending != null && pendingUser);
   }
 
-  /// Каждая новая раскладка сразу имеет якорную страницу. Работа до якоря в этот расчёт не входит.
-  void _startLayout(ReadingPosition place, {ReadingPosition? retain, bool savePosition = true}) {
-    _layout?.dispose();
+  /// Сохранённые начала строк сохраняются точно. Для иной цели вызывающий передаёт начало блока
+  /// и удерживаемую позицию; поиск её страницы также идёт порциями, даже внутри длинного абзаца.
+  void _startLayout(ReadingPosition place, {ReadingPosition? retain, bool completeRetain = false,
+      bool savePosition = true, bool move = false, bool user = false}) {
+    _cancelPending();
+    _layout?.cancel();
+    final metrics = _wantedMetrics;
     final next = ChapterPagination();
-    next.start(book: book, style: _style, column: _column, block: place.block, offset: place.offset,
+    next.start(book: book, style: metrics.style, column: metrics.column, block: place.block, offset: place.offset,
         throughBook: true, imageSizes: s.library.imageSizes(book.id));
     // До удерживаемого места — не больше текста одной прежней страницы. Первую подходящую страницу
     // показываем сразу, без промежуточного показа страницы, с которой голос уже ушёл.
-    while (retain != null && next.findPage(retain.block, retain.offset) == null && !next.isComplete) {
+    while (completeRetain && retain != null && next.findPage(retain.block, retain.offset) == null && !next.isComplete) {
       next.advancePage();
     }
-    _layout = next;
-    _seenPrepend = 0;
-    _page = retain == null ? 0 : next.findPage(retain.block, retain.offset) ?? 0;
-    _anchor = _pagePosition;
-    next.addListener(_onLayout);
+    _cancelPageRequest();
+    final target = retain == null ? 0 : next.findPage(retain.block, retain.offset);
+    if (target != null) {
+      _installLayout(next, target, metrics, savePosition: savePosition, move: move, user: user);
+      return;
+    }
+    _pendingLayout = next;
+    _pendingGoal = retain;
+    _pendingMetrics = metrics;
+    _pendingSave = savePosition;
+    _pendingMove = move;
+    _pendingUser = user;
+    if (_layout == null) {
+      _layout = next;
+      _page = 0;
+      _shownMetrics = metrics;
+      _seenPrepend = 0;
+    }
+    _resetPages();
+    next.addListener(_onPendingLayout);
+  }
+
+  void _cancelPending() {
+    final pending = _pendingLayout;
+    _pendingLayout = null;
+    _pendingGoal = null;
+    if (pending == null) return;
+    pending.removeListener(_onPendingLayout);
+    if (!identical(pending, _layout)) pending.dispose();
+  }
+
+  void _cancelPageRequest() {
+    _layout?.cancelPrevious();
     _waitingPage = null;
     _waitingDone?.complete();
     _waitingDone = null;
     _flipTarget = null;
     _flipTimer?.cancel();
+    _navOp++;
+  }
+
+  void _onPendingLayout() {
+    if (!mounted) return;
+    final pending = _pendingLayout!;
+    final goal = _pendingGoal!;
+    final target = pending.findPage(goal.block, goal.offset);
+    if (target == null && !pending.isComplete) {
+      setState(() {});
+      return;
+    }
+    setState(() => _installLayout(pending, target ?? pending.pages.length - 1, _pendingMetrics!,
+        savePosition: _pendingSave, move: _pendingMove, user: _pendingUser));
+  }
+
+  void _installLayout(ChapterPagination next, int target,
+      ({PageStyle style, Size column, EdgeInsets pad}) metrics,
+      {required bool savePosition, required bool move, required bool user}) {
+    next.removeListener(_onPendingLayout);
+    if (!identical(_layout, next)) _layout?.dispose();
+    _pendingLayout = null;
+    _pendingGoal = null;
+    _layout = next;
+    _shownMetrics = metrics;
+    _seenPrepend = next.prependedCount;
+    _page = target;
+    _anchor = _pagePosition;
+    next.addListener(_onLayout);
     _resetPages();
     _markLastAfterFrame();
     final generation = _generation;
     // При stopped позиция контроллера остаётся до явного перемещения читателем (А§5).
-    if (savePosition && !_mine) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && generation == _generation) _saveScreenPosition();
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || generation != _generation) return;
+      if (move) _reportShownPage();
+      if (user || (savePosition && !_mine)) _saveScreenPosition();
+    });
   }
 
   void _resetPages() {
@@ -280,25 +356,51 @@ class ReaderScreenState extends State<ReaderScreen> {
   }
 
   void _goToPlace(int block, int offset, {bool user = true}) {
+    if (_pendingLayout != null) {
+      if (_current.contains(block, offset)) {
+        setState(() => _startLayout(_pagePosition, retain: ReadingPosition(block, offset), completeRetain: true));
+      } else {
+        goToPosition(ReadingPosition(block, offset), user: user);
+      }
+      return;
+    }
     final target = layout.findPage(block, offset);
-    if (target != null && (target == _page || (!user && (target - _page).abs() == 1) ||
-        (layout.pages[target].firstBlock == block && layout.pages[target].firstOffset == offset))) {
+    if (target != null && (target == _page || (!user && (target - _page).abs() == 1))) {
       goToPage(target, user: user);
       return;
     }
     goToPosition(ReadingPosition(block, offset), user: user);
   }
 
-  /// Явное начало страницы от позиции, независимо от границ уже готовых страниц.
+  /// Произвольная цель ищется в раскладке от начала её блока, без разрыва слова новым началом страницы.
   void goToPosition(ReadingPosition place, {bool user = true}) {
     setState(() {
-      _startLayout(place);
+      _cancelPageRequest();
       _selectedBlock = null;
       _selectedAt = null;
       if (user) _userMoved();
+      if (_pendingGoal?.block == place.block) {
+        _pendingGoal = place;
+        _pendingMove = true;
+        _pendingUser = user;
+        _onPendingLayout();
+      } else if (_pendingLayout == null && layout.pages.first.firstBlock == place.block &&
+          layout.pages.first.firstOffset == 0) {
+        // Этот блок уже считается с начала: продолжаем его очередь, не измеряя готовый префикс заново.
+        _pendingLayout = layout;
+        _pendingGoal = place;
+        _pendingMetrics = _shownMetrics;
+        _pendingSave = true;
+        _pendingMove = true;
+        _pendingUser = user;
+        layout.removeListener(_onLayout);
+        layout.addListener(_onPendingLayout);
+        _resetPages();
+        _onPendingLayout();
+      } else {
+        _startLayout(ReadingPosition(place.block, 0), retain: place, move: true, user: user);
+      }
     });
-    _reportShownPage();
-    if (user) _saveScreenPosition();
   }
 
   BookPageLayout get _current => _layout!.pages[_page];
@@ -316,6 +418,7 @@ class ReaderScreenState extends State<ReaderScreen> {
   /// доводится мгновенно, второй идёт от него. Касание пальцем останавливает анимацию прокрутки ещё до того,
   /// как распознано как касание, поэтому цель первого перехода помнится всё время его анимации.
   void _flip(int delta) {
+    if (_pendingLayout != null) return;
     final pc = _pc;
     if (pc == null || !pc.hasClients) return;
     final pending = _flipTarget;
@@ -340,6 +443,7 @@ class ReaderScreenState extends State<ReaderScreen> {
   Timer? _flipTimer;
 
   Future<void> goToPage(int target, {bool user = true}) async {
+    if (_pendingLayout != null) return;
     final pc = _pc;
     if (pc == null || !pc.hasClients) return;
     if (target >= 0) layout.cancelPrevious();
@@ -421,6 +525,7 @@ class ReaderScreenState extends State<ReaderScreen> {
   }
 
   bool _onScroll(ScrollNotification n) {
+    if (_pendingLayout != null) return false;
     if (n is ScrollStartNotification && n.dragDetails != null) {
       // Палец на странице: автоматический переход отменяется. Следование выключится, только если жест в итоге
       // сменит страницу: малое перетаскивание с возвратом и отменённый жест ничего не меняют.
@@ -535,7 +640,13 @@ class ReaderScreenState extends State<ReaderScreen> {
       _following = true;
     });
     final at = soundingPosition;
-    if (at != null && !_current.contains(at.block, at.offset)) goToPosition(at, user: false);
+    if (at != null) {
+      if (_current.contains(at.block, at.offset)) {
+        _goToPlace(at.block, at.offset, user: false);
+      } else {
+        goToPosition(at, user: false);
+      }
+    }
   }
 
   // --- жесты ---------------------------------------------------------------------------------------------
@@ -738,7 +849,13 @@ class ReaderScreenState extends State<ReaderScreen> {
             : _bottomInset + (downloading ? 104 : 44);
         _pad = EdgeInsets.fromLTRB(24, _topInset + 28, 24, reserved);
         _column = Size(area.width - _pad.horizontal, math.max(_style.lineHeight * 3, area.height - _pad.vertical));
+        _wantedMetrics = (style: _style, column: _column, pad: _pad);
         _ensureLayout(_style, _column);
+        if (_pendingLayout != null) {
+          _style = _shownMetrics!.style;
+          _column = _shownMetrics!.column;
+          _pad = _shownMetrics!.pad;
+        }
         final generation = _generation;
         final highlight = <int>{
           if (playerVisible && narration.block != null) narration.block!,
@@ -776,6 +893,9 @@ class ReaderScreenState extends State<ReaderScreen> {
                   child: PageView.builder(
                     key: ValueKey('pages-$_generation'),
                     controller: _pc,
+                    // Даже единственная готовая страница принимает жест к ещё не посчитанному краю.
+                    physics: _pendingLayout == null
+                        ? const AlwaysScrollableScrollPhysics() : const NeverScrollableScrollPhysics(),
                     onPageChanged: (i) => _onPageChangedFrom(generation, i),
                     itemCount: _layout!.pages.length,
                     // Преимущественно вертикальный жест (угол к горизонтали больше 45° на момент распознавания) не

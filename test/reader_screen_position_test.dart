@@ -14,6 +14,13 @@ Book millionBook() => Book(id: 'three-million', title: 'Три миллиона'
     blocks: [Block(index: 0, kind: BlockKind.paragraph, text: List.filled(300000, 'Текст тут ').join())],
     notes: const {});
 
+// Сохранённая строка огромного абзаца проверяется отдельно. Произвольные цели считаются от
+// начала абзаца, поэтому для проверки независимости от объёма книги нужны обычные отдельные абзацы.
+Book millionParagraphBook() => Book(id: 'million-paragraphs', title: 'Три миллиона', author: '', language: 'ru',
+    chapters: [for (var i = 0; i < 3; i++) Chapter(title: 'Глава $i', level: 1, firstBlock: i * 1000, blockCount: 1000)],
+    blocks: [for (var i = 0; i < 3000; i++) Block(index: i, kind: BlockKind.paragraph,
+        text: List.filled(100, 'Текст тут ').join())], notes: const {});
+
 Future<ReaderScreenState> openAt(WidgetTester tester, Prototype p, Book book, ReadingPosition at) async {
   p.library.savePosition(book.id, at);
   tester.state<NavigatorState>(find.byType(Navigator).first).push(
@@ -52,30 +59,31 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('3 миллиона: ползунок 50 % открывает страницу сразу без измерения предшествующего текста', (tester) async {
+  testWidgets('3 миллиона: ползунок 50 % считает только целевой блок, не предыдущие главы', (tester) async {
     final p = await pumpPrototype(tester);
-    final book = millionBook();
+    final book = millionParagraphBook();
     final st = await openAt(tester, p, book, const ReadingPosition(0, 0));
     await tester.pump(const Duration(milliseconds: 360));
     await tester.tapAt(tester.getRect(find.byKey(const Key('page-area'))).center);
     await tester.pump();
     measured.clear();
-    tester.widget<Slider>(find.byKey(const Key('book-slider'))).onChangeEnd!(0.5);
+    const fraction = 0.500123;
+    final target = book.placeAt(fraction);
+    tester.widget<Slider>(find.byKey(const Key('book-slider'))).onChangeEnd!(fraction);
     await tester.pump();
     expect(measured, isNotEmpty, reason: 'целевая страница считается в этой команде, а не ждёт хвоста очереди');
-    expect(measured.every((r) => r.$2 >= 1500000), isTrue);
+    expect(measured.every((r) => r.$1 >= target.$1), isTrue);
     expect(measured.fold(0, (n, r) => n + r.$3 - r.$2), lessThan(16384));
-    expect(st.layout.pages[st.page].firstOffset, 1500000);
-    expect(p.library.positionOf(book.id)?.offset, 1500000);
+    final page = st.layout.pages[st.page];
+    expect(page.contains(target.$1, target.$2), isTrue);
+    expect((page.firstBlock, page.firstOffset), (target.$1, 0));
+    expect(p.library.positionOf(book.id), ReadingPosition(page.firstBlock, page.firstOffset));
     await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('далёкие оглавление, голос и возврат к голосу начинают страницу от места', (tester) async {
     final p = await pumpPrototype(tester);
-    final text = millionBook().blocks.single.text.substring(0, 1000000);
-    final book = Book(id: 'million-chapters', title: 'Главы', author: '', language: 'ru',
-        chapters: [for (var i = 0; i < 3; i++) Chapter(title: 'Глава $i', level: 1, firstBlock: i, blockCount: 1)],
-        blocks: [for (var i = 0; i < 3; i++) Block(index: i, kind: BlockKind.paragraph, text: text)], notes: const {});
+    final book = millionParagraphBook();
     final st = await openAt(tester, p, book, const ReadingPosition(0, 0));
     await tester.pump(const Duration(milliseconds: 360));
     await tester.tapAt(tester.getRect(find.byKey(const Key('page-area'))).center);
@@ -86,19 +94,20 @@ void main() {
     await tester.tap(find.byKey(const Key('chapter-2')));
     await tester.pump();
     await tester.pump();
-    expect((st.layout.pages[st.page].firstBlock, st.layout.pages[st.page].firstOffset), (2, 0));
+    expect((st.layout.pages[st.page].firstBlock, st.layout.pages[st.page].firstOffset), (2000, 0));
     expect(measured, isNotEmpty);
-    expect(measured.every((r) => r.$1 == 2), isTrue);
+    expect(measured.every((r) => r.$1 >= 2000), isTrue);
     expect(measured.fold(0, (n, r) => n + r.$3 - r.$2), lessThan(16384));
     measured.clear();
     p.narration.demoShow('paused', book: book, fromBlock: 0);
     await tester.pump();
     await tester.pump();
     final sound = st.soundingPosition!;
-    expect((st.layout.pages[st.page].firstBlock, st.layout.pages[st.page].firstOffset), (0, sound.offset));
-    expect(measured.every((r) => r.$1 == 0 && r.$2 >= sound.offset), isTrue);
+    expect((st.layout.pages[st.page].firstBlock, st.layout.pages[st.page].firstOffset), (0, 0));
+    expect(st.layout.pages[st.page].contains(0, sound.offset), isTrue);
+    expect(measured.every((r) => r.$1 < 2), isTrue);
     expect(measured.fold(0, (n, r) => n + r.$3 - r.$2), lessThan(32768));
-    st.goToPosition(const ReadingPosition(2, 700000));
+    st.goToPosition(const ReadingPosition(2700, 700));
     await tester.pump();
     await tester.pump();
     expect(st.following, isFalse);
@@ -107,9 +116,10 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(st.following, isTrue);
-    expect(st.layout.pages[st.page].firstOffset, sound.offset);
+    expect(st.layout.pages[st.page].firstOffset, 0);
+    expect(st.layout.pages[st.page].contains(0, sound.offset), isTrue);
     expect(measured, isNotEmpty);
-    expect(measured.every((r) => r.$1 == 0 && r.$2 >= sound.offset), isTrue);
+    expect(measured.every((r) => r.$1 < 2), isTrue);
     expect(measured.fold(0, (n, r) => n + r.$3 - r.$2), lessThan(32768));
     await tester.pumpWidget(const SizedBox());
   });
