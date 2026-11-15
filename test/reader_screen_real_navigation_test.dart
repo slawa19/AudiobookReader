@@ -40,11 +40,11 @@ class DelayedPlayer extends FakePlayer {
   }
 }
 
-// Обычная проза: 12 абзацев по 2400 знаков, начала отрезков внутри строк.
-List<int> navigationBook() => utf8.encode('''<?xml version="1.0" encoding="utf-8"?>
+// Обычная проза: по умолчанию 12 абзацев по 2400 знаков, начала отрезков внутри строк.
+List<int> navigationBook({int repetitions = 14}) => utf8.encode('''<?xml version="1.0" encoding="utf-8"?>
 <FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
 <description><title-info><book-title>Переходы по прозе</book-title><lang>ru</lang></title-info></description>
-<body><section>${List.generate(12, (b) => '<p>${List.generate(14, (s) => 'Утром путешественник $b осмотрел дорогу и продолжил путь. Вдали показались деревья, за которыми открывалась широкая долина. Он остановился у реки и посмотрел на другой берег.').join(' ')}</p>').join()}</section></body></FictionBook>''');
+<body><section>${List.generate(12, (b) => '<p>${List.generate(repetitions, (s) => 'Утром путешественник $b осмотрел дорогу и продолжил путь. Вдали показались деревья, за которыми открывалась широкая долина. Он остановился у реки и посмотрел на другой берег.').join(' ')}</p>').join()}</section></body></FictionBook>''');
 
 /// Инвариант экрана для прозы: если глава ещё продолжается, следующая строка не помещается.
 /// Конец главы/книги разрешает короткую страницу; искусственное место старта — нет.
@@ -74,13 +74,14 @@ void expectFollowingPage(WidgetTester tester) {
   expect(find.byKey(ValueKey('hl-${fragment.block}-${fragment.start}')), findsWidgets);
 }
 
-Future<AppHarness> listeningApp(WidgetTester tester, {bool delayed = false, bool narrow = false}) async {
+Future<AppHarness> listeningApp(WidgetTester tester,
+    {bool delayed = false, bool narrow = false, List<int>? bookBytes}) async {
   final h = AppHarness(tester);
   final player = delayed ? DelayedPlayer(clock: h.playbackClock) : null;
   await h.start(fakeTts: true, playerPort: player);
   if (player != null) addTearDown(player.dispose);
   if (narrow) tester.view.physicalSize = const Size(320, 800);
-  final file = await h.copy(navigationBook());
+  final file = await h.copy(bookBytes ?? navigationBook());
   h.files.events.add(file);
   await h.opened();
   await h.deleted(file);
@@ -115,10 +116,16 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('настоящий контроллер: вперёд отменяет незавершённое ручное листание', (tester) async {
+  testWidgets('настоящий контроллер: назад на текущую страницу отменяет незавершённое ручное листание', (tester) async {
     final h = await listeningApp(tester);
     await h.until(() => h.app.queue.inFlight == 0);
+    h.playbackClock.advance(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
     final st = reader(tester);
+    final original = st.layout.pages[st.page];
+    final at = st.soundingPosition!;
+    expect(at.offset, greaterThan(0));
+    expect(original.contains(at.block, 0), isTrue, reason: 'назад перезапустит тот же абзац на исходной странице');
     final area = tester.getRect(find.byKey(const Key('page-area')));
     await tester.tapAt(Offset(area.right - 12, 300));
     await tester.pump();
@@ -126,8 +133,9 @@ void main() {
     final pc = tester.widget<PageView>(find.byType(PageView)).controller!;
     expect(pc.page, greaterThan(st.page), reason: 'ручная анимация уже идёт');
     final revision = h.app.services.narration.commandRevision;
-    await tester.tap(find.byKey(const Key('next')));
+    await tester.tap(find.byKey(const Key('previous')));
     expect(h.app.services.narration.commandRevision, revision + 1);
+    expect(h.app.services.narration.unitStart, ReadingPosition(at.block, 0));
     // Медленный кадр: прежний переворот завершится раньше замера высоты preparing.
     await tester.pump(const Duration(milliseconds: 400));
     await h.until(() => h.player.playing);
