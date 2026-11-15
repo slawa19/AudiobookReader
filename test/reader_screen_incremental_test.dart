@@ -223,7 +223,7 @@ void main() {
     final target = book.placeAt(0.95);
     expect(st.layout.findPage(target.$1, target.$2), isNull);
     tester.widget<Slider>(find.byKey(const Key('book-slider'))).onChangeEnd!(0.95);
-    tester.widget<FilledButton>(find.byKey(const Key('to-reading-place'))).onPressed!();
+    tester.widget<IconButton>(find.byKey(const Key('to-reading-place'))).onPressed!();
     await tester.pump(const Duration(milliseconds: 2));
     expect(st.following, isTrue);
     expect(st.layout.pages[st.page].contains(sounding.block, sounding.offset), isTrue,
@@ -231,7 +231,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('изменение высоты панели не теряет ожидаемый переход ползунка', (tester) async {
+  testWidgets('постоянная высота панели сохраняет ожидаемый переход ползунка', (tester) async {
     final (p, book, st) = await openLong(tester, narrow: true);
     p.narration.demoShow('paused', book: book);
     await tester.pump();
@@ -247,7 +247,7 @@ void main() {
     await until(tester, () => st.layout.findPage(target.$1, target.$2) != null);
     await tester.pump();
     await tester.pump();
-    expect(st.pagePadding.bottom, greaterThan(before), reason: 'кнопка действительно увеличила панель');
+    expect(st.pagePadding.bottom, before, reason: 'значок не меняет высоту панели');
     expect(st.layout.pages[st.page].contains(target.$1, target.$2), isTrue);
     expect(st.following, isFalse);
     await tester.pumpWidget(const SizedBox());

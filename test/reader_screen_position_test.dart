@@ -112,7 +112,7 @@ void main() {
     await tester.pump();
     expect(st.following, isFalse);
     measured.clear();
-    tester.widget<FilledButton>(find.byKey(const Key('to-reading-place'))).onPressed!();
+    tester.widget<IconButton>(find.byKey(const Key('to-reading-place'))).onPressed!();
     await tester.pump();
     await tester.pump();
     expect(st.following, isTrue);
