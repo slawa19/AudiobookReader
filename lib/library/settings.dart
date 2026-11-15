@@ -18,7 +18,7 @@ const defaultFontStep = 2;
 /// Скорости плеера (FR-P5).
 const speeds = <double>[0.75, 1, 1.25, 1.5, 1.75, 2];
 
-/// Настройки приложения (А§4: обычное хранилище настроек). В прототипе живут в памяти.
+/// Настройки приложения (А§4). FileLibrary сохраняет их в settings.json; прототип — в памяти.
 ///
 /// Голос и модель хранятся строками: `library` не знает модуля `tts` (А§2). Умолчания передаёт `app`.
 class AppSettings extends ChangeNotifier {
@@ -41,6 +41,26 @@ class AppSettings extends ChangeNotifier {
   /// Язык интерфейса: код языка или `null` — «Как в системе» (язык телефона; не из поддерживаемых — английский).
   String? get language => _language;
 
+  /// Ключ сюда не попадает: его хранение — отдельная задача платформы.
+  Map<String, Object?> toJson() => {
+    'theme': theme.name,
+    'fontStep': fontStep,
+    'speed': speed,
+    'voice': voice,
+    'modelId': modelId,
+    'language': language,
+  };
+
+  void restore(Map<String, Object?> json) {
+    _theme = ThemeChoice.values.byName(json['theme']! as String);
+    _fontStep = (json['fontStep']! as int).clamp(0, fontSteps.length - 1);
+    _speed = (json['speed']! as num).toDouble();
+    _voice = json['voice']! as String;
+    _modelId = json['modelId']! as String;
+    _language = json['language'] as String?;
+    notifyListeners();
+  }
+
   /// Ключ в настоящем приложении лежит в защищённом хранилище; экрану нужен только хвост — не больше четырёх
   /// последних знаков, у короткого ключа — сколько есть.
   bool get hasApiKey => _apiKey != null && _apiKey!.isNotEmpty;
@@ -52,11 +72,13 @@ class AppSettings extends ChangeNotifier {
 
   set theme(ThemeChoice v) => _set(() => _theme = v);
   set language(String? v) => _set(() => _language = v);
-  set fontStep(int v) => _set(() => _fontStep = v.clamp(0, fontSteps.length - 1));
+  set fontStep(int v) =>
+      _set(() => _fontStep = v.clamp(0, fontSteps.length - 1));
   set speed(double v) => _set(() => _speed = v);
   set voice(String v) => _set(() => _voice = v);
   set modelId(String v) => _set(() => _modelId = v);
-  set apiKey(String? v) => _set(() => _apiKey = (v == null || v.trim().isEmpty) ? null : v.trim());
+  set apiKey(String? v) =>
+      _set(() => _apiKey = (v == null || v.trim().isEmpty) ? null : v.trim());
 
   void _set(void Function() f) {
     f();

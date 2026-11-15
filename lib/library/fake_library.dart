@@ -150,7 +150,7 @@ class FakeLibrary extends Library {
   }
 
   @override
-  void deleteBook(String bookId) {
+  Future<void> deleteBook(String bookId) async {
     _entries.removeWhere((e) => e.id == bookId);
     _positions.remove(bookId);
     _listening.remove(bookId);
