@@ -212,7 +212,8 @@ class ReaderScreenState extends State<ReaderScreen> {
     _resetPages();
     _markLastAfterFrame();
     final generation = _generation;
-    if (savePosition) {
+    // При stopped позиция контроллера остаётся до явного перемещения читателем (А§5).
+    if (savePosition && !_mine) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && generation == _generation) _saveScreenPosition();
       });
