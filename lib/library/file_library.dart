@@ -75,6 +75,7 @@ class FileLibrary extends Library {
   final Map<String, Future<Book>> _loads = {};
   final Map<String, Future<ShelfEntry?>> _adding = {};
   final List<AddJob> _jobs = [];
+  Map<DateTime, Map<String, UsageTokens>> _usage = {};
   final Set<String> _dirty = {};
   Future<void> _writer = Future.value();
   Object? _writeError;
@@ -102,6 +103,30 @@ class FileLibrary extends Library {
         // Корень JSON должен быть объектом настроек.
       }
     }
+    await settings.loadApiKey();
+    try {
+      final json = await _json(File('${root.path}/usage.json'));
+      final loaded = <DateTime, Map<String, UsageTokens>>{};
+      for (final entry in json.entries) {
+        final month = DateTime.parse('${entry.key}-01');
+        if (entry.key != _monthKey(month)) {
+          throw const FormatException('Неверный месяц расхода');
+        }
+        loaded[month] = {
+          for (final model in (entry.value! as Map<String, Object?>).entries)
+            model.key: UsageTokens.fromJson(
+              model.value! as Map<String, Object?>,
+            ),
+        };
+      }
+      _usage = loaded;
+    } on FormatException {
+      // Оборванный или неверный файл расхода не лишает пользователя полки.
+    } on TypeError {
+      // Схема расхода повреждена — начинаем с нуля.
+    } on FileSystemException {
+      // Отсутствующий или нечитаемый файл равнозначен пустому расходу.
+    }
     await for (final dir in books.list()) {
       if (dir is! Directory) continue;
       try {
@@ -122,6 +147,55 @@ class FileLibrary extends Library {
   void _settingsChanged() {
     _settingsDirty = true;
     _requestWrite();
+  }
+
+  @override
+  Map<DateTime, Map<String, UsageTokens>> get usage => Map.unmodifiable({
+    for (final month in _usage.entries)
+      month.key: Map<String, UsageTokens>.unmodifiable(month.value),
+  });
+
+  static String _monthKey(DateTime month) =>
+      '${month.year.toString().padLeft(4, '0')}-${month.month.toString().padLeft(2, '0')}';
+
+  @override
+  Future<void> recordUsage({
+    required String modelId,
+    required int audioTokens,
+    required int inputTokens,
+    DateTime? at,
+  }) async {
+    // Момент фиксируется до ожидания запуска и писателя, а не по времени записи.
+    final local = (at ?? _clock()).toLocal();
+    final month = DateTime(local.year, local.month);
+    if (audioTokens < 0 || inputTokens < 0) {
+      throw ArgumentError('Число токенов не может быть отрицательным');
+    }
+    await ready;
+    if (_closed) throw StateError('Библиотека закрыта');
+    await _enqueue(() async {
+      final previous = _usage[month]?[modelId];
+      final next = {
+        ..._usage,
+        month: {
+          ...?_usage[month],
+          modelId: UsageTokens(
+            audioTokens: (previous?.audioTokens ?? 0) + audioTokens,
+            inputTokens: (previous?.inputTokens ?? 0) + inputTokens,
+          ),
+        },
+      };
+      await _atomic(File('${root.path}/usage.json'), {
+        for (final entry in next.entries)
+          _monthKey(entry.key): {
+            for (final model in entry.value.entries)
+              model.key: model.value.toJson(),
+          },
+      });
+      // Неудавшаяся запись не меняет счётчики в памяти; повтор не удвоит расход.
+      _usage = next;
+      if (!_closed) notifyListeners();
+    });
   }
 
   @override
@@ -482,14 +556,18 @@ class FileLibrary extends Library {
     await ready;
     _pending?.cancel();
     _pending = null;
-    await _enqueue(() async {
-      final error = _writeError;
-      final stack = _writeStack;
-      _writeError = null;
-      _writeStack = null;
-      if (error != null) Error.throwWithStackTrace(error, stack!);
-      await _writeDirty(force: true);
-    });
+    // Сбой хранилища ключа не мешает дописать позицию и обычные настройки.
+    await Future.wait([
+      settings.flushApiKey(),
+      _enqueue(() async {
+        final error = _writeError;
+        final stack = _writeStack;
+        _writeError = null;
+        _writeStack = null;
+        if (error != null) Error.throwWithStackTrace(error, stack!);
+        await _writeDirty(force: true);
+      }),
+    ]);
   }
 
   @override
