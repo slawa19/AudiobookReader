@@ -9,7 +9,7 @@ import 'content.dart';
 import 'model.dart';
 import 'xml.dart';
 
-const currentParserVersion = 2;
+const currentParserVersion = 3;
 
 enum SourceFormat {
   fb2('fb2'),
@@ -196,11 +196,14 @@ ParsedBook _fb(XmlElement root, String id, SourceFormat format) {
       final key = section.attr('id');
       if (key == null) continue;
       final b = builder();
-      for (final child
-          in b
-              .contentChildren(section)
-              .whereType<XmlElement>()
-              .where((e) => e.local != 'section')) {
+      final children = b
+          .contentChildren(section)
+          .whereType<XmlElement>()
+          .where((e) => e.local != 'section')
+          .toList();
+      // `title` раздела сноски — её знак («1»), а не текст: в сноску не идёт, пока у неё есть другой текст.
+      final body = children.where((e) => e.local != 'title').toList();
+      for (final child in body.isEmpty ? children : body) {
         b.render(child);
       }
       notes[key] = Note(id: key, blocks: b.blocks);
