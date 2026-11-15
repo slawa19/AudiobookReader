@@ -12,8 +12,11 @@
 1. код и история git;
 2. [docs/WHERE_WE_ARE.md](docs/WHERE_WE_ARE.md) — что сделано и что дальше; читать первым;
 3. [docs/CONCEPT.md](docs/CONCEPT.md) — что строим и чего не строим;
-4. [docs/GEMINI_TTS.md](docs/GEMINI_TTS.md) — как вызывать Gemini и сколько это стоит;
-5. макет интерфейса (появится в `docs/mockup/`).
+4. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) и действующая спека в `docs/specs/` — как устроено и что требуется;
+5. [docs/GEMINI_TTS.md](docs/GEMINI_TTS.md) — как вызывать Gemini и сколько это стоит;
+6. прототип экранов ([docs/prototype/README.md](docs/prototype/README.md)) — вид интерфейса.
+
+Указатель всех документов — [docs/README.md](docs/README.md).
 
 Markdown отстаёт от кода. Если документ и код расходятся, прав код, а документ правится тем же коммитом.
 
