@@ -58,23 +58,14 @@ void main() {
       );
     }
   });
-  test('FR-B2: TXT определяется по первым 64КБ и сейчас не разбирается', () {
+  test('FR-B2/B5: TXT определяется по первым 64КБ и разбирается', () {
     for (final bytes in [
       utf8.encode('Текст.'),
       [9, 10, 13, 65],
       [...List.filled(65536, 65), 0],
     ]) {
       expect(detectFormat(bytes), SourceFormat.txt);
-      expect(
-        () => parseBook(bytes),
-        throwsA(
-          isA<BookParseException>().having(
-            (e) => e.reason,
-            'reason',
-            ParseFailure.unsupported,
-          ),
-        ),
-      );
+      expect(checked(bytes).format, SourceFormat.txt);
     }
     expect(
       () => detectFormat([...List.filled(65535, 65), 8]),

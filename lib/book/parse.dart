@@ -82,7 +82,7 @@ bool _fb2(String text) =>
           .replaceFirst(RegExp(r'<!DOCTYPE[^>]*>'), ''),
     );
 
-/// Определяет также TXT; разбор TXT в первой версии этого модуля ещё не включён.
+/// Определяет формат по содержимому, независимо от имени файла (А§3).
 SourceFormat detectFormat(List<int> bytes) {
   try {
     if (_zip(bytes)) return _archiveFormat(_unzip(bytes));
@@ -113,10 +113,9 @@ ParsedBook parseBook(List<int> bytes) {
     final files = _zip(bytes) ? _unzip(bytes) : null;
     final format = files == null ? detectFormat(bytes) : _archiveFormat(files);
     final id = sha256.convert(bytes).toString().substring(0, 12);
-    if (format == SourceFormat.txt) {
-      throw const BookParseException(ParseFailure.unsupported);
-    }
-    final result = format == SourceFormat.epub
+    final result = format == SourceFormat.txt
+        ? _txt(bytes, id)
+        : format == SourceFormat.epub
         ? _epub(files!, id)
         : _fb(
             parseXml(
@@ -144,6 +143,60 @@ ParsedBook parseBook(List<int> bytes) {
   } catch (e) {
     throw BookParseException(ParseFailure.unreadable, e.toString());
   }
+}
+
+ParsedBook _txt(List<int> bytes, String id) {
+  final bom =
+      bytes.length >= 3 &&
+      bytes[0] == 239 &&
+      bytes[1] == 187 &&
+      bytes[2] == 191;
+  final content = bom ? bytes.sublist(3) : bytes;
+  String text;
+  try {
+    text = utf8.decode(bytes);
+  } on FormatException {
+    text = decodeWindows1251(content);
+  }
+  final lines = text.split(RegExp(r'\r\n|\r|\n')).map((s) => s.trim()).toList();
+  // Только пустая строка МЕЖДУ строками текста включает склейку абзацев.
+  final first = lines.indexWhere((s) => s.isNotEmpty);
+  final last = lines.lastIndexWhere((s) => s.isNotEmpty);
+  final separated = first >= 0 && lines.sublist(first, last + 1).contains('');
+  final paragraphs = <String>[];
+  final pending = <String>[];
+  void flush() {
+    if (pending.isNotEmpty) paragraphs.add(pending.join(' '));
+    pending.clear();
+  }
+
+  for (final line in lines) {
+    if (line.isEmpty) {
+      flush();
+    } else if (separated) {
+      pending.add(line);
+    } else {
+      paragraphs.add(line);
+    }
+  }
+  flush();
+  return ParsedBook(
+    book: Book(
+      id: id,
+      title: '',
+      author: '',
+      language: '',
+      chapters: const [],
+      blocks: [
+        for (var i = 0; i < paragraphs.length; i++)
+          Block(index: i, kind: BlockKind.paragraph, text: paragraphs[i]),
+      ],
+      notes: const {},
+      parserVersion: currentParserVersion,
+    ),
+    format: SourceFormat.txt,
+    images: const {},
+  );
 }
 
 ParsedBook _fb(XmlElement root, String id, SourceFormat format) {

@@ -48,6 +48,27 @@ Future<void> _writeBook(String path, Book book) => Isolate.run(() async {
   await temp.rename(path);
 });
 
+// У TXT нет метаданных: имя приходит от провайдера, а не от временной копии.
+ParsedBook _txtTitle(ParsedBook parsed, String title) {
+  if (parsed.format != SourceFormat.txt) return parsed;
+  final book = parsed.book;
+  return ParsedBook(
+    book: Book(
+      id: book.id,
+      title: title,
+      author: book.author,
+      language: book.language,
+      chapters: book.chapters,
+      blocks: book.blocks,
+      notes: book.notes,
+      parserVersion: book.parserVersion,
+    ),
+    format: parsed.format,
+    images: parsed.images,
+    cover: parsed.cover,
+  );
+}
+
 /// Файловая полка этапа 1. После конструктора нужно дождаться [ready].
 /// Перед записью позиций книга должна быть открыта через [loadBook].
 /// [parser], [clock] и [timer] подставляются в тестах; обычный разбор идёт в Isolate.run.
@@ -257,7 +278,10 @@ class FileLibrary extends Library {
     try {
       work = await Directory('${root.path}/tmp').createTemp('add-');
       final source = await File(path).copy('${work.path}/source');
-      final parsed = await _parser(source.path);
+      final parsed = _txtTitle(
+        await _parser(source.path),
+        fileName.replaceFirst(RegExp(r'\.[^.]*$'), ''),
+      );
       if (_closed) return null;
       await source.rename('${work.path}/original.${parsed.format.extension}');
       await _writeBook('${work.path}/book.json', parsed.book);
@@ -362,7 +386,10 @@ class FileLibrary extends Library {
             (f) => f is File && f.uri.pathSegments.last.startsWith('original.'),
           )
           .first;
-      final parsed = await _parser(original.path);
+      final parsed = _txtTitle(
+        await _parser(original.path),
+        stored.meta['title']! as String,
+      );
       book = parsed.book;
       final next = book;
       await _enqueue(() async {
