@@ -158,9 +158,11 @@ void main() {
       expect(h.engine.calls.map((c) => c.text), ['Первая.', 'Продолжение.']);
       await h.release(0);
       await h.release(1);
+      // Часы двигаем, только когда оба файла уже в плеере: на медленной машине (CI, 2026-11-15) запись звука
+      // не успевала за фиксированной паузой, и время уходило раньше, чем было что доигрывать.
+      await until(() => h.player.playing && h.player.items.length >= 2, 'оба отрезка в плеере');
       h.clock.advance(const Duration(seconds: 3));
-      await ioSettled();
-      expect(c.state, NarrationState.paused);
+      await until(() => c.state == NarrationState.paused, 'пауза в конце главы');
       expect(c.unitStart, const ReadingPosition(2, 0));
       expect(c.sleepTimer, isNull);
       expect(h.engine.calls.length, 2);
