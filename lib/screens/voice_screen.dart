@@ -157,7 +157,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
                 progress: s.sampler.progress,
                 onPressed: () => sampling == SampleState.loading || sampling == SampleState.playing
                     ? s.sampler.stop()
-                    : s.sampler.play(VoiceProfile(voice: v.name, modelId: s.settings.modelId),
+                    : s.sampler.play(VoiceProfile(voiceId: v.name, model: s.settings.modelId),
                         bookLanguage: _language(context)),
               ),
             );

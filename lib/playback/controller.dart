@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import '../book/model.dart';
 import '../library/library.dart';
 import '../library/settings.dart';
-import '../tts/book_language.dart';
 import '../tts/engine.dart';
 import '../tts/segments.dart';
 import '../tts/sentences.dart';
@@ -132,11 +131,7 @@ class FileNarrationController extends NarrationController {
     super.notifyListeners();
   }
 
-  VoiceProfile profileFor(Book book) => VoiceProfile(
-    model: settings.modelId,
-    voiceId: library.bookVoice(book.id) ?? settings.voice,
-    style: readingStyleFor(book.language),
-  );
+  VoiceProfile profileFor(Book book) => bookVoiceProfile(book, library, settings);
 
   void _command() {
     _commands++;

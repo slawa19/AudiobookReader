@@ -72,7 +72,7 @@ class FakeVoiceSampler extends VoiceSampler {
 
   @override
   void play(VoiceProfile profile, {required String bookLanguage}) {
-    final voice = profile.voice;
+    final voice = profile.voiceId;
     _timer?.cancel();
     _voice = voice;
     _progress = 0;

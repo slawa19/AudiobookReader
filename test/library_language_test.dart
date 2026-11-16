@@ -36,8 +36,8 @@ List<int> sample(String format, {String language = ''}) => switch (format) {
 String audioKey(Book book) => fingerprint(
   book.blocks.first.text,
   VoiceProfile(
-    voice: 'default',
-    modelId: 'model',
+    voiceId: 'default',
+    model: 'model',
     style: readingStyleFor(book.language),
   ),
   'wav',

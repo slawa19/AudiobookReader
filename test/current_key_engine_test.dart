@@ -19,7 +19,7 @@ void main() {
     });
     addTearDown(transport.close);
     final engine = CurrentKeyEngine(settings, transport);
-    final profile = VoiceProfile(voice: 'Aoede', modelId: TtsModel.flash.id);
+    final profile = VoiceProfile(voiceId: 'Aoede', model: TtsModel.flash.id);
     for (final key in ['first-test-key', 'replacement-test-key']) {
       settings.apiKey = key;
       await expectLater(
