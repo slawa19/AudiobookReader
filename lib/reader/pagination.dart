@@ -49,7 +49,6 @@ class BookPageLayout {
   int get lastBlock => fragments.last.block;
   int get lastEnd => fragments.last.end;
 
-  bool containsBlock(int block) => block >= firstBlock && block <= lastBlock;
 
   /// Стоит ли место (блок, смещение) на этой странице.
   bool contains(int block, int offset) {

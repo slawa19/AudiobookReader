@@ -222,16 +222,6 @@ class FakeChapterDownloads extends ChapterDownloads {
     notifyListeners();
   }
 
-  /// Только для показа и тестов: постоянная ошибка идущей задачи.
-  void demoFail(String googleMessage) {
-    final t = _task;
-    if (t == null) return;
-    _timer?.cancel();
-    t.status = DownloadStatus.failed;
-    t.googleMessage = googleMessage;
-    notifyListeners();
-  }
-
   @override
   void dispose() {
     settings.removeListener(profileChanged);
