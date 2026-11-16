@@ -386,6 +386,8 @@ class FileLibrary extends Library {
     };
   }
 
+  Book? cachedBook(String bookId) => _books[bookId];
+
   @override
   Future<Book> loadBook(String bookId) async {
     await ready;
