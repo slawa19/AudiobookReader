@@ -1,4 +1,5 @@
 import 'package:audiobook_reader/app/screen_awake.dart';
+import 'package:audiobook_reader/app/media_lifecycle.dart';
 import 'package:audiobook_reader/platform/external_links.dart';
 import 'package:audiobook_reader/platform/media_service.dart';
 import 'package:audiobook_reader/platform/screen_awake.dart';
@@ -41,8 +42,10 @@ void main() {
       messenger.setMockMethodCallHandler(AndroidMediaService.channel, null);
       messenger.setMockMethodCallHandler(AndroidExternalLinks.channel, null);
     });
-    await AndroidMediaService.awaitForeground();
+    final lifecycle = AndroidMediaServiceLifecycle();
+    await lifecycle.awaitForeground();
+    await lifecycle.stopForeground();
     await AndroidExternalLinks.open('https://aistudio.google.com/billing');
-    expect(calls, ['awaitForeground', 'open']);
+    expect(calls, ['awaitForeground', 'stopForeground', 'open']);
   });
 }

@@ -21,8 +21,8 @@ class MediaStrings {
   final String channel, preparing, waiting, paused, ended, play, pause, previous, next;
 }
 
-/// Пауза оставляет foreground. При stopped штатный idle завершает службу;
-/// карточка может исчезнуть, сообщение остаётся на экране чтения.
+/// Пауза оставляет foreground. При idle/stopped обработчик явно снимает его
+/// через Android-мост: одного stopSelf в audio_service недостаточно при привязке.
 class NarrationMediaState {
   const NarrationMediaState(this.session, this.foreground, this.playing, this.processing, this.message);
   final bool session, foreground, playing;
@@ -58,9 +58,10 @@ class MediaCard {
   final Uri? art;
 }
 
-/// Порт ожидания подтверждения Android: фокус нельзя просить до startForeground.
+/// Порт службы Android: подтверждает foreground до фокуса и снимает при завершении.
 abstract interface class MediaServiceLifecycle {
   Future<void> awaitForeground();
+  Future<void> stopForeground();
 }
 
 /// Команды системы идут в тот же контроллер, что и команды экрана.
@@ -80,9 +81,10 @@ class NarrationMediaHandler extends BaseAudioHandler {
   final MediaServiceLifecycle lifecycle;
   bool _disposed = false;
   Object? _mediaKey, _stateKey;
+  Future<void>? _stopping;
 
   void publish() {
-    if (_disposed) return;
+    if (_disposed || _stopping != null) return;
     final text = strings();
     final state = mediaStateFor(
       controller.state,
@@ -91,7 +93,7 @@ class NarrationMediaHandler extends BaseAudioHandler {
       error: controller.error?.googleMessage,
     );
     final book = card();
-    final item = (!state.session && controller.state != NarrationState.stopped) || book == null
+    final item = !state.session || book == null
         ? null
         : MediaItem(
             id: book.id,
@@ -144,6 +146,7 @@ class NarrationMediaHandler extends BaseAudioHandler {
               action: MediaAction.skipToNext,
             ),
           ];
+    final ending = !state.session && playbackState.value.processingState != AudioProcessingState.idle;
     playbackState.add(
       PlaybackState(
         processingState: state.processing,
@@ -154,9 +157,19 @@ class NarrationMediaHandler extends BaseAudioHandler {
         speed: controller.speed,
       ),
     );
+    if (ending) {
+      // Мост ждёт native idle. Новый старт публикуется только после снятия
+      // foreground, иначе позднее завершение могло бы снять уже новую службу.
+      _stopping = lifecycle.stopForeground().whenComplete(() {
+        _stopping = null;
+        publish();
+      });
+      unawaited(_stopping);
+    }
   }
 
   Future<void> readyForFocus() async {
+    await _stopping;
     if (!controller.isActive || controller.state == NarrationState.paused) {
       return;
     }
@@ -178,7 +191,11 @@ class NarrationMediaHandler extends BaseAudioHandler {
   }
 
   @override
-  Future<void> stop() async => controller.close();
+  Future<void> stop() async {
+    controller.close();
+    await _stopping;
+  }
+
   @override
   Future<void> onTaskRemoved() async {
     // Смахивание окна не закрывает книгу и не останавливает службу.

@@ -9,6 +9,7 @@ import 'package:audiobook_reader/library/incoming_files.dart';
 import 'package:audiobook_reader/audio/wav_audio_encoder.dart';
 import 'package:audiobook_reader/playback/clock.dart';
 import 'package:audiobook_reader/playback/fake_player.dart';
+import 'package:audiobook_reader/playback/media_session.dart';
 import 'package:audiobook_reader/playback/screen_awake.dart';
 import 'package:audiobook_reader/playback/player.dart';
 import 'package:audiobook_reader/tts/fake_engine.dart';
@@ -130,6 +131,7 @@ class AppHarness {
       playbackClock: playbackClock,
       fakeTts: fakeTts,
       secretStore: secretStore,
+      mediaLifecycle: TestMediaServiceLifecycle(),
       screenAwake: screenAwake,
     );
   }
@@ -207,4 +209,11 @@ class TestScreenAwake implements ScreenAwakePort {
   final values = <bool>[];
   @override
   void setEnabled(bool enabled) => values.add(enabled);
+}
+
+class TestMediaServiceLifecycle implements MediaServiceLifecycle {
+  @override
+  Future<void> awaitForeground() async {}
+  @override
+  Future<void> stopForeground() async {}
 }
