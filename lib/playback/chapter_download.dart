@@ -5,10 +5,18 @@ import 'package:flutter/foundation.dart';
 
 import '../audio/audio_store.dart';
 import '../book/model.dart';
+import '../library/library.dart';
 import '../library/settings.dart';
+import '../tts/book_language.dart';
 import '../tts/engine.dart';
 import '../tts/voices.dart';
 import 'tariffs.dart';
+
+VoiceProfile bookVoiceProfile(Book book, Library library, AppSettings settings) => VoiceProfile(
+  voiceId: library.bookVoice(book.id) ?? settings.voice,
+  model: settings.modelId,
+  style: readingStyleFor(book.language),
+);
 
 enum DownloadStatus { running, failed }
 
@@ -84,7 +92,7 @@ class FakeChapterDownloads extends ChapterDownloads {
   }) {
     settings.addListener(profileChanged);
     for (final (book, chapter) in const [('dama', 1), ('dama', 2), ('kapitanskaya', 0)]) {
-      _voiced.add(_key(book, chapter, VoiceProfile(voice: settings.voice, modelId: settings.modelId)));
+      _voiced.add(_key(book, chapter, VoiceProfile(voiceId: settings.voice, model: settings.modelId)));
     }
   }
 
@@ -119,7 +127,7 @@ class FakeChapterDownloads extends ChapterDownloads {
 
   @override
   VoiceProfile profileFor(String bookId) =>
-      VoiceProfile(voice: bookVoice?.call(bookId) ?? settings.voice, modelId: settings.modelId);
+      VoiceProfile(voiceId: bookVoice?.call(bookId) ?? settings.voice, model: settings.modelId);
 
   /// Голос книги или модель могли смениться: задача чужого теперь профиля останавливается, готовое остаётся
   /// (правило g, принято владельцем 2026-11-14; FR-D2).
@@ -144,7 +152,7 @@ class FakeChapterDownloads extends ChapterDownloads {
   DownloadEstimate estimate(Book book, int chapter, VoiceProfile profile) {
     final key = _key(book.id, chapter, profile);
     final seconds = _voiced.contains(key) ? 0.0 : math.max(0.0, _chapterSeconds(book, chapter) - (_ready[key] ?? 0));
-    return DownloadEstimate(seconds, seconds / 3600 * tariffs.dollarsPerHour(TtsModel.byId(profile.modelId)));
+    return DownloadEstimate(seconds, seconds / 3600 * tariffs.dollarsPerHour(TtsModel.byId(profile.model)));
   }
 
   @override

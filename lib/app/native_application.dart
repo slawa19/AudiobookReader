@@ -63,12 +63,10 @@ class NativeApplication extends AppAssembly {
   late final SynthesisQueue queue;
   late final FileChapterDownloads downloads;
   late final ScreenAwakePort _screenAwake;
-  final _books = <String, Book>{};
   late final PlayerPort player, samplePlayer;
   late final NarrationMediaHandler media;
   NarrationAudioFocus? _focus;
   http.Client? _transport;
-  Book? _openedBook;
   Uri? _art;
 
   /// В тестах меняются только источник входящих файлов и каталог хранения.
@@ -153,7 +151,7 @@ class NativeApplication extends AppAssembly {
     downloads = FileChapterDownloads(
       queue: queue,
       tariffs: tariffs,
-      bookFor: (id) => _books[id] ?? (throw StateError('Книга не открыта: $id')),
+      bookFor: (id) => library.cachedBook(id) ?? (throw StateError('Книга не открыта: $id')),
       screenAwake: _screenAwake,
     );
     this.player = player ?? JustAudioPlayer(beforePlay: () async => await _focus?.activateNarration() ?? false);
@@ -225,7 +223,7 @@ class NativeApplication extends AppAssembly {
     final id = media.controller.bookId;
     if (id == null) return null;
     final entry = library.entry(id);
-    final book = _openedBook;
+    final book = library.cachedBook(id);
     final block = media.controller.block;
     return MediaCard(
       id: id,
@@ -377,8 +375,6 @@ class NativeApplication extends AppAssembly {
     if (opening != _opening) return;
     final navigator = _navigator?.currentState;
     if (navigator == null) return;
-    _openedBook = book;
-    _books[book.id] = book;
     // Обложка готова до нажатия «Слушать»: старт службы не ждёт рисования PNG.
     _art = await notificationArtwork(
       library.root,

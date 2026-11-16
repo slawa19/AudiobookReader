@@ -53,7 +53,7 @@ void main() {
     addTearDown(player.dispose);
     await h.start(fakeTts: true, samplePort: player);
     h.app.services.sampler.play(
-      VoiceProfile(voice: 'Aoede', modelId: TtsModel.flash.id),
+      VoiceProfile(voiceId: 'Aoede', model: TtsModel.flash.id),
       bookLanguage: 'en',
     );
     await h.until(() => player.playing);

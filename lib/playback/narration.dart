@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 
 import '../book/model.dart';
 import '../library/library.dart';
+import '../tts/segments.dart';
+import '../tts/sentences.dart';
 
 /// Состояния прослушивания — ровно таблица А§6.6, других нет.
 enum NarrationState { idle, preparing, playing, waiting, paused, stopped }
@@ -36,6 +38,31 @@ class PageRange {
   static bool _le(ReadingPosition a, ReadingPosition b) => a.block < b.block || (a.block == b.block && a.offset <= b.offset);
 
   bool contains(ReadingPosition p) => _le(start, p) && !_le(end, p);
+}
+
+/// Сохранённое место на странице, первое начинающееся на ней предложение или начало текущего.
+ReadingPosition listenStart(Book book, PageRange page, ReadingPosition? saved) {
+  if (saved != null && page.contains(saved)) return saved;
+  for (var i = page.start.block; i <= page.end.block && i < book.blocks.length; i++) {
+    final block = book.blocks[i];
+    if (!block.isSpoken) continue;
+    for (final offset in blockSentenceStarts(block)) {
+      final position = ReadingPosition(i, offset);
+      if (page.contains(position)) return position;
+    }
+  }
+  final block = book.blocks[page.start.block];
+  return ReadingPosition(block.index, blockSentenceStartAt(block, page.start.offset));
+}
+
+/// Те же правила пригодности текста, что у синтеза, включая сноски и блоки из одних знаков.
+int? spokenBlockFrom(Book book, int from, {required bool forward}) {
+  var i = from;
+  while (i >= 0 && i < book.blocks.length) {
+    if (chapterSegments([book.blocks[i]]).isNotEmpty) return i;
+    i += forward ? 1 : -1;
+  }
+  return null;
 }
 
 enum SleepKind { minutes, endOfChapter }

@@ -213,7 +213,7 @@ void main() {
           : 'Абзац 0. Текст книги для чтения. Текст книги для чтения. Текст книги…';
       await h.until(() => find.text(expected).evaluate().isNotEmpty);
       final shelfText = tester.widget<Text>(find.text(expected));
-      expect(shelfText.maxLines, titled ? 2 : 1);
+      expect(shelfText.maxLines, 2);
       expect(shelfText.overflow, TextOverflow.ellipsis);
       await tester.tap(find.text(book.title));
       await h.opened();
@@ -225,8 +225,8 @@ void main() {
       expect(header.overflow, TextOverflow.ellipsis);
       expect(
         h.app.library.shelf.single.chapterTitle,
-        titled ? expected : isEmpty,
-        reason: 'подпись формируется при показе, название в модели не меняется',
+        expected,
+        reason: 'библиотека сохраняет подпись вместе с позицией',
       );
     });
   }

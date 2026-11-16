@@ -591,7 +591,7 @@ void main() {
       const PageRange(ReadingPosition(0, 3), ReadingPosition(0, 45)),
     );
     await h.calls(2);
-    expect(h.engine.calls.first.profile.voice, 'Charon');
+    expect(h.engine.calls.first.profile.voiceId, 'Charon');
     expect(c.unitStart, const ReadingPosition(0, 20));
     c.pause();
     h.settings.voice = 'Kore';
@@ -610,7 +610,7 @@ void main() {
     c.resume();
     await h.calls(4);
     expect(h.engine.calls[2].text, secondSentence);
-    expect(h.engine.calls[2].profile.voice, 'Kore');
+    expect(h.engine.calls[2].profile.voiceId, 'Kore');
     expect(c.state, NarrationState.preparing);
     await h.release(2);
     expect(c.state, NarrationState.playing);

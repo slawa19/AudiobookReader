@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:material_ui/material_ui.dart';
 
-import '../book/model.dart';
 import '../library/library.dart';
 import '../reader/page_style.dart';
 import '../tts/voices.dart';
@@ -100,31 +99,6 @@ void setImmersive(bool hidden) {
     SchedulerBinding.instance.addPostFrameCallback((_) => apply());
     SchedulerBinding.instance.ensureVisualUpdate();
   }
-}
-
-/// Подпись только для показа: у безымянной главы — первый непустой блок её текста.
-/// Модель книги не меняется. Берём до 12 слов для однострочной подписи, чтобы
-/// шапка не раскладывала целиком блок в сотни тысяч знаков; виджет добавляет обрезку по ширине.
-String chapterLabel(Book book, int chapter, {bool includeParent = true}) {
-  final ch = book.chapters[chapter];
-  if (ch.title.trim().isEmpty) {
-    for (var i = ch.firstBlock; i < ch.endBlock; i++) {
-      final words = RegExp(r'\S+').allMatches(book.blocks[i].text).take(13).map((m) => m.group(0)!).toList();
-      if (words.isNotEmpty) {
-        return words.length > 12 ? '${words.take(12).join(' ')}…' : words.join(' ');
-      }
-    }
-    return '';
-  }
-  if (includeParent && ch.level > 1) {
-    for (var j = chapter - 1; j >= 0; j--) {
-      if (book.chapters[j].level < ch.level) {
-        final parent = book.chapters[j].title;
-        return parent.trim().isEmpty ? ch.title : '$parent · ${ch.title}';
-      }
-    }
-  }
-  return ch.title;
 }
 
 /// Объём на диске по локали: «96 МБ», «1,2 ГБ».

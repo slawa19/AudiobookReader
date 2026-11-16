@@ -60,7 +60,7 @@ void main() {
     expect(p.downloads.isVoiced('dama', 1, p.downloads.profileFor('dama')), isTrue);
     final book = await p.library.loadBook('dama');
     p.downloads.demoShow(book, 3, failed: false);
-    const kore = VoiceProfile(voice: 'Kore', modelId: 'gemini-3.8-flash-tts');
+    const kore = VoiceProfile(voiceId: 'Kore', model: 'gemini-3.8-flash-tts');
     p.sampler.play(kore, bookLanguage: 'ru');
     await advance(tester, const Duration(seconds: 5));
     p.sampler.stop();

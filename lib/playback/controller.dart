@@ -4,10 +4,8 @@ import 'dart:math' as math;
 import '../book/model.dart';
 import '../library/library.dart';
 import '../library/settings.dart';
-import '../tts/book_language.dart';
 import '../tts/engine.dart';
 import '../tts/segments.dart';
-import '../tts/sentences.dart';
 import '../tts/voices.dart';
 import 'chapter_download.dart';
 import 'clock.dart';
@@ -132,11 +130,7 @@ class FileNarrationController extends NarrationController {
     super.notifyListeners();
   }
 
-  VoiceProfile profileFor(Book book) => VoiceProfile(
-    model: settings.modelId,
-    voiceId: library.bookVoice(book.id) ?? settings.voice,
-    style: readingStyleFor(book.language),
-  );
+  VoiceProfile profileFor(Book book) => bookVoiceProfile(book, library, settings);
 
   void _command() {
     _commands++;
@@ -151,32 +145,7 @@ class FileNarrationController extends NarrationController {
   void listen(Book book, PageRange page) {
     if (!settings.hasApiKey) return;
     _command();
-    final saved = library.listeningPositionOf(book.id);
-    if (saved != null && page.contains(saved)) {
-      _begin(book, saved, true);
-      return;
-    }
-    for (
-      var i = page.start.block;
-      i <= page.end.block && i < book.blocks.length;
-      i++
-    ) {
-      final b = book.blocks[i];
-      if (!b.isSpoken) continue;
-      for (final offset in blockSentenceStarts(b)) {
-        final p = ReadingPosition(i, offset);
-        if (page.contains(p)) {
-          _begin(book, p, true);
-          return;
-        }
-      }
-    }
-    final b = book.blocks[page.start.block];
-    _begin(
-      book,
-      ReadingPosition(b.index, blockSentenceStartAt(b, page.start.offset)),
-      true,
-    );
+    _begin(book, listenStart(book, page, library.listeningPositionOf(book.id)), true);
   }
 
   ReadingPosition _first(SpeechSegment s) =>
@@ -385,13 +354,9 @@ class FileNarrationController extends NarrationController {
     final seconds = _position!.offset * secondsPerChar / speed;
     // Пауза посреди абзаца началом не считается: «назад» возвращает к началу этого абзаца.
     final atStart = !_heard || seconds < blockStartWindow.inMilliseconds / 1000;
-    var target = forward ? current + 1 : atStart ? current - 1 : current;
-    while (target >= 0 && target < book.blocks.length) {
-      // Те же правила пригодности текста, что у синтеза, включая сноски и блоки из одних знаков.
-      if (chapterSegments([book.blocks[target]]).isNotEmpty) break;
-      target += forward ? 1 : -1;
-    }
-    if (target < 0 || target >= book.blocks.length) return;
+    final from = forward ? current + 1 : atStart ? current - 1 : current;
+    final target = spokenBlockFrom(book, from, forward: forward);
+    if (target == null) return;
     _command();
     // Каноническое начало/части берутся из кэша; segmentsFrom нужен только для хвоста группы.
     _begin(book, ReadingPosition(target, 0), _intent);

@@ -1,5 +1,4 @@
 import '../book/model.dart';
-import '../tts/book_language.dart';
 import '../tts/engine.dart';
 import '../tts/segments.dart';
 import '../tts/voices.dart';
@@ -36,11 +35,7 @@ class FileChapterDownloads extends ChapterDownloads {
   ChapterDownloadTask? get task => _task;
 
   @override
-  VoiceProfile profileFor(String bookId) => VoiceProfile(
-    voiceId: queue.library.bookVoice(bookId) ?? queue.settings.voice,
-    model: queue.settings.modelId,
-    style: readingStyleFor(bookFor(bookId).language),
-  );
+  VoiceProfile profileFor(String bookId) => bookVoiceProfile(bookFor(bookId), queue.library, queue.settings);
 
   List<SpeechSegment> _segments(Book book, int chapter) {
     final ch = book.chapters[chapter];

@@ -52,11 +52,11 @@ class FileVoiceSampler extends VoiceSampler {
     if (!queue.settings.hasApiKey) return;
     stop();
     final session = _session;
-    _voice = profile.voice;
+    _voice = profile.voiceId;
     _state = SampleState.loading;
     final effective = VoiceProfile(
       model: profile.model,
-      voiceId: profile.voice,
+      voiceId: profile.voiceId,
       style: readingStyleFor(bookLanguage),
     );
     final request = queue.request(

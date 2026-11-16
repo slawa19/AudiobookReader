@@ -25,7 +25,7 @@ void main() {
     expect(changed.toSet().length, 5);
     expect(changed, everyElement(isNot(fp)));
     expect(fingerprint('Ре\u0301чь', p, 'pcm'), fingerprint('Речь', p, 'pcm'));
-    expect(p, const VoiceProfile(voice: 'v', modelId: 'm', style: 's'));
+    expect(p, const VoiceProfile(voiceId: 'v', model: 'm', style: 's'));
     expect(p.key, isNot(const VoiceProfile(model: 'm', voiceId: 'v', style: 'S').key));
   });
 

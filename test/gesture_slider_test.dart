@@ -1,9 +1,9 @@
 // Ползунок по книге пальцем: перетаскивание, за край, во время прослушивания (раздел C проверки жестов
 // 2026-11-14). Прежние тесты ползунка — одно касание дорожки.
 
+import 'package:audiobook_reader/book/model.dart';
 import 'package:audiobook_reader/library/library.dart';
 import 'package:audiobook_reader/playback/narration.dart';
-import 'package:audiobook_reader/screens/common.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 

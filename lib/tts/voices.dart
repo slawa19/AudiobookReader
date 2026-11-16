@@ -98,21 +98,13 @@ enum TtsModel {
   double dollarsPerHourAt(DateTime date) => dollarsPerHourNow * _tariffMultiplier(date);
 }
 
-/// Полный профиль звука. Старые имена параметров сохранены для потребителей прототипа.
+/// Полный профиль звука.
 class VoiceProfile {
-  const VoiceProfile({String? voiceId, String? model, String? voice, String? modelId, this.style = ''})
-    : assert(voiceId != null || voice != null),
-      assert(model != null || modelId != null),
-      assert(voiceId == null || voice == null || voiceId == voice),
-      assert(model == null || modelId == null || model == modelId),
-      voiceId = voiceId ?? voice ?? '',
-      model = model ?? modelId ?? '';
+  const VoiceProfile({required this.voiceId, required this.model, this.style = ''});
 
   final String voiceId;
   final String model;
   final String style;
-  String get voice => voiceId;
-  String get modelId => model;
 
   String get key => '${voiceId.length}:$voiceId${model.length}:$model${style.length}:$style';
 

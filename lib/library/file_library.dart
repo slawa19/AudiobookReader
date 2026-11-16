@@ -386,6 +386,8 @@ class FileLibrary extends Library {
     };
   }
 
+  Book? cachedBook(String bookId) => _books[bookId];
+
   @override
   Future<Book> loadBook(String bookId) async {
     await ready;
@@ -494,8 +496,12 @@ class FileLibrary extends Library {
     String bookId,
     ReadingPosition position, {
     double? fraction,
-    String? chapterTitle,
-  }) => _change(bookId, 'position', _at(_books[bookId]!, position).toJson());
+  }) {
+    final book = _books[bookId]!;
+    final at = _at(book, position);
+    _stored[bookId]!.state['chapterTitle'] = chapterLabel(book, book.chapterOf(at.block));
+    _change(bookId, 'position', at.toJson());
+  }
   @override
   void saveListeningPosition(String bookId, ReadingPosition position) =>
       _change(
@@ -697,20 +703,6 @@ class _StoredBook {
   void refresh(Directory dir) {
     final pos = position('position');
     final total = meta['totalChars']! as int;
-    final chapters = (meta['chapters']! as List)
-        .map((c) => Chapter.fromJson(c as Map<String, Object?>))
-        .toList();
-    final chapter = chapters.lastWhere(
-      (c) => c.firstBlock <= (pos?.block ?? 0),
-    );
-    var label = chapter.title;
-    final index = chapters.indexOf(chapter);
-    for (var i = index - 1; i >= 0; i--) {
-      if (chapters[i].level < chapter.level) {
-        label = '${chapters[i].title} · $label';
-        break;
-      }
-    }
     final opened = state['lastOpened'] as String?;
     entry = ShelfEntry(
       id: meta['id']! as String,
@@ -732,7 +724,7 @@ class _StoredBook {
               // Конец позиции сам по себе не означает «дочитана» (FR-L4).
               (total - 1) / total,
             ),
-      chapterTitle: label,
+      chapterTitle: state['chapterTitle'] as String? ?? '',
       bookBytes: bytes,
     );
   }
