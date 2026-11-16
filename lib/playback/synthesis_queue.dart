@@ -20,12 +20,11 @@ class SynthesisRequest {
     this.bookId,
     this.generation,
     this.bookGeneration,
-    this.session,
   );
   final String text, fingerprint;
   final VoiceProfile profile;
   final String? bookId;
-  final int generation, bookGeneration, session;
+  final int generation, bookGeneration;
 }
 
 /// Потребитель задаёт упорядоченный остаток работы, а не запускает сетевые вызовы.
@@ -34,13 +33,11 @@ class SynthesisRequest {
 class SynthesisTask {
   SynthesisTask._(
     this.queue,
-    this.session,
     this.changed,
     this.failed,
     this.canStart,
   );
   final SynthesisQueue queue;
-  final int session;
   final void Function() changed;
   final void Function(TtsError error) failed;
   // Только прослушивание ограничивает покупку; скачивание главы и проба — нет.
@@ -64,10 +61,9 @@ class SynthesisTask {
 }
 
 class _Retry {
-  _Retry(this.attempt, this.session);
+  _Retry(this.attempt);
   final int attempt;
   bool due = false;
-  final int session;
   Timer? timer;
 }
 
@@ -117,7 +113,6 @@ class SynthesisQueue {
     String text,
     VoiceProfile profile, {
     String? bookId,
-    int session = 0,
   }) => SynthesisRequest._(
     text,
     profile,
@@ -125,16 +120,14 @@ class SynthesisQueue {
     bookId,
     _generation,
     _bookGenerations[bookId] ?? 0,
-    session,
   );
 
   SynthesisTask task({
-    required int session,
     required void Function() changed,
     required void Function(TtsError) failed,
     bool Function(SynthesisRequest)? canStart,
   }) {
-    final task = SynthesisTask._(this, session, changed, failed, canStart);
+    final task = SynthesisTask._(this, changed, failed, canStart);
     _tasks.add(task);
     return task;
   }
@@ -282,7 +275,7 @@ class SynthesisQueue {
       if (failure is TemporaryTtsError) {
         if (_needs(r.fingerprint)) {
           final attempt = (_retries[r.fingerprint]?.attempt ?? -1) + 1;
-          final retry = _Retry(attempt, r.session);
+          final retry = _Retry(attempt);
           _retries[r.fingerprint] = retry;
           retry.timer = clock.schedule(_delay(attempt), () {
             retry.due = true;
