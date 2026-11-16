@@ -91,14 +91,18 @@ void main() {
     }
     final preparing = st.layout.pages[st.page];
     final stable = (preparing.firstBlock, preparing.firstOffset, preparing.lastBlock, preparing.lastEnd);
-    for (var frame = 0; frame < 140; frame++) {
-      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    final wait = Stopwatch()..start();
+    do {
+      if (wait.elapsed >= const Duration(seconds: 10)) {
+        fail('За 10 с озвучка не перешла в playing: ${h.app.services.narration.state}');
+      }
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
       await tester.pump(const Duration(milliseconds: 16));
       expect(st.columnSize.height, height);
       expect(tester.getRect(find.byKey(const Key('player-close'))), close);
       final p = st.layout.pages[st.page];
       expect((p.firstBlock, p.firstOffset, p.lastBlock, p.lastEnd), stable);
-    }
+    } while (h.app.services.narration.state != NarrationState.playing);
     expect(h.app.services.narration.state, NarrationState.playing);
     expect(tester.takeException(), isNull);
   });
