@@ -103,7 +103,7 @@ class FakeChapterDownloads extends ChapterDownloads {
   final String? Function(String bookId)? bookVoice;
 
   /// Подставное хранилище: готовый звук занимает место, иначе после «Очистить озвучку» новая озвучка не видна
-  /// ни в «Удалить озвучку», ни в настройках (№9 ревью логики).
+  /// ни в «Удалить озвучку», ни в настройках.
   final FakeAudioStore? audio;
 
   /// Байт сжатого звука на секунду (≈ 32 кбит/с).
