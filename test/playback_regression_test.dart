@@ -210,6 +210,22 @@ List<String> longChapter([int count = 14]) => [
   for (var i = 0; i < count; i++) '$i ${'word ' * 110}',
 ];
 
+// Файловый ввод-вывод идёт по настенным часам, таймеры и ответы — подставные.
+Future<void> untilWithProgress(
+  bool Function() condition,
+  void Function() progress,
+  String reason,
+) async {
+  final wait = Stopwatch()..start();
+  while (!condition()) {
+    if (wait.elapsed >= const Duration(seconds: 10)) {
+      fail('За 10 с не завершилась $reason');
+    }
+    progress();
+    await Future<void>.delayed(const Duration(milliseconds: 2));
+  }
+}
+
 void main() {
   test(
     'R9c ошибка до started оставляет preparing и восстанавливает файл',
@@ -223,10 +239,10 @@ void main() {
       );
       await h.cache('Книга.');
       h.controller.readFrom(h.book, 0);
-      await ioSettled();
+      await until(() => player.current != null, 'подготовка файла до started');
       expect(h.controller.state, NarrationState.preparing);
       player.failCurrent();
-      await ioSettled();
+      await h.calls(1);
       expect(h.controller.state, NarrationState.preparing);
       expect(h.engine.calls, hasLength(1));
       player.holdStart = false;
@@ -250,7 +266,10 @@ void main() {
       await h.cache('Первый.');
       await h.cache('Второй.');
       h.controller.readFrom(h.book, 0);
-      await ioSettled();
+      await until(
+        () => events.isNotEmpty && player.items.length == 2,
+        'событие плеера и оба файла в списке',
+      );
       final old = events.first;
       player.failCurrent();
       await h.calls(1);
@@ -340,7 +359,7 @@ void main() {
         engineFactory: UnknownFailureEngine.new,
       );
       h.controller.readFrom(h.book, 0);
-      await ioSettled();
+      await until(() => h.controller.error != null, 'ошибка синтеза');
       expect(
         h.controller.error!.googleMessage,
         'StateError: synthesis request failed',
@@ -360,16 +379,19 @@ void main() {
         await h.cache('Первый.');
         await h.cache('Второй.');
         h.controller.readFrom(h.book, 0);
-        await ioSettled();
+        await until(() => h.player.items.length == 2, 'оба файла в плеере');
         h.player.failCurrent();
-        await ioSettled();
+        await h.calls(1);
         expect(h.audio.has(h.key('Первый.'), bookId: h.book.id), isFalse);
         expect(h.engine.calls.map((c) => c.text), ['Первый.']);
         await h.release(0);
         expect(h.controller.state, NarrationState.playing);
         if (badAgain) {
           h.player.failCurrent();
-          await ioSettled();
+          await until(
+            () => h.controller.state == NarrationState.stopped,
+            'остановка после повторной ошибки плеера',
+          );
           expect(h.controller.state, NarrationState.stopped);
           expect(h.controller.unitStart, const ReadingPosition(0, 0));
           expect(
@@ -441,12 +463,18 @@ void main() {
       final d = await DownloadHarness.create(playbackBook([longChapter()]));
       final h = d.h;
       h.controller.readFrom(h.book, 0);
-      for (var turn = 0; turn < 10; turn++) {
-        for (final call in h.engine.calls.toList()) {
-          call.release();
-        }
-        await ioSettled();
-      }
+      await untilWithProgress(
+        () =>
+            h.controller.state == NarrationState.playing &&
+            h.player.items.fold(0, (s, i) => s + i.duration.inMilliseconds) >=
+                120000,
+        () {
+          for (final call in h.engine.calls.toList()) {
+            call.release();
+          }
+        },
+        'набор 120 с готового звука',
+      );
       expect(h.controller.state, NarrationState.playing);
       expect(
         h.player.items.fold(
@@ -476,7 +504,7 @@ void main() {
       () => h.controller.deleteBook(h.book.id),
       (e, _) => escaped.add(e),
     );
-    await ioSettled();
+    await until(() => library.addJobs.isNotEmpty, 'сообщение об отказе удаления');
     expect(escaped, isEmpty);
     expect(library.addJobs.single.technical, contains('delete denied'));
     expect(library.shelf, hasLength(1));
@@ -504,14 +532,21 @@ void main() {
             .file(h.key('Повреждён.'), bookId: h.book.id)!
             .writeAsStringSync('broken');
         h.controller.readFrom(h.book, 0);
-        await ioSettled();
+        await h.calls(1);
+        await until(() => h.player.playing, 'воспроизведение до битого файла');
         expect(h.controller.state, NarrationState.playing);
         expect(h.controller.unitStart, const ReadingPosition(0, 0));
         expect(h.engine.calls.map((c) => c.text), ['Повреждён.']);
         if (rejectAgain) player.rejectAll = true;
         await h.release(0);
         h.clock.advance(const Duration(seconds: 10));
-        await ioSettled();
+        await until(
+          () =>
+              h.controller.unitStart == const ReadingPosition(1, 0) &&
+              h.controller.state ==
+                  (rejectAgain ? NarrationState.stopped : NarrationState.playing),
+          'переход к заменённому файлу',
+        );
         expect(h.controller.unitStart, const ReadingPosition(1, 0));
         expect(
           h.controller.state,
@@ -544,12 +579,16 @@ void main() {
           .file(h.key('Битый.'), bookId: h.book.id)!
           .writeAsStringSync('broken');
       h.controller.readFrom(h.book, 0);
-      await ioSettled();
+      await h.calls(1);
+      await until(() => h.player.playing, 'воспроизведение перед дырой');
       expect(h.engine.calls.map((c) => c.text), ['Битый.']);
       expect(h.controller.state, NarrationState.playing);
       await h.release(0);
       h.clock.advance(const Duration(seconds: 10));
-      await ioSettled();
+      await until(
+        () => h.controller.unitStart == const ReadingPosition(1, 0),
+        'переход к восстановленному запасу',
+      );
       expect(h.controller.unitStart, const ReadingPosition(1, 0));
     },
   );
@@ -568,7 +607,7 @@ void main() {
     await h.release(0);
     clock.shift = const Duration(hours: -1);
     clock.advance(const Duration(seconds: 1));
-    await ioSettled();
+    await h.calls(2);
     expect(h.engine.calls, hasLength(2));
   });
 
@@ -586,12 +625,12 @@ void main() {
           await h.cache(text, seconds: 40);
         }
         h.controller.readFrom(h.book, 0);
-        await ioSettled();
+        await until(() => player.items.length >= 3, 'три файла в окне запаса');
         expect(player.probesAtFirstPlay, 1);
         expect(player.probes, lessThanOrEqualTo(3));
         expect(player.items, hasLength(3));
         h.clock.advance(const Duration(seconds: 41));
-        await ioSettled();
+        await until(() => player.probes > 3, 'пополнение окна запаса');
         expect(player.probes, greaterThan(3));
         expect(h.engine.calls, isEmpty);
       },
@@ -720,7 +759,7 @@ void main() {
             h.controller.close();
         }
       }, (e, _) => escaped.add(e));
-      await ioSettled();
+      await until(() => lib.addJobs.isNotEmpty, 'сообщение об ошибке flush');
       lib.failFlush = false;
       expect(escaped, isEmpty);
       expect(lib.addJobs.single.fileName, 'state.json / settings.json');
@@ -762,19 +801,17 @@ void main() {
     await h.cache('Следующая.');
     h.controller.readFrom(h.book, 0);
     h.controller.setSleepTimer(SleepTimer.endOfChapter(h.clock.now()));
-    await ioSettled();
+    await until(() => h.player.playing, 'начало длинной главы');
     h.clock.advance(const Duration(seconds: 1));
     await ioSettled();
     expect(h.controller.sleepTimer, isNotNull);
+    await until(() => h.player.playing, 'звук после пополнения окна запаса');
     expect(h.controller.state, NarrationState.playing);
-    for (
-      var i = 0;
-      i < 10 && h.controller.state != NarrationState.paused;
-      i++
-    ) {
-      h.clock.advance(const Duration(seconds: 1));
-      await ioSettled();
-    }
+    await untilWithProgress(
+      () => h.controller.state == NarrationState.paused,
+      () => h.clock.advance(const Duration(seconds: 1)),
+      'пауза на конце длинной главы',
+    );
     expect(h.controller.state, NarrationState.paused);
     expect(h.controller.unitStart, const ReadingPosition(20, 0));
     expect(h.engine.calls, isEmpty);
@@ -791,16 +828,28 @@ void main() {
     h.controller.readFrom(h.book, 0);
     await h.calls(2);
     await h.release(1);
+    await until(() => encoder.attempts > 0, 'первая попытка записи PCM');
     expect(encoder.attempts, 1);
     h.controller.readFrom(h.book, 2);
     await ioSettled();
     expect(h.engine.calls, hasLength(2));
     h.clock.advance(const Duration(seconds: 1));
-    await ioSettled();
+    await untilWithProgress(
+      () => encoder.attempts > 1,
+      () {
+        expect(h.engine.calls, hasLength(2));
+        h.clock.advance(const Duration(seconds: 1));
+      },
+      'повторная попытка записи PCM при заполненном диске',
+    );
     expect(encoder.attempts, greaterThan(1));
     expect(h.engine.calls, hasLength(2));
     encoder.full = false;
-    h.clock.advance(const Duration(seconds: 30));
-    await h.calls(3);
+    await untilWithProgress(
+      () => h.engine.calls.length >= 3,
+      () => h.clock.advance(const Duration(seconds: 30)),
+      'новая покупка после записи PCM',
+    );
+    expect(h.audio.has(h.key('Второй.'), bookId: h.book.id), isTrue);
   });
 }
