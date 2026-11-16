@@ -15,6 +15,7 @@
 | [CONCEPT.md](CONCEPT.md) | замысел, читатель, состав функций, «Чего не делаем» |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | модули и их зависимости, модель книги, раскладка страниц, озвучка, хранение, замеры |
 | [specs/001-first-version.md](specs/001-first-version.md) | спека первой версии: решения, требования по этапам, критерии приёмки, журнал решений (Changelog) |
+| [specs/002-cleanup-after-reviews.md](specs/002-cleanup-after-reviews.md) | спека доработки по итогам ревью архитектуры: дефекты, повторы, удаление лишнего |
 | [GEMINI_TTS.md](GEMINI_TTS.md) | форма запроса к Gemini TTS, голоса, тарифы, замеры задержки |
 | [GOOGLE_PLAY_PLAN.md](GOOGLE_PLAY_PLAN.md) | планы на потом: публикация в Google Play и платный сервис; не решение |
 
@@ -50,6 +51,7 @@
 | [FABLE_REVIEW_001_STAGE2_2026-11-15.md](reviews/FABLE_REVIEW_001_STAGE2_2026-11-15.md) | код этапа 2 «Озвучка» |
 | [FABLE_REVIEW_001_NAV_TXT_2026-11-15.md](reviews/FABLE_REVIEW_001_NAV_TXT_2026-11-15.md) | переходы по абзацам, возврат страницы, TXT |
 | [READER_SCREEN_REVIEW_2026-11-15.md](reviews/READER_SCREEN_REVIEW_2026-11-15.md) | экран чтения во время озвучки: два независимых ревью (Opus 5.5 и gpt-6-astra) |
+| [ARCH_REVIEW_2026-11-16.md](reviews/ARCH_REVIEW_2026-11-16.md) | архитектура, разделение ответственности, повторы, качество кода Codex: два независимых ревью |
 | [EXPERIMENT_CODEX_IMPL.md](reviews/EXPERIMENT_CODEX_IMPL.md) | журнал эксперимента: код пишут агенты Codex, принимает оркестратор |
 
 ## Правила именования
