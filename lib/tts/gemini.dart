@@ -108,7 +108,7 @@ class GeminiTtsEngine implements TtsEngine {
           .timeout(timeout);
     } on TimeoutException catch (e) {
       throw TemporaryTtsError('Истекло время запроса (${e.runtimeType})', reason: TtsErrorReason.timeout);
-    } catch (e) {
+    } on Exception catch (e) {
       // post включает отправку и чтение тела. Чужой текст может содержать ключ, даже в экранированном виде.
       throw TemporaryTtsError('Ошибка сети (${e.runtimeType})', reason: TtsErrorReason.network);
     }

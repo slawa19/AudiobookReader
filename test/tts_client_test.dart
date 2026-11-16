@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:audiobook_reader/playback/synthesis_queue.dart';
 import 'package:audiobook_reader/tts/engine.dart';
 import 'package:audiobook_reader/tts/gemini.dart';
 import 'package:audiobook_reader/tts/voices.dart';
@@ -11,6 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import 'support/tts_responses.dart';
+import 'support/playback_harness.dart';
 
 const profile = VoiceProfile(model: 'gemini-3.8-flash-tts', voiceId: 'Aoede', style: 'Читай естественно.');
 const key = 'fake-secret+key';
@@ -36,7 +38,7 @@ void main() {
   test('транспорт: чужой текст исключения никогда не попадает в TtsError', () async {
     for (final failure in [
       FormatException('Invalid HTTP header field value: "$key\\n"'),
-      StateError('чужой текст ${Uri.encodeComponent(key)}'),
+      http.ClientException('чужой текст ${Uri.encodeComponent(key)}'),
     ]) {
       final e = await errorOf(engine((_) => throw failure).synthesize('Да.', profile));
       expect(e, isA<TemporaryTtsError>());
@@ -49,6 +51,56 @@ void main() {
     }
     expect((await engine((_) => jsonResponse(audioResponse())).synthesize('Да.', profile)).pcm, isNotEmpty);
   });
+
+  test('FR-3: ошибка программы проходит через клиент без превращения во временную', () async {
+    final failure = StateError('чужой текст $key ${Uri.encodeComponent(key)}');
+    await expectLater(engine((_) => throw failure).synthesize('Да.', profile), throwsA(same(failure)));
+  });
+
+  for (final failure in [
+    FormatException('чужой текст $key ${Uri.encodeComponent(key)}'),
+    http.ClientException('чужой текст $key ${Uri.encodeComponent(key)}'),
+    StateError('чужой текст $key ${Uri.encodeComponent(key)}'),
+  ]) {
+    test('FR-3: очередь, ${failure.runtimeType}: повтор Exception, остановка Error, ключ скрыт', () async {
+      final h = await PlaybackHarness.create(playbackBook([['Да.']]));
+      h.settings.apiKey = key;
+      var calls = 0;
+      final queue = SynthesisQueue(
+        engine: engine((_) {
+          if (++calls == 1) throw failure;
+          return jsonResponse(audioResponse());
+        }),
+        audio: h.audio,
+        library: h.library,
+        settings: h.settings,
+        clock: h.clock,
+      );
+      addTearDown(queue.dispose);
+      final errors = <TtsError>[];
+      final request = queue.request('Да.', profile, bookId: h.book.id);
+      late final SynthesisTask task;
+      task = queue.task(session: 1, changed: () => task.update([request], active: true), failed: errors.add);
+      task.update([request], active: true);
+      await until(() => calls == 1 && queue.inFlight == 0);
+      h.clock.advance(const Duration(seconds: 2));
+      await Future<void>.delayed(Duration.zero);
+      await queue.drain();
+      if (failure is Error) {
+        expect(calls, 1);
+        expect(task.error, same(errors.single));
+        expect(errors.single, isNot(isA<TemporaryTtsError>()));
+        expect(errors.single.message, 'StateError: synthesis request failed');
+        expect(errors.single.toString(), isNot(contains(key)));
+        expect(errors.single.toString(), isNot(contains(Uri.encodeComponent(key))));
+      } else {
+        expect(calls, 2);
+        expect(errors, isEmpty);
+        expect(task.error, isNull);
+        expect(h.audio.has(request.fingerprint, bookId: h.book.id), isTrue);
+      }
+    });
+  }
 
   test('ключ вне печатного ASCII отклоняется до транспорта; печатный ASCII отправляется', () async {
     for (final value in ['fake\nkey', 'fake\u200bkey', 'fakeékey', 'fake\u007fkey']) {
