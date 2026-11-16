@@ -79,6 +79,13 @@ class FakeNarrationController extends NarrationController {
   @override
   double get blockProgress => _progress;
   @override
+  ReadingPosition? get sounding {
+    if (_book == null || _block == null) return null;
+    final len = _book!.blocks[_block!].text.length;
+    final offset = math.min((_progress.clamp(0.0, 1.0) * len).floor(), math.max(0, len - 1));
+    return ReadingPosition(_block!, offset);
+  }
+  @override
   ReadingPosition? get unitStart => _block == null ? null : ReadingPosition(_block!, _unitStart);
   @override
   double get speed => settings?.speed ?? _speed;

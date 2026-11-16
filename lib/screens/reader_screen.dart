@@ -701,11 +701,8 @@ class ReaderScreenState extends State<ReaderScreen> {
 
   /// Место, которое сейчас звучит: блок и оценка смещения внутри него по доле проигранного.
   ReadingPosition? get soundingPosition {
-    final block = narration.block;
-    if (narration.bookId != book.id || block == null) return null;
-    final len = book.blocks[block].text.length;
-    final offset = math.min((narration.blockProgress.clamp(0.0, 1.0) * len).floor(), math.max(0, len - 1));
-    return ReadingPosition(block, offset);
+    if (narration.bookId != book.id) return null;
+    return narration.sounding;
   }
 
   void _onNarration() {

@@ -74,6 +74,9 @@ abstract class NarrationController extends ChangeNotifier {
   int? get block;
   double get blockProgress;
 
+  /// Точное звучащее место: блок и смещение в нём.
+  ReadingPosition? get sounding;
+
   /// Начало звучащей единицы (отрезка; в прототипе — блока или его части от выбранного предложения). Это и есть
   /// место прослушивания, которое контроллер сохраняет (А§4, А§5).
   ReadingPosition? get unitStart;

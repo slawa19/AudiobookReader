@@ -15,7 +15,7 @@ class TestEngine implements PlaylistEngine {
   double speed = 1;
   bool advanceWhenAppendedToCompleted = false;
   final nativeAutoStarts = <PlayerItem>[];
-  Object? loadFailure, appendFailure, playFailure;
+  Object? loadFailure, appendFailure, playFailure, disposeFailure;
   bool holdStart = false;
   @override
   EnginePlayback snapshot = const EnginePlayback();
@@ -98,6 +98,7 @@ class TestEngine implements PlaylistEngine {
   Future<void> dispose() => operation('dispose', () async {
     snapshot = EnginePlayback(item: snapshot.item, position: snapshot.position);
     await updates.close();
+    if (disposeFailure != null) throw disposeFailure!;
   });
 }
 
@@ -127,6 +128,24 @@ class Harness {
 }
 
 void main() {
+  test('FR-2: ошибка освобождения не останавливает команды нового списка', () async {
+    final h = Harness();
+    h.player.append(item(0));
+    h.player.play();
+    await h.player.settled;
+    h.engine.disposeFailure = StateError('dispose failed');
+    h.player.clear(1);
+    await expectLater(h.player.settled, throwsStateError);
+    final next = item(1);
+    h.player.append(next);
+    h.player.play();
+    await h.player.settled;
+    expect(h.engines, hasLength(2));
+    expect(h.engine.items, [next]);
+    expect(h.player.playing, isTrue);
+    expect(h.started.last, same(next));
+  });
+
   test('current задаётся синхронно исходным экземпляром; clear и drained обнуляют его', () async {
     final h = Harness();
     final a = item(0), b = item(1);

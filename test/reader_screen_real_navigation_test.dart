@@ -97,6 +97,26 @@ Future<AppHarness> listeningApp(WidgetTester tester,
 }
 
 void main() {
+  testWidgets('FR-4: звучащее смещение 15 в блоке длиной 22 передаётся экрану точно', (tester) async {
+    final h = AppHarness(tester);
+    await h.start(fakeTts: true);
+    final file = await h.copy(utf8.encode('<FictionBook><body><section>'
+        '<p>Первая строка. Вторая.</p></section></body></FictionBook>'));
+    h.files.events.add(file);
+    await h.opened();
+    await h.deleted(file);
+    final st = reader(tester);
+    final book = st.widget.book;
+    expect(book.blocks.single.text.length, 22);
+    h.app.library.saveListeningPosition(book.id, const ReadingPosition(0, 15));
+    final narration = h.app.services.narration;
+    expect(narration, isA<FileNarrationController>());
+    narration.listen(book, const PageRange(ReadingPosition(0, 0), ReadingPosition(0, 22)));
+    expect(narration.unitStart, const ReadingPosition(0, 15));
+    expect(h.app.library.positionOf(book.id), const ReadingPosition(0, 15));
+    expect(st.soundingPosition!.offset, 15);
+  });
+
   testWidgets('короткий конец главы разрешён инвариантом', (tester) async {
     final p = await pumpPrototype(tester, size: phone360);
     final book = checked(utf8.encode('<FictionBook><body><section><p>Конец главы.</p></section>'
