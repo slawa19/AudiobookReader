@@ -73,6 +73,8 @@ class ForegroundGate implements MediaServiceLifecycle {
   final started = Completer<void>();
   @override
   Future<void> awaitForeground() => started.future;
+  @override
+  Future<void> stopForeground() async {}
 }
 
 Future<void> settle() => Future<void>.delayed(Duration.zero);
