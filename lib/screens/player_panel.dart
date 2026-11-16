@@ -189,7 +189,9 @@ class _Controls extends StatelessWidget {
             // Место обоих значков постоянно. Состояние уступает ширину голосу, но не кнопкам.
             final voiceWidth = math.min(180.0, (constraints.maxWidth - 96) * 0.55);
             return Row(children: [
-              SizedBox(width: voiceWidth, child: VoiceChip(
+              ConstrainedBox(
+                constraints: BoxConstraints(minWidth: voiceWidth, maxWidth: constraints.maxWidth - 96),
+                child: VoiceChip(
                   key: const Key('voice-chip'), voiceName: voiceName, onPressed: onVoice)),
               Expanded(child: busy ? Tooltip(
                 message: state == NarrationState.preparing ? l10n.preparing : l10n.waiting,
