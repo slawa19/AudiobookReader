@@ -80,7 +80,7 @@ void main() {
       final errors = <TtsError>[];
       final request = queue.request('Да.', profile, bookId: h.book.id);
       late final SynthesisTask task;
-      task = queue.task(session: 1, changed: () => task.update([request], active: true), failed: errors.add);
+      task = queue.task(changed: () => task.update([request], active: true), failed: errors.add);
       task.update([request], active: true);
       await until(() => calls == 1 && queue.inFlight == 0);
       h.clock.advance(const Duration(seconds: 2));

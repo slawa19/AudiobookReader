@@ -103,7 +103,7 @@ class FakeChapterDownloads extends ChapterDownloads {
   final String? Function(String bookId)? bookVoice;
 
   /// Подставное хранилище: готовый звук занимает место, иначе после «Очистить озвучку» новая озвучка не видна
-  /// ни в «Удалить озвучку», ни в настройках (№9 ревью логики).
+  /// ни в «Удалить озвучку», ни в настройках.
   final FakeAudioStore? audio;
 
   /// Байт сжатого звука на секунду (≈ 32 кбит/с).
@@ -219,16 +219,6 @@ class FakeChapterDownloads extends ChapterDownloads {
       t.status = DownloadStatus.failed;
       t.googleMessage = 'Request contains an invalid argument.';
     }
-    notifyListeners();
-  }
-
-  /// Только для показа и тестов: постоянная ошибка идущей задачи.
-  void demoFail(String googleMessage) {
-    final t = _task;
-    if (t == null) return;
-    _timer?.cancel();
-    t.status = DownloadStatus.failed;
-    t.googleMessage = googleMessage;
     notifyListeners();
   }
 

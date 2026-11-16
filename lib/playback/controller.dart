@@ -184,7 +184,6 @@ class FileNarrationController extends NarrationController {
     _save(listening: true);
     final session = _session;
     _task = queue.task(
-      session: session,
       canStart: _canStart,
       changed: () {
         if (session == _session) _refresh();
@@ -264,7 +263,7 @@ class FileNarrationController extends NarrationController {
           _Unit(
             u.segment,
             i,
-            queue.request(u.text, _profile!, bookId: bookId, session: _session),
+            queue.request(u.text, _profile!, bookId: bookId),
           ),
         );
         ahead += _seconds(_units.last);

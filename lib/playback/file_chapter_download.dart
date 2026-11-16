@@ -147,7 +147,6 @@ class FileChapterDownloads extends ChapterDownloads {
       }
       if (_foreground) {
         _consumer ??= queue.task(
-          session: 0,
           changed: _refresh,
           failed: _failed,
         );

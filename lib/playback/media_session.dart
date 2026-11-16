@@ -122,30 +122,27 @@ class NarrationMediaHandler extends BaseAudioHandler {
     );
     if (_stateKey == stateKey) return;
     _stateKey = stateKey;
-    final stopped = controller.state == NarrationState.stopped;
     final controls = !state.session
         ? <MediaControl>[]
         : [
-            if (!stopped)
-              MediaControl(
-                androidIcon: 'drawable/audio_service_skip_previous',
-                label: text.previous,
-                action: MediaAction.skipToPrevious,
-              ),
+            MediaControl(
+              androidIcon: 'drawable/audio_service_skip_previous',
+              label: text.previous,
+              action: MediaAction.skipToPrevious,
+            ),
             if (state.playing)
               MediaControl(androidIcon: 'drawable/audio_service_pause', label: text.pause, action: MediaAction.pause)
-            else if (!stopped || controller.stopReason == StopReason.error)
+            else
               MediaControl(
                 androidIcon: 'drawable/audio_service_play_arrow',
                 label: text.play,
                 action: MediaAction.play,
               ),
-            if (!stopped)
-              MediaControl(
-                androidIcon: 'drawable/audio_service_skip_next',
-                label: text.next,
-                action: MediaAction.skipToNext,
-              ),
+            MediaControl(
+              androidIcon: 'drawable/audio_service_skip_next',
+              label: text.next,
+              action: MediaAction.skipToNext,
+            ),
           ];
     playbackState.add(
       PlaybackState(
@@ -155,8 +152,6 @@ class NarrationMediaHandler extends BaseAudioHandler {
         androidCompactActionIndices: List.generate(controls.length, (i) => i),
         systemActions: const {},
         speed: controller.speed,
-        errorCode: state.processing == AudioProcessingState.error ? 1 : null,
-        errorMessage: state.processing == AudioProcessingState.error ? state.message : null,
       ),
     );
   }

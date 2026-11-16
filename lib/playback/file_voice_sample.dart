@@ -62,7 +62,6 @@ class FileVoiceSampler extends VoiceSampler {
     final request = queue.request(
       phraseFor(bookLanguage),
       effective,
-      session: session,
     );
     var loading = false;
     Future<void> changed() async {
@@ -100,7 +99,6 @@ class FileVoiceSampler extends VoiceSampler {
     }
 
     _task = queue.task(
-      session: session,
       changed: () => unawaited(changed()),
       failed: (error) {
         if (session != _session || _disposed) return;
