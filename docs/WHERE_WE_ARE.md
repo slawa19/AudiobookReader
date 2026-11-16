@@ -57,7 +57,7 @@
 - [ARCHITECTURE.md](ARCHITECTURE.md) — архитектура, версия 3.
 - [specs/001-first-version.md](specs/001-first-version.md) — спека первой версии; идёт реализация.
 - [specs/002-cleanup-after-reviews.md](specs/002-cleanup-after-reviews.md) — доработка по ревью архитектуры
-  2026-11-16; сделана и влита 2026-11-16; на телефоне не проверено.
+  2026-11-16; сделана и влита 2026-11-16; на телефоне проверена подставной сборкой.
 - [reviews/](reviews/) — записи ревью Codex: архитектуры, спеки, макета и прототипа, все 2026-11-14.
 - [prototype/README.md](prototype/README.md) — прототип: запуск, жесты, палитра, языки, снимки экранов.
 - [GEMINI_TTS.md](GEMINI_TTS.md) — проверенная в AudiobookStudio форма запроса, голоса, тарифы.
