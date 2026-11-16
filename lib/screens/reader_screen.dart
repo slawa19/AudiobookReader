@@ -56,6 +56,7 @@ class ReaderScreenState extends State<ReaderScreen> {
   PageController? _pc;
   int _page = 0;
   bool _panels = false;
+  int _panelsVersion = 0;
   bool _following = true;
   int? _selectedBlock;
   double? _sliderDrag;
@@ -884,6 +885,8 @@ class ReaderScreenState extends State<ReaderScreen> {
   Future<void> _openContents() async {
     final chapter = await _push<int>(TocScreen(services: s, book: book, current: _current.chapter));
     if (chapter == null || !mounted) return;
+    // Новые _Slide сразу скрыты: результат pop приходит до первого кадра возврата.
+    _panelsVersion++;
     _setPanels(false);
     final listening = narration.bookId == book.id &&
         (narration.isActive || narration.state == NarrationState.paused);
@@ -1080,6 +1083,7 @@ class ReaderScreenState extends State<ReaderScreen> {
               ),
             if (_selectedBlock != null) _readFromHere(context, area),
             _Slide(
+              key: ValueKey('top-$_panelsVersion'),
               visible: _panels,
               from: const Offset(0, -1),
               alignment: Alignment.topCenter,
@@ -1096,6 +1100,7 @@ class ReaderScreenState extends State<ReaderScreen> {
             ),
             if (!playerVisible)
               _Slide(
+                key: ValueKey('bottom-$_panelsVersion'),
                 visible: _panels,
                 from: const Offset(0, 1),
                 alignment: Alignment.bottomCenter,
@@ -1215,7 +1220,7 @@ class ReaderScreenState extends State<ReaderScreen> {
 
 /// Плавное появление панели: сдвиг + прозрачность; спрятанная панель не ловит касания.
 class _Slide extends StatelessWidget {
-  const _Slide({required this.visible, required this.from, required this.alignment, required this.child});
+  const _Slide({super.key, required this.visible, required this.from, required this.alignment, required this.child});
 
   final bool visible;
   final Offset from;
