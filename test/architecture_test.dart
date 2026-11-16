@@ -18,7 +18,7 @@ const allowed = <String, Set<String>>{
   'book': {},
 };
 
-final _import = RegExp(r'''^import\s+'([^']+)';''', multiLine: true);
+final _import = RegExp(r"""^(?:import|export)\s+'([^']+)'""", multiLine: true);
 
 /// Модули, которые импортирует файл [file] модуля [module].
 Set<String> importedModules(File file, String module) {
@@ -53,6 +53,27 @@ double contrast(Color a, Color b) {
 }
 
 void main() {
+  test('importedModules видит import и export с хвостом и пропускает текст', () {
+    final temp = Directory.systemTemp.createTempSync('architecture-');
+    addTearDown(() => temp.deleteSync(recursive: true));
+    final cases = <String, Set<String>>{
+      "import 'package:audiobook_reader/book/model.dart';": {'book'},
+      "import 'package:audiobook_reader/tts/engine.dart' as tts;": {'tts'},
+      "import 'package:audiobook_reader/audio/audio_store.dart' show AudioStore;": {'audio'},
+      "import 'package:audiobook_reader/library/library.dart' hide Library;": {'library'},
+      "export 'package:audiobook_reader/reader/pagination.dart';": {'reader'},
+      "// import 'package:audiobook_reader/book/model.dart';": {},
+      "// export 'package:audiobook_reader/book/model.dart';": {},
+      "const text = \"import 'package:audiobook_reader/book/model.dart';\";": {},
+      "const text = \"export 'package:audiobook_reader/book/model.dart';\";": {},
+    };
+    final file = File('${temp.path}/directives.dart');
+    for (final entry in cases.entries) {
+      file.writeAsStringSync(entry.key);
+      expect(importedModules(file, 'app'), entry.value, reason: entry.key);
+    }
+  });
+
   test('модули импортируют только разрешённое (А§2)', () {
     final violations = <String>[];
     var files = 0;
