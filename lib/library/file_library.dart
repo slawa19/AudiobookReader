@@ -670,8 +670,13 @@ Future<void> _atomic(File file, Map<String, Object?> value) async {
 
 Future<int> _bytes(Directory dir) async {
   var bytes = 0;
-  await for (final file in dir.list(recursive: true, followLinks: false)) {
-    if (file is File) bytes += await file.length();
+  await for (final entry in dir.list(followLinks: false)) {
+    if (entry is File) bytes += await entry.length();
+    if (entry is Directory && entry.path != '${dir.path}/audio') {
+      await for (final file in entry.list(recursive: true, followLinks: false)) {
+        if (file is File) bytes += await file.length();
+      }
+    }
   }
   return bytes;
 }

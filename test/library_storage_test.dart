@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:audiobook_reader/audio/file_audio_store.dart';
+import 'package:audiobook_reader/audio/wav_audio_encoder.dart';
 import 'package:audiobook_reader/book/parse.dart';
 import 'package:audiobook_reader/library/file_library.dart';
 import 'package:audiobook_reader/library/library.dart';
@@ -57,6 +60,22 @@ void main() {
     library.dispose();
     await root.delete(recursive: true);
   });
+
+  for (final withAudio in [false, true]) {
+    test('FR-1: размер книги после перезапуска, озвучка=$withAudio', () async {
+      final id = await add();
+      final before = library.shelf.single.bookBytes;
+      expect(before, greaterThan(0));
+      if (withAudio) {
+        final audio = FileAudioStore(root, encoder: const WavAudioEncoder());
+        addTearDown(audio.dispose);
+        await audio.put('segment', Uint8List.fromList([0, 0, 1, 0]), 24000, bookId: id);
+        expect(audio.bytesForBook(id), greaterThan(0));
+      }
+      await restart();
+      expect(library.shelf.single.bookBytes, before);
+    });
+  }
 
   for (final damaged in ['missing-meta', 'missing-state', 'empty', 'broken', 'empty-state', 'broken-state', 'empty-dir']) {
     test('повреждённая книга $damaged не мешает здоровой и сохраняет исходник', () async {
