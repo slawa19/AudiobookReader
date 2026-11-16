@@ -699,7 +699,7 @@ class ReaderScreenState extends State<ReaderScreen> {
 
   // --- следование за голосом (А§5, FR-P4) ---------------------------------------------------------------
 
-  /// Место, которое сейчас звучит: блок и оценка смещения внутри него по доле проигранного.
+  /// Место, которое сейчас звучит в этой книге, — как его сообщает контроллер.
   ReadingPosition? get soundingPosition {
     if (narration.bookId != book.id) return null;
     return narration.sounding;
