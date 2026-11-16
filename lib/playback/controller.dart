@@ -92,6 +92,8 @@ class FileNarrationController extends NarrationController {
   @override
   int? get block => _position?.block;
   @override
+  ReadingPosition? get sounding => _position;
+  @override
   double get blockProgress => _book == null || _position == null
       ? 0
       : _position!.offset /
