@@ -99,7 +99,10 @@ class QueuedPlayer implements PlayerPort {
   }
 
   void _enqueue(Future<void> Function() operation) {
-    _operations = _operations.then((_) => operation());
+    _operations = _operations.then(
+      (_) => operation(),
+      onError: (Object _, StackTrace _) => operation(),
+    );
   }
 
   void _command(_Playlist list, Future<void> Function() operation, {PlayerItem? failureItem}) {
