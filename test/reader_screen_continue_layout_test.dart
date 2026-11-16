@@ -268,7 +268,13 @@ void main() {
       expect(st.following, isFalse);
       // Пока читатель смотрит назад, голос пересекает готовый край. Кадры страницы
       // не двигают подставные часы звука; звук и файловые операции идут отдельно.
-      for (var i = 0; i < 80 && h.app.services.narration.block == block; i++) {
+      await h.until(() => h.player.playing);
+      final wait = Stopwatch()..start();
+      while (h.app.services.narration.block == block) {
+        if (wait.elapsed >= const Duration(seconds: 10)) {
+          fail('За 10 с голос не вышел из блока $block: ${h.app.services.narration.state}, '
+              'плеер играет: ${h.player.playing}');
+        }
         h.playbackClock.advance(const Duration(seconds: 5));
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 5)));
         await tester.pump();
