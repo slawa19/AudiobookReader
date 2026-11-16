@@ -272,3 +272,28 @@ class Book {
     );
   }
 }
+
+/// Подпись только для показа: у безымянной главы — первый непустой блок её текста.
+/// Модель книги не меняется. Берём до 12 слов для однострочной подписи, чтобы
+/// шапка не раскладывала целиком блок в сотни тысяч знаков; виджет добавляет обрезку по ширине.
+String chapterLabel(Book book, int chapter, {bool includeParent = true}) {
+  final ch = book.chapters[chapter];
+  if (ch.title.trim().isEmpty) {
+    for (var i = ch.firstBlock; i < ch.endBlock; i++) {
+      final words = RegExp(r'\S+').allMatches(book.blocks[i].text).take(13).map((m) => m.group(0)!).toList();
+      if (words.isNotEmpty) {
+        return words.length > 12 ? '${words.take(12).join(' ')}…' : words.join(' ');
+      }
+    }
+    return '';
+  }
+  if (includeParent && ch.level > 1) {
+    for (var j = chapter - 1; j >= 0; j--) {
+      if (book.chapters[j].level < ch.level) {
+        final parent = book.chapters[j].title;
+        return parent.trim().isEmpty ? ch.title : '$parent · ${ch.title}';
+      }
+    }
+  }
+  return ch.title;
+}

@@ -694,7 +694,7 @@ class ReaderScreenState extends State<ReaderScreen> {
   /// Позицию пишет экран, только пока прослушивание не активно (А§5).
   void _saveScreenPosition() {
     if (narration.bookId == book.id && narration.isActive) return;
-    s.library.savePosition(book.id, _pagePosition, fraction: _fraction, chapterTitle: chapterLabel(book, _current.chapter));
+    s.library.savePosition(book.id, _pagePosition, fraction: _fraction);
   }
 
   // --- следование за голосом (А§5, FR-P4) ---------------------------------------------------------------

@@ -40,7 +40,7 @@ class FakeLibrary extends Library {
       final pos = _positions[entry.id];
       if (book != null && pos != null) {
         entry.fraction = book.fractionAt(pos.block, pos.offset);
-        entry.chapterTitle = _chapterLabel(book, pos.block);
+        entry.chapterTitle = chapterLabel(book, book.chapterOf(pos.block));
       }
     }
   }
@@ -119,7 +119,7 @@ class FakeLibrary extends Library {
   }
 
   @override
-  void savePosition(String bookId, ReadingPosition position, {double? fraction, String? chapterTitle}) {
+  void savePosition(String bookId, ReadingPosition position, {double? fraction}) {
     if (_positions[bookId] == position) return;
     _positions[bookId] = position;
     final e = _entries.where((e) => e.id == bookId).firstOrNull;
@@ -131,8 +131,7 @@ class FakeLibrary extends Library {
       } else if (f != null) {
         e.fraction = f;
       }
-      final title = chapterTitle ?? (book == null ? null : _chapterLabel(book, position.block));
-      if (title != null) e.chapterTitle = title;
+      if (book != null) e.chapterTitle = chapterLabel(book, book.chapterOf(position.block));
     }
     notifyListeners();
   }
@@ -253,19 +252,6 @@ class FakeLibrary extends Library {
     demoEmptyShelf = value;
     notifyListeners();
   }
-
-  static String _chapterLabel(Book book, int block) {
-    final i = book.chapterOf(block);
-    final ch = book.chapters[i];
-    if (ch.level > 1) {
-      for (var j = i - 1; j >= 0; j--) {
-        if (book.chapters[j].level < ch.level) return '${book.chapters[j].title} · ${ch.title}';
-      }
-    }
-    return ch.title;
-  }
-
-  String chapterLabel(Book book, int block) => _chapterLabel(book, block);
 
   Book _stub(String bookId) {
     final e = entry(bookId);

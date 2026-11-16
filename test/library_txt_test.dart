@@ -107,7 +107,7 @@ void main() {
     library.savePosition(entry.id, const ReadingPosition(1, 3));
     await restart();
     expect(library.shelf.single.title, 'Моя.книга');
-    expect(library.shelf.single.chapterTitle, '');
+    expect(library.shelf.single.chapterTitle, 'Первый абзац.');
     expect(library.shelf.single.opened, isTrue);
     expect(library.shelf.single.fraction, book.fractionAt(1, 3));
     expect((await library.loadBook(entry.id)).title, 'Моя.книга');

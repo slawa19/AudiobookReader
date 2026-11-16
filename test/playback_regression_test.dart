@@ -112,14 +112,12 @@ class ObservedLibrary extends FileLibrary {
     String bookId,
     ReadingPosition position, {
     double? fraction,
-    String? chapterTitle,
   }) {
     positions++;
     super.savePosition(
       bookId,
       position,
       fraction: fraction,
-      chapterTitle: chapterTitle,
     );
   }
 

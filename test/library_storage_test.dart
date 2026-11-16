@@ -346,17 +346,20 @@ void main() {
       final book = await library.loadBook(id);
       expect(book.chapters, hasLength(2));
       library.markOpened(id);
+      expect(library.entry(id).chapterTitle, isEmpty);
       final block = book.chapters[1].firstBlock;
       library.savePosition(
         id,
         ReadingPosition(block, 1),
         fraction: 0,
-        chapterTitle: 'неверная',
       );
       expect(library.entry(id).fraction, book.fractionAt(block, 1));
       expect(library.entry(id).chapterTitle, book.chapters[1].title);
       library.saveListeningPosition(id, const ReadingPosition(0, 0));
       expect(library.entry(id).chapterTitle, book.chapters[1].title);
+      await restart();
+      expect(library.entry(id).chapterTitle, book.chapters[1].title);
+      await library.loadBook(id);
       library.setFinished(id, true);
       library.savePosition(id, const ReadingPosition(0, 0));
       expect(library.entry(id).fraction, 1);
