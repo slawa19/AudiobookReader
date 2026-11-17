@@ -37,6 +37,14 @@ The public name of the app is **Book AudioReader** (owner decision of 2026-11-17
 the web prototype and the README use it. The repository, the Dart package, the applicationId and the release file name
 keep `AudiobookReader` / `audiobook_reader`.
 
+Two defects seen on the owner's phone on 2026-11-17 are fixed: the license page listed the app twice (as "Book
+AudioReader" and as "audiobook_reader"; the app's entries now live in the root `NOTICES` file), and App info showed
+the app's notifications as "Blocked" with a switch that could not be turned on (the app now declares
+`POST_NOTIFICATIONS` and asks once, the first time listening starts; the media card worked without it and still does).
+On the phone, the fake debug build showed the cause of the second defect (the card works, the switch is disabled); the
+fixed builds' permission dialog and license page are not yet looked at on the phone. After the update the real app
+asks on its next "Listen".
+
 **What is next, on the phone** — all with the owner, none of it can be verified from a computer:
 
 1. listening with the real voice: speech by ear, "back/forward", page return;
@@ -49,7 +57,7 @@ keep `AudiobookReader` / `audiobook_reader`.
 **What is next, publication** — the owner's steps, in this order:
 
 1. have the Ukrainian strings (`lib/screens/l10n/app_uk.arb`) read by a native speaker; they were written by an agent;
-2. look at Settings → "Open-source licenses" on the phone;
+2. look at Settings → "Open-source licenses" on the phone: the app should be listed once;
 3. confirm the rule of spec 003 (Changelog) that technical text, as distinct from interface strings, is in English;
 4. switch the GitHub repository to public;
 5. cut the first release: bump `version:` in `pubspec.yaml` if needed, push the tag `v0.1.0` (or the bumped version),

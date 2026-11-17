@@ -242,7 +242,9 @@ divided between agents by file ownership (modules of A§2).
   the same way as from the player panel: these are controller commands, and the screen learns about them from its
   explicit-command counter (FR-P4, A§5). The player card in the notification and on the lock screen shows the book's
   cover; for a book without a cover, the same placeholder with the first letter as on the shelf (the owner's decision
-  2026-11-14). There is no paragraph text and no seeking by seconds on the card.
+  2026-11-14). There is no paragraph text and no seeking by seconds on the card. The notification permission is
+  declared and asked once, when listening starts for the first time; playback does not wait for the answer, the card
+  works without the permission, and after a refusal the app does not ask again (A§7, 2026-11-17).
 - **FR-P3.** The start place is the rule of A§5 "Listen from `idle`" (from the owner's remark of 2026-11-14):
   - the listening place, the start of the segment that was sounding, is stored in `state.json` separately from the
     reading position and is not forgotten on pause, stop, "Close" and restart;
@@ -706,3 +708,13 @@ during implementation:
   "Language" item, five ARB files), FR-R8 and FR-T7 (the book-language table: ru, en, pl, de, uk; an unknown language
   such as cs still falls back to English), rows FR-I1 and FR-T7 of the checks table. The documents were also translated
   into English in preparation for open-source publication.
+- 2026-11-17 — seen on the owner's phone: App info showed the app's notifications as "Blocked". Checked on the phone
+  with the fake debug build (Android 17, targetSdk 36): without `POST_NOTIFICATIONS` the media card is posted
+  (MediaStyle with the session token, the service in the foreground, the app op `POST_NOTIFICATION: ignore`), is shown
+  in the shade, and pause/resume from it work, also with the app in the background — the media-session exemption of
+  Android 13+. But the notification switch in App info is disabled: an app that does not declare the permission cannot
+  be allowed notifications at all. Decided: declare `POST_NOTIFICATIONS` and ask once, when listening starts for the
+  first time; playback does not wait for the answer and after a refusal the app does not ask again (FR-P2, A§7). Tests:
+  `test/notification_prompt_test.dart`, the permission set in `test/android_manifest_test.dart`. The new fake build was
+  installed and declares the permission (not granted yet); the dialog itself and App info after "Allow" are not yet
+  checked on the phone: it locked during the check.
