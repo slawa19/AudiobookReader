@@ -1,4 +1,5 @@
 import 'package:audiobook_reader/app/app.dart';
+import 'package:audiobook_reader/library/fake_library.dart';
 import 'package:audiobook_reader/screens/reader_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -18,6 +19,7 @@ Future<Prototype> pumpPrototype(
   double textScale = 1,
   double demoAcceleration = 4,
   String locale = 'ru',
+  DemoContent? content,
 }) async {
   // In tests shadows are drawn as a solid outline by default; screenshots need real ones.
   debugDisableShadows = false;
@@ -36,7 +38,8 @@ Future<Prototype> pumpPrototype(
   });
   // The app clock is pinned: "today" tariffs and the sleep timer do not depend on the day of the run.
   final p = (await tester.runAsync(
-      () => Prototype.create(demoAcceleration: demoAcceleration, clock: () => DateTime(2026, 11, 14, 12, 30))))!;
+      () => Prototype.create(
+      demoAcceleration: demoAcceleration, clock: () => DateTime(2026, 11, 14, 12, 30), content: content)))!;
   addTearDown(() {
     p.narration.close();
     p.downloads.stop();
@@ -72,6 +75,7 @@ Future<void> openBook(WidgetTester tester, String title) async {
 
 ReaderScreenState reader(WidgetTester tester) => tester.state<ReaderScreenState>(find.byType(ReaderScreen));
 
-Future<void> snapshot(WidgetTester tester, String name) async {
-  await expectLater(find.byType(AudiobookApp), matchesGoldenFile('../docs/prototype/screens/$name.png'));
+/// Compares the screen with `docs/<dir>/<name>.png`: the prototype screenshots by default.
+Future<void> snapshot(WidgetTester tester, String name, {String dir = 'prototype/screens'}) async {
+  await expectLater(find.byType(AudiobookApp), matchesGoldenFile('../docs/$dir/$name.png'));
 }

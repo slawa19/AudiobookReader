@@ -26,14 +26,47 @@ What the app does not do, and why — [docs/CONCEPT.md](docs/CONCEPT.md), sectio
 
 ## Screenshots
 
-<!-- screenshots: updated by a later step -->
+<table>
+  <tr>
+    <td align="center" valign="top" width="25%">
+      <img src="docs/screenshots/01-shelf.png" width="190" alt="The shelf with several books"><br>
+      <sub>Shelf</sub>
+    </td>
+    <td align="center" valign="top" width="25%">
+      <img src="docs/screenshots/02-reading.png" width="190" alt="Reading: the start of a chapter"><br>
+      <sub>Reading</sub>
+    </td>
+    <td align="center" valign="top" width="25%">
+      <img src="docs/screenshots/03-reading-panels.png" width="190" alt="Reading with the panels shown: slider, voice, Listen button"><br>
+      <sub>Panels</sub>
+    </td>
+    <td align="center" valign="top" width="25%">
+      <img src="docs/screenshots/04-listening.png" width="190" alt="Listening: the player panel while the book is narrated"><br>
+      <sub>Listening</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" valign="top" width="25%">
+      <img src="docs/screenshots/05-contents.png" width="190" alt="Table of contents with narrated chapters and a download in progress"><br>
+      <sub>Contents and narration</sub>
+    </td>
+    <td align="center" valign="top" width="25%">
+      <img src="docs/screenshots/06-voice.png" width="190" alt="Choosing the voice of the book, with a sample"><br>
+      <sub>Voice</sub>
+    </td>
+    <td align="center" valign="top" width="25%">
+      <img src="docs/screenshots/07-settings.png" width="190" alt="Settings: key, voice, model, spend, storage"><br>
+      <sub>Settings</sub>
+    </td>
+    <td align="center" valign="top" width="25%">
+      <img src="docs/screenshots/08-listening-dark.png" width="190" alt="Listening in the dark theme"><br>
+      <sub>Dark theme</sub>
+    </td>
+  </tr>
+</table>
 
-<p align="center">
-  <img src="docs/prototype/screens/01-shelf.png" width="200" alt="Shelf">
-  <img src="docs/prototype/screens/06-reading.png" width="200" alt="Reading">
-  <img src="docs/prototype/screens/14-listening.png" width="200" alt="Listening">
-  <img src="docs/prototype/screens/16-listening-dark.png" width="200" alt="Listening, dark theme">
-</p>
+The screenshots are taken by a test on the prototype's fake data: the book is the opening of *Alice's Adventures in
+Wonderland* (public domain, Project Gutenberg); nothing is narrated or paid for.
 
 ## Requirements and cost
 
@@ -56,7 +89,9 @@ headphones, a phone call. What has been done and what is next — [docs/WHERE_WE
 
 ## Install
 
-Signed APKs are published on the Releases page; see docs/RELEASING.md for how to verify them.
+Download the signed APK from the [Releases page](https://github.com/slawa19/AudiobookReader/releases) and open it on the
+phone (Android asks to allow installs from your browser or file manager). How to verify the file before installing it:
+[docs/RELEASING.md](docs/RELEASING.md).
 
 To install an APK you built yourself: `adb install -r build/app/outputs/flutter-apk/app-real-release.apk`.
 

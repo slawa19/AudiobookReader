@@ -236,6 +236,12 @@ Screenshots are in `docs/prototype/screens/`, 412 × 915 dp (PNG ×2), plus `n32
 prototype screenshots for evaluation, **not an approved golden** (the golden is recorded after the screens are approved
 on the phone, AGENTS.md "Interface").
 
+`docs/screenshots/` is a separate, smaller set for the public `README.md`: eight screens in the English interface over an
+English book and shelf (public-domain works, `test/fixtures/screenshots_en/`, injected through `DemoContent` in
+`Prototype.create`), taken by `test/readme_screenshots_test.dart` (`bash scripts/test.sh
+test/readme_screenshots_test.dart --update-goldens`). Unlike the screenshots above they are not for design review, and
+the prototype's Russian demo shelf is untouched.
+
 The Ukrainian set `l10n-uk-*` (added 2026-11-17) consists of `01-shelf`, `07-reading-panels`, `14-player`,
 `18-player-402`, `22-settings`, `n320-14-player` and `n320-22-settings`.
 

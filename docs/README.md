@@ -26,6 +26,7 @@ the same commit.
 | Document | What it is about |
 |---|---|
 | [prototype/README.md](prototype/README.md) | the Flutter screen prototype — it sets the look; running, gestures, palette, screenshots |
+| [screenshots/](screenshots/) | the README screenshots: the English interface and an English book, taken by `test/readme_screenshots_test.dart` (not the prototype goldens) |
 | [mockup/](mockup/) | the static mock-up: a reference for the composition of screens and texts, not a standard of the look |
 | [logo.svg](logo.svg) | the app's mark; the same outlines are in the Android icon |
 

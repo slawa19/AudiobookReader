@@ -1,0 +1,26 @@
+English demo content for the README screenshots (test/readme_screenshots_test.dart, docs/screenshots/).
+It lives under test/ and is not bundled into the app.
+
+alice.json
+  Lewis Carroll, "Alice's Adventures in Wonderland" (1865), chapters I-VI. Lewis Carroll (Charles L. Dodgson) died in
+  1898: the work is in the public domain.
+  Source: Project Gutenberg ebook #11, https://www.gutenberg.org/ebooks/11
+  Downloaded 2026-11-17 from the Project Gutenberg mirror https://gutenberg.pglaf.org/1/11/11-0.txt
+  (www.gutenberg.org answered "503 temporarily down for maintenance" at that time); SHA-256 of the downloaded file:
+  a3a27f8edbf7fcd9b8ba8435494440e24952deaa3e2f2d65192d4cb7ca403754
+  Built by build_book.py (next to this file; the command line to regenerate is in its header). What was left out:
+  the Project Gutenberg start line, the "[Illustration]" marker, the edition line, the table of contents, chapters
+  VII-XII and the end marker with the licence text, so no Project Gutenberg trademark or licence text is stored. The
+  work's text is unchanged except for the layout: _word_ markers became italics, lines were joined into paragraphs,
+  four-space indented lines became verse, deeper-indented blocks became quotes, "* * *" lines became separators, and
+  the chapter headings "CHAPTER I." became "Chapter I".
+
+Shelf entries (test/support/demo_en.dart) have only a title, an author and a progress; they are real public-domain
+works and have no text in the demo:
+  Pride and Prejudice - Jane Austen (1813)
+  The Adventures of Tom Sawyer - Mark Twain (1876)
+  Great Expectations - Charles Dickens (1861)
+  Wuthering Heights - Emily Bronte (1847)
+  Moby-Dick - Herman Melville (1851)
+The covers are the text-free abstract ones from assets/demo/covers/ (drawn by scripts/prototype-texts.py, original
+work under the project license); no cover has a title or any other text on it.

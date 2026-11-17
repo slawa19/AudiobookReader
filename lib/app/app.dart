@@ -59,19 +59,25 @@ class Prototype extends AppAssembly {
   late final AppServices services;
 
   /// [clock] — the app clock: today's tariffs and the sleep timer. Wall clock by default.
-  static Future<Prototype> create({DateTime Function()? clock, double demoAcceleration = 4}) async {
+  /// [content] — an alternative demo shelf (README screenshots); the built-in Russian one by default.
+  static Future<Prototype> create({DateTime Function()? clock, double demoAcceleration = 4, DemoContent? content}) async {
     final now = clock ?? DateTime.now;
-    final library = FakeLibrary();
+    final library = FakeLibrary(content: content);
     await library.preload();
     final settings = AppSettings(voice: defaultVoiceName, modelId: TtsModel.flash.id, apiKey: 'AIzaSyD-prototype-key-a1f3');
     final tariffs = Tariffs(today: now);
-    final audio = FakeAudioStore({
-      'kapitanskaya': 96 * 1024 * 1024,
-      'dama': 274 * 1024 * 1024,
-      'voyna': 38 * 1024 * 1024,
-    });
-    final downloads =
-        FakeChapterDownloads(settings: settings, tariffs: tariffs, bookVoice: library.bookVoice, audio: audio);
+    final audio = FakeAudioStore(content?.audioBytes ??
+        {
+          'kapitanskaya': 96 * 1024 * 1024,
+          'dama': 274 * 1024 * 1024,
+          'voyna': 38 * 1024 * 1024,
+        });
+    final downloads = FakeChapterDownloads(
+        settings: settings,
+        tariffs: tariffs,
+        bookVoice: library.bookVoice,
+        audio: audio,
+        voicedChapters: content?.voicedChapters);
     // The book's own voice changed — the "Download chapter" task of the previous profile is stopped (FR-D2).
     library.addListener(downloads.profileChanged);
     final sampler = FakeVoiceSampler(audio: audio);
