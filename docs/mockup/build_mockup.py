@@ -1,20 +1,20 @@
-"""Собирает сценарий FigCraft для макета читалки.
+"""Builds the FigCraft script for the reader mock-up.
 
-Запуск из docs/mockup (Python 3, только стандартная библиотека; figcraft-cli — Windows-программа):
+Run from docs/mockup (Python 3, standard library only; figcraft-cli is a Windows program):
 
-    python3 build_mockup.py <script.json>                 # пишет сценарий и <script>.ids.json
+    python3 build_mockup.py <script.json>                 # writes the script and <script>.ids.json
     figcraft-cli run <script.json> --out reader.figcraft --no-system-fonts > run.log
-    python3 build_mockup.py --check <script.json> run.log # сверяет номера слоёв с выводом run
+    python3 build_mockup.py --check <script.json> run.log # compares layer numbers with the run output
     figcraft-cli export reader.figcraft --out png --scale 2 --no-system-fonts
 
-Слои нумеруются подряд с 2 в новом документе (страница — 1); сценарий опирается на это, чтобы ссылаться на
-родителя: `parent` принимает только числовой id. Команды, которые слой не создают (`text.style`), номер не
-расходуют — поэтому у Builder два метода: `_add` (создаёт слой) и `_cmd` (не создаёт). `--check` ловит
-расхождение, если оно появится. `figcraft-cli run` откатывает всё при первой ошибке.
+Layers are numbered consecutively from 2 in a new document (the page is 1); the script relies on this to refer to
+a parent: `parent` accepts only a numeric id. Commands that do not create a layer (`text.style`) do not consume a
+number, which is why Builder has two methods: `_add` (creates a layer) and `_cmd` (does not). `--check` catches a
+mismatch if one ever appears. `figcraft-cli run` rolls everything back on the first error.
 
-Шрифты: Roboto (интерфейс) и Merriweather (текст книги) — оба входят во встроенный набор FigCraft, поэтому
-картинка одинакова на любой машине с флагом --no-system-fonts. Source Sans 3 и Source Serif 4 во встроенном
-наборе отсутствуют (проверено `text.fonts` 2026-11-14).
+Fonts: Roboto (interface) and Merriweather (book text) are both in FigCraft's built-in set, so the picture is the
+same on any machine with the --no-system-fonts flag. Source Sans 3 and Source Serif 4 are absent from the built-in
+set (checked with `text.fonts` on 2026-11-14).
 """
 import json
 import sys
@@ -25,7 +25,7 @@ PER_ROW = 5
 SANS = "Roboto"
 SERIF = "Merriweather"
 
-# ---------------------------------------------------------------- палитры
+# ---------------------------------------------------------------- palettes
 LIGHT = dict(name="Светлая", bg="#F8F4EC", surface="#FFFDF9", ink="#221D17", ink2="#675E54", line="#E3DBCE",
              accent="#A8431F", on_accent="#FFFDF9", hl="#F3DFCF", scrim="#221D17", scrim_a=0.42)
 SEPIA = dict(name="Сепия", bg="#F0E4CC", surface="#F7EDDA", ink="#3A2D1F", ink2="#6B5A45", line="#DCCBAE",
@@ -33,27 +33,27 @@ SEPIA = dict(name="Сепия", bg="#F0E4CC", surface="#F7EDDA", ink="#3A2D1F", 
 DARK = dict(name="Тёмная", bg="#16130F", surface="#221D18", ink="#E8E0D2", ink2="#A09584", line="#383029",
             accent="#E08A5B", on_accent="#16130F", hl="#3D2B1F", scrim="#000000", scrim_a=0.55)
 
-# ---------------------------------------------------------------- типографика: (шрифт, начертание, кегль, интерлиньяж)
+# ---------------------------------------------------------------- typography: (font, style, size, line height)
 ROLES = {
-    "display": (SERIF, "Bold", 26, 32),      # заголовок полки
-    "title": (SANS, "Medium", 20, 26),       # заголовок экрана, листа, диалога
-    "title_s": (SANS, "Medium", 16, 22),     # заголовок в шапке чтения, пункт списка
+    "display": (SERIF, "Bold", 26, 32),      # shelf title
+    "title": (SANS, "Medium", 20, 26),       # screen, sheet and dialog title
+    "title_s": (SANS, "Medium", 16, 22),     # title in the reading app bar, list item
     "body": (SANS, "Regular", 16, 22),
-    "label": (SANS, "Medium", 15, 20),       # кнопки
+    "label": (SANS, "Medium", 15, 20),       # buttons
     "small": (SANS, "Regular", 14, 20),
     "small_m": (SANS, "Medium", 14, 20),
     "caption": (SANS, "Regular", 13, 18),
-    "over": (SANS, "Medium", 12, 16),        # надписи разделов
-    "book": (SERIF, "Regular", 16, 27),      # текст книги
-    "book_i": (SERIF, "Italic", 14, 22),     # эпиграф, стихи
-    "book_cap": (SERIF, "Italic", 13, 20),   # подпись к картинке
-    "book_h": (SERIF, "Bold", 22, 32),       # заголовок главы
-    "book_title": (SERIF, "Bold", 16, 22),   # название книги в списке
-    "book_title_l": (SERIF, "Bold", 18, 24), # название книги в карточке «Продолжить»
+    "over": (SANS, "Medium", 12, 16),        # section labels
+    "book": (SERIF, "Regular", 16, 27),      # book text
+    "book_i": (SERIF, "Italic", 14, 22),     # epigraph, verse
+    "book_cap": (SERIF, "Italic", 13, 20),   # picture caption
+    "book_h": (SERIF, "Bold", 22, 32),       # chapter title
+    "book_title": (SERIF, "Bold", 16, 22),   # book title in the list
+    "book_title_l": (SERIF, "Bold", 18, 24), # book title in the "Продолжить" (Continue) card
 }
-LINE = 27  # шаг строки текста книги: высота страницы кратна ему, поэтому страница режется по границе строки
+LINE = 27  # line step of the book text: the page height is a multiple of it, so the page is cut at a line boundary
 
-# ---------------------------------------------------------------- иконки: Material Icons (filled), клетка 24×24
+# ---------------------------------------------------------------- icons: Material Icons (filled), 24x24 cell
 ICONS = {
     "back": "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z",
     "close": "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
@@ -85,7 +85,7 @@ ICONS = {
               "-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z",
     "stop": "M6 6h12v12H6z",
 }
-# рамка рисунка внутри клетки 24×24: (x, y, ширина, высота) — снято node.get с несмасштабированных векторов
+# bounding box of the drawing inside the 24x24 cell: (x, y, width, height) - taken with node.get from unscaled vectors
 ICON_BOX = {
     "back": (4, 4, 16, 16), "close": (5, 5, 14, 14), "play": (8, 5, 11, 14), "pause": (6, 5, 12, 14),
     "prev": (6, 6, 12, 12), "next": (6, 6, 12, 12), "add": (5, 5, 14, 14), "toc": (3, 7, 18, 10),
@@ -94,7 +94,7 @@ ICON_BOX = {
     "bedtime": (2, 2.01, 18.66, 19.99), "open": (3, 3, 18, 18), "locate": (1, 1, 22, 22), "stop": (6, 6, 12, 12),
 }
 
-# ---------------------------------------------------------------- тексты (общественное достояние)
+# ---------------------------------------------------------------- texts (public domain)
 CH1 = [
     "Говорили, что на набережной появилось новое лицо: дама с собачкой. Дмитрий Дмитрич Гуров, проживший в Ялте "
     "уже две недели и привыкший тут, тоже стал интересоваться новыми лицами. Сидя в павильоне у Верне¹, он видел, "
@@ -128,11 +128,11 @@ COVERS = {"Дама с собачкой. Рассказы": "#7A3B2E", "Маст
 class Builder:
     def __init__(self):
         self.steps = []
-        self.ids = []          # ожидаемый id для каждого шага (None — шаг слоя не создаёт)
+        self.ids = []          # expected id for each step (None: the step creates no layer)
         self.next_id = 2
         self.n_screens = 0
 
-    # -- низкий уровень
+    # -- low level
     def _add(self, command, params):
         params.setdefault("select", False)
         self.steps.append({"command": command, "params": params})
@@ -145,7 +145,7 @@ class Builder:
         self.steps.append({"command": command, "params": params})
         self.ids.append(None)
 
-    # -- примитивы
+    # -- primitives
     def screen(self, name, t):
         i = self.n_screens
         self.n_screens += 1
@@ -170,7 +170,7 @@ class Builder:
 
     def text(self, parent, x, y, s, role, color, width=None, name=None, **props):
         font, style, size, lh = ROLES[role]
-        for unit in (" МБ", " $", " %"):  # число не отрывается от единицы
+        for unit in (" МБ", " $", " %"):  # keep the number attached to its unit
             s = s.replace(unit, " " + unit[1:])
         props = {"fontFamily": font, "fontStyle": style, "fontSize": size, "lineHeight": lh, "fill": color,
                  **props}
@@ -185,11 +185,11 @@ class Builder:
         self._cmd("text.style", {"id": node_id, "start": start, "end": end, **props})
 
     def icon(self, parent, x, y, name, color, size=24):
-        """Иконка в клетке size×size с левым верхним углом (x, y): фрейм-клетка и вектор в нём."""
+        """An icon in a size x size cell with top-left corner (x, y): a frame cell and the vector inside it."""
         cell = self.frame(parent, x, y, size, size, "icon/" + name)
         k = size / 24
         ox, oy, bw, bh = ICON_BOX[name]
-        # vector.create кладёт левый край рисунка в x + несмасштабированное смещение рамки
+        # vector.create puts the left edge of the drawing at x + the unscaled offset of the bounding box
         self._add("vector.create", {"path": ICONS[name], "closed": True, "x": ox * k - ox, "y": oy * k - oy,
                                     "width": bw * k, "height": bh * k, "parent": cell, "name": name,
                                     "props": {"fill": color, "stroke": "none"}})
@@ -199,9 +199,9 @@ class Builder:
 b = Builder()
 
 
-# ================================================================ компоненты
+# ================================================================ components
 def status_bar(s, t, fill=None):
-    """Строка состояния Android, 28 dp. На экране чтения без панелей её нет (полноэкранный режим)."""
+    """Android status bar, 28 dp. It is absent on the reading screen without panels (full-screen mode)."""
     if fill:
         b.rect(s, 0, 0, W, 28, fill, name="Строка состояния")
     b.text(s, 16, 6, "12:30", "small_m", t["ink"], name="Время")
@@ -211,7 +211,7 @@ def status_bar(s, t, fill=None):
 
 
 def app_bar(s, t, title, sub=None, left="back", right=()):
-    """Шапка 28 + 56 dp: значок слева, заголовок, значки справа. Клетки касания 48 dp."""
+    """App bar 28 + 56 dp: an icon on the left, the title, icons on the right. Touch cells 48 dp."""
     b.rect(s, 0, 0, W, 84, t["surface"], name="Шапка")
     b.rect(s, 0, 84, W, 1, t["line"], name="Линия")
     status_bar(s, t)
@@ -233,9 +233,9 @@ def app_bar(s, t, title, sub=None, left="back", right=()):
 
 
 def button(parent, x, y, w, label, t, icon=None, kind="filled", h=48, name="Кнопка", align="center"):
-    """Кнопка-пилюля на автораскладке. w=None — по содержимому. kind: filled | outlined | text.
+    """A pill button on auto layout. w=None: sized to its content. kind: filled | outlined | text.
 
-    align="max" — текстовая кнопка у правого края: подпись прижата к правому полю, клетка касания w×h."""
+    align="max": a text button at the right edge: the label is pushed to the right margin, touch cell w x h."""
     fg = t["on_accent"] if kind == "filled" else t["accent"]
     props = dict(cornerRadius=h / 2, layout="horizontal", mainAlign=align, crossAlign="center", gap=8,
                  fill=t["accent"] if kind == "filled" else "none")
@@ -252,7 +252,7 @@ def button(parent, x, y, w, label, t, icon=None, kind="filled", h=48, name="Кн
 
 
 def centered_row(parent, y, h, name="Ряд"):
-    """Полоса во всю ширину, центрирующая содержимое по горизонтали."""
+    """A full-width strip that centers its content horizontally."""
     return b.frame(parent, 0, y, W, h, name, layout="horizontal", mainAlign="center", crossAlign="center")
 
 
@@ -272,7 +272,7 @@ def scrim(s, t):
 
 
 def sheet(s, t, h, title=None):
-    """Нижний лист: скругление 24 сверху, ручка, заголовок. Возвращает y верха листа."""
+    """Bottom sheet: 24 corner radius on top, a handle, a title. Returns the y of the sheet top."""
     scrim(s, t)
     y = H - h
     b.rect(s, 0, y, W, h, t["surface"], radius=[24, 24, 0, 0], name="Лист")
@@ -283,7 +283,7 @@ def sheet(s, t, h, title=None):
 
 
 def dialog(s, t, h, title, body, confirm, cancel="Отмена"):
-    """Диалог подтверждения по центру экрана. h подобрана под две строки заголовка/текста."""
+    """Confirmation dialog in the center of the screen. h is chosen for two lines of title/text."""
     scrim(s, t)
     y = (H - h) // 2
     b.rect(s, 24, y, W - 48, h, t["surface"], radius=24, name="Диалог")
@@ -294,7 +294,7 @@ def dialog(s, t, h, title, body, confirm, cancel="Отмена"):
 
 
 def cover(parent, x, y, w, h, title, t):
-    """Обложка-заглушка: цветной прямоугольник с названием. Книга без обложки — первая буква названия."""
+    """Placeholder cover: a colored rectangle with the title. A book without a cover shows the first letter."""
     color = COVERS.get(title)
     if color is None:
         b.rect(parent, x, y, w, h, t["line"], radius=3, name="Заглушка обложки")
@@ -309,15 +309,15 @@ def cover(parent, x, y, w, h, title, t):
 
 
 def page(parent, t, y, avail, paras=CH1, heading=None, highlight=None, footnote_mark=None):
-    """Страница книги: колонка 312 dp (поля 24), автораскладка считает высоты абзацев.
+    """Book page: a 312 dp column (24 margins); auto layout computes the paragraph heights.
 
-    Высота страницы кратна LINE, поэтому нижняя строка не режется пополам — абзац продолжается на следующей
-    странице, как в настоящей разбивке."""
+    The page height is a multiple of LINE, so the bottom line is not cut in half - the paragraph continues on the
+    next page, as in the real pagination."""
     head_h = 4 * LINE if heading else 0
     h = head_h + (avail - head_h) // LINE * LINE
     col = b.frame(parent, 16, y, W - 32, h, "Страница", layout="vertical", gap=0, clip=True)
     if heading:
-        # заголовок прижат к низу своего блока: шапка с панелями (до y=84) его не перекрывает
+        # the title is pressed to the bottom of its block: the app bar with panels (down to y=84) does not overlap it
         hw = b.frame(col, 0, 0, W - 32, head_h, "Заголовок главы", layout="vertical", mainAlign="max",
                      crossAlign="center", sizingH="fill", padding=[0, 0, 14, 0])
         b.text(hw, 0, 0, heading, "book_h", t["ink"], textAlign="center")
@@ -336,16 +336,16 @@ def footer(s, t, text="34 %"):
     b.text(s, 0, H - 38, text, "caption", t["ink2"], width=W, textAlign="center", name="Доля книги")
 
 
-# ---------------------------------------------------------------- плеер
+# ---------------------------------------------------------------- player
 PLAYER_H = 152
 END_H = 80
 
 
 def player(s, t, state="playing", y0=H - PLAYER_H, timer=None, card=False):
-    """Панель прослушивания, 152 dp.
+    """Listening panel, 152 dp.
 
-    Ряд A (48): голос — или словами состояние, когда звука нет; справа «закрыть» (остановить прослушивание).
-    Ряд B (64): скорость · назад · играть/пауза · вперёд · таймер сна."""
+    Row A (48): the voice - or the state in words when there is no sound; "close" on the right (stop listening).
+    Row B (64): speed · back · play/pause · forward · sleep timer."""
     p = b.frame(s, 0, y0, W, PLAYER_H, "Плеер — " + state, fill=t["surface"], clip=True,
                 cornerRadius=16 if card else 0)
     if not card:
@@ -360,7 +360,7 @@ def player(s, t, state="playing", y0=H - PLAYER_H, timer=None, card=False):
         b.text(chip, 0, 0, "Aoede", "small_m", t["ink"])
         b.icon(chip, 0, 0, "expand", t["ink2"], size=20)
     b.icon(p, W - 16 - 24, 16, "close", t["ink2"])
-    # ряд B
+    # row B
     b.text(p, 12, 82, "1,25×", "small_m", t["ink"], width=56, textAlign="center", name="Скорость")
     b.icon(p, 84 + 8, 76, "prev", t["ink"], size=32)
     b.ellipse(p, W / 2 - 32, 60, 64, t["accent"], name="Играть/пауза")
@@ -375,9 +375,10 @@ def player(s, t, state="playing", y0=H - PLAYER_H, timer=None, card=False):
 
 
 def player_stopped(parent, t, title, detail, action=None):
-    """Остановка с ошибкой (`stopped`): своими словами что случилось, ответ Google, действие и «Слушать».
+    """Stop on an error (`stopped`): what happened in our own words, the Google reply, an action and "Слушать"
+    (Listen).
 
-    Высота по содержимому (автораскладка): текст сверху, кнопки сразу под ним, крестик — в строке заголовка."""
+    Height follows the content (auto layout): text on top, buttons right below it, the cross in the title row."""
     p = b.frame(parent, 0, 0, W, 100, "Плеер — stopped", fill=t["surface"], cornerRadius=16, layout="vertical",
                 padding=[16, 16, 20, 16], gap=16, sizingV="hug")
     top = b.frame(p, 0, 0, W - 32, 40, "Сообщение", layout="horizontal", gap=16, sizingH="fill", sizingV="hug")
@@ -399,7 +400,7 @@ def listening(s, t, highlight=1):
     player(s, t, "playing")
 
 
-# ================================================================ экраны
+# ================================================================ screens
 t = LIGHT
 SHELF = [("Мастер и Маргарита", "Михаил Булгаков", "12 %"), ("Война и мир", "Лев Толстой", "новая"),
          ("Записки охотника", "Иван Тургенев", "58 %"), ("Капитанская дочка", "Александр Пушкин", "3 %"),
@@ -440,7 +441,7 @@ def fab(s, t):
     b.icon(s, W - 16 - 56 + 16, H - 24 - 56 + 16, "add", t["on_accent"])
 
 
-# ---- 01 Полка
+# ---- 01 Shelf
 def shelf(s, t):
     shelf_header(s, t)
     continue_card(s, t, 100)
@@ -452,7 +453,7 @@ def shelf(s, t):
 s = b.screen("01 Полка", t)
 shelf(s, t)
 
-# ---- 02 Полка — пустая
+# ---- 02 Shelf - empty
 s = b.screen("02 Полка — пустая", t)
 shelf_header(s, t)
 for dx, dy, c in ((-46, 14, t["line"]), (0, 0, t["hl"]), (46, 14, t["line"])):
@@ -464,7 +465,7 @@ b.text(s, 40, 376, "Добавьте файл FB2, EPUB или TXT кнопко�
 r = centered_row(s, 476, 48)
 button(r, 0, 0, None, "Добавить книгу", t, icon="add")
 
-# ---- 03 Полка — добавление
+# ---- 03 Shelf - adding
 s = b.screen("03 Полка — добавление", t)
 shelf_header(s, t)
 y = 100
@@ -493,7 +494,7 @@ shelf_row(s, t, y + 104 + 184, *SHELF[0])
 shelf_row(s, t, y + 104 + 184 + 92, *SHELF[1])
 fab(s, t)
 
-# ---- 04 Полка — меню книги
+# ---- 04 Shelf - book menu
 s = b.screen("04 Полка — меню книги", t)
 shelf(s, t)
 y = sheet(s, t, 264)
@@ -505,18 +506,18 @@ b.text(s, 24, y + 130, "Удалить озвучку", "body", t["ink"])
 b.text(s, W - 24 - 100, y + 130, "38 МБ", "body", t["ink2"], width=100, textAlign="right")
 b.text(s, 24, y + 186, "Удалить книгу", "body", t["ink"])
 
-# ---- 05 Полка — удаление
+# ---- 05 Shelf - deleting
 s = b.screen("05 Полка — удаление", t)
 shelf(s, t)
 dialog(s, t, 204, "Удалить «Война и мир»?",
        "Книга и её озвучка будут удалены с телефона. Освободится 96 МБ.", "Удалить")
 
-# ---- 06 Чтение
+# ---- 06 Reading
 s = b.screen("06 Чтение", t)
 page(s, t, 40, H - 44 - 40, heading="I")
 footer(s, t)
 
-# ---- 07 Чтение — панели
+# ---- 07 Reading - panels
 s = b.screen("07 Чтение — панели", t)
 page(s, t, 40, H - 44 - 40, heading="I")
 footer(s, t)
@@ -531,7 +532,7 @@ b.ellipse(s, 24 + round(track * 0.34) - 10, y + 22, 20, t["accent"], name="Бе�
 b.text(s, 24, y + 52, "34 % книги", "caption", t["ink2"])
 button(s, 16, y + 88, W - 32, "Слушать", t, icon="phones", h=52)
 
-# ---- 08 Чтение — стихи и картинка
+# ---- 08 Reading - verse and picture
 s = b.screen("08 Чтение — стихи и картинка", t)
 col = b.frame(s, 16, 40, W - 32, H - 84, "Страница", layout="vertical", gap=0, clip=True)
 hw = b.frame(col, 0, 0, W - 32, 4 * LINE, "Заголовок главы", layout="vertical", mainAlign="center",
@@ -560,7 +561,7 @@ b._add("vector.create", {"path": "M0 160 L84 76 L134 120 L204 52 L312 160 Z", "c
 b.text(pic, 0, 0, "Иллюстрация к первой главе", "book_cap", t["ink2"], width=W - 80, textAlign="center")
 footer(s, t, "2 %")
 
-# ---- 09 Вид текста (сепия выбрана — страница за листом уже в сепии)
+# ---- 09 Text appearance (sepia selected - the page behind the sheet is already sepia)
 ts = SEPIA
 s = b.screen("09 Вид текста", ts)
 page(s, ts, 40, H - 44 - 40, heading="I")
@@ -593,7 +594,7 @@ for i, (cap, c1, c2) in enumerate(themes):
     b.text(s, cx - 4, y + 242, cap, "caption", ts["ink"] if on else ts["ink2"], width=cw + 8, textAlign="center",
            fontStyle="Medium" if on else "Regular")
 
-# ---- 10 Оглавление
+# ---- 10 Table of contents
 TOC = [(0, "Ионыч", ""), (1, "I", "озвучена"), (1, "II", "озвучена"), (1, "III", ""), (1, "IV", ""), (1, "V", ""),
        (0, "Дама с собачкой", ""), (1, "I", "current"), (1, "II", ""), (1, "III", ""), (1, "IV", ""),
        (0, "Невеста", ""), (1, "I", "")]
@@ -633,7 +634,7 @@ def toc_screen(name, downloading):
 toc_screen("10 Оглавление", False)
 toc_screen("11 Оглавление — скачивание", True)
 
-# ---- 12 Сноска
+# ---- 12 Footnote
 s = b.screen("12 Сноска", t)
 page(s, t, 40, H - 44 - 40, heading="I")
 footer(s, t)
@@ -641,11 +642,12 @@ y = sheet(s, t, 148)
 b.text(s, 24, y + 36, "1", "book_title", t["accent"])
 b.text(s, 44, y + 34, NOTE, "book", t["ink"], width=W - 44 - 24)
 
-# ---- 13 Читать отсюда
+# ---- 13 Read from here
 s = b.screen("13 Читать отсюда", t)
 page(s, t, 40, H - 44 - 40, heading="I", highlight=2)
 footer(s, t)
-# меню над нажатым абзацем: абзац 3 начинается с 18-й строки после заголовка (10 + 7 строк выше, сверено по PNG)
+# menu above the tapped paragraph: paragraph 3 starts at the 18th line after the title (10 + 7 lines above,
+# checked against the PNG)
 r = centered_row(s, 40 + 4 * LINE + 17 * LINE - 8 - 52, 52, "Меню абзаца")
 menu = b.frame(r, 0, 0, 100, 52, "Читать отсюда", fill=t["ink"], cornerRadius=14, layout="horizontal",
                crossAlign="center", gap=10, sizingH="hug", padding=[0, 24, 0, 20],
@@ -653,11 +655,11 @@ menu = b.frame(r, 0, 0, 100, 52, "Читать отсюда", fill=t["ink"], cor
 b.icon(menu, 0, 0, "play", t["bg"])
 b.text(menu, 0, 0, "Читать отсюда", "body", t["bg"], fontStyle="Medium")
 
-# ---- 14 Слушает
+# ---- 14 Listening
 s = b.screen("14 Слушает", t)
 listening(s, t)
 
-# ---- 15 Слушает — листаю сам
+# ---- 15 Listening - paging by myself
 s = b.screen("15 Слушает — листаю сам", t)
 page(s, t, 40, H - PLAYER_H - 8 - 40, paras=LATER + ["Прошла неделя после знакомства."])
 player(s, t, "playing")
@@ -668,11 +670,11 @@ f = b.frame(r, 0, 0, 100, 40, "Кнопка «К месту чтения»", fil
 b.icon(f, 0, 0, "locate", t["bg"], size=20)
 b.text(f, 0, 0, "К месту чтения", "label", t["bg"])
 
-# ---- 16 Слушает — тёмная
+# ---- 16 Listening - dark
 s = b.screen("16 Слушает — тёмная", DARK)
 listening(s, DARK)
 
-# ---- 17 Плеер — состояния
+# ---- 17 Player - states
 s = b.screen("17 Плеер — состояния", t)
 b.text(s, 24, 28, "Панель плеера: когда звука нет", "title", t["ink"], width=W - 48)
 y = 72
@@ -688,7 +690,7 @@ b.text(p, 16, 16, "Книга закончилась", "title_s", t["ink"], widt
 b.text(p, 16, 40, "Чтобы читать глазами, закройте панель.", "caption", t["ink2"], width=W - 16 - 64)
 b.icon(p, W - 16 - 24, 16, "close", t["ink2"])
 
-# ---- 18 Плеер — остановка
+# ---- 18 Player - stop
 s = b.screen("18 Плеер — остановка", t)
 b.text(s, 24, 28, "Панель плеера: ошибка", "title", t["ink"], width=W - 48)
 b.text(s, 24, 58, "Готовый звук доигран; позиция — первый неозвученный абзац.", "caption", t["ink2"],
@@ -705,7 +707,7 @@ for cap, title, detail, action in (
     b.text(capf, 0, 0, cap, "over", t["ink2"])
     player_stopped(board, t, title, detail, action)
 
-# ---- 19 Скорость
+# ---- 19 Speed
 s = b.screen("19 Скорость", t)
 listening(s, t)
 y = sheet(s, t, 256, "Скорость")
@@ -721,7 +723,7 @@ for i, v in enumerate(speeds):
 b.text(s, 24, y + 196, "Меняется только воспроизведение: заново не озвучивается и не стоит денег.", "caption",
        t["ink2"], width=W - 48)
 
-# ---- 20 Таймер сна
+# ---- 20 Sleep timer
 s = b.screen("20 Таймер сна", t)
 listening(s, t)
 y = sheet(s, t, 368, "Таймер сна")
@@ -733,7 +735,7 @@ for i, cap in enumerate(("15 минут", "30 минут", "60 минут", "Д�
         b.icon(s, W - 24 - 24, ry + 14, "check", t["accent"])
     b.text(s, 24, ry + 15, cap, "body", t["ink"], fontStyle="Medium" if on else "Regular")
 
-# ---- 21 Голос
+# ---- 21 Voice
 s = b.screen("21 Голос", t)
 app_bar(s, t, "Голос", "для книги «" + BOOK + "»")
 lst = b.frame(s, 0, 85, W, H - 85 - 72, "Список голосов", clip=True)
@@ -775,7 +777,7 @@ b.text(s, 16, H - 60, "Проба читает одну и ту же фразу.
        "caption", t["ink2"], width=W - 32)
 
 
-# ---- 22 Настройки
+# ---- 22 Settings
 def settings_screen(name, no_key=False):
     s = b.screen(name, t)
     app_bar(s, t, "Настройки")
@@ -838,7 +840,7 @@ def settings_screen(name, no_key=False):
 settings_screen("22 Настройки")
 settings_screen("23 Настройки — нет ключа", no_key=True)
 
-# ---- 24 Настройки — модель
+# ---- 24 Settings - model
 s = settings_screen("24 Настройки — модель")
 y = sheet(s, t, 336, "Модель")
 for i, (name, price, note, on) in enumerate((("3.8 Flash", "0,81 $ за час звука", "по умолчанию", True),
@@ -851,13 +853,13 @@ b.text(s, 24, y + 228, "С 1 января 2027 года Google берёт вдв
        "модели другой не засчитывается: после смены книги озвучиваются заново.", "caption", t["ink2"],
        width=W - 48)
 
-# ---- 25 Настройки — очистка
+# ---- 25 Settings - clearing
 s = settings_screen("25 Настройки — очистка")
 dialog(s, t, 226, "Очистить озвучку?",
        "Удалится озвучка всех книг — 412 МБ. Слушать уже озвученное снова будет платно.", "Очистить")
 
 
-# ================================================================ вывод
+# ================================================================ output
 def contrast(a, c):
     def lum(h):
         r, g, b_ = (int(h[i:i + 2], 16) / 255 for i in (1, 3, 5))

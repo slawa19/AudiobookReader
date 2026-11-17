@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "figcraft": {
-      "command": "D:\\Program Files\\ArtCraft\\FigCraft\\figcraft-cli.exe",
-      "args": ["mcp", "--automation-write-root", "D:\\Work\\Projects\\AudiobookReader\\docs\\mockup"]
-    }
-  }
-}

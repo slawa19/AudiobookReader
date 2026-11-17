@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Анализатор + тесты. Селектор и опции пробрасываются во `flutter test`:
-#   bash scripts/test.sh                                  # всё
-#   bash scripts/test.sh test/reader_test.dart            # один файл
-#   bash scripts/test.sh test/reader_test.dart --name 'листание'
-#   bash scripts/test.sh test/screens_golden_test.dart --update-goldens   # переснять снимки экранов
-# Анализатор всегда идёт по всему проекту и должен быть без замечаний (в том числе info).
+# Analyzer + tests. The selector and options are passed through to `flutter test`:
+#   bash scripts/test.sh                                  # everything
+#   bash scripts/test.sh test/reader_test.dart            # one file
+#   bash scripts/test.sh test/reader_test.dart --name 'paging'
+#   bash scripts/test.sh test/screens_golden_test.dart --update-goldens   # regenerate the screen goldens
+# The analyzer always covers the whole project and must report no issues (info included).
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"

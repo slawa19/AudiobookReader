@@ -1,5 +1,6 @@
-# секреты и локальное
+# secrets and local files
 .env
+.mcp.json
 .run/
 *.jks
 *.keystore
@@ -23,7 +24,7 @@ coverage/
 *.iml
 captures/
 
-# редакторы и ОС
+# editors and OS
 .idea/
 .vscode/*
 !.vscode/tasks.json
@@ -31,5 +32,5 @@ captures/
 .DS_Store
 Thumbs.db
 
-# книги владельца для локальной проверки разбора (спека 001, раздел 6)
+# the owner's books for local parser checks (spec 001, section 6)
 test/local_books/

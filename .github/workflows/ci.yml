@@ -13,20 +13,20 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      # Раннер приходит почти полным: своих SDK и NDK сборке не хватало места («No space left on device»,
-      # найдено 2026-11-15). Предустановленные Android SDK, .NET, GHC и образы Docker нам не нужны.
-      - name: Освободить место на диске
+      # The runner arrives almost full: our own SDK and NDK left the build without space ("No space left on device",
+      # found 2026-11-15). The preinstalled Android SDK, .NET, GHC and Docker images are not needed.
+      - name: Free disk space
         run: |
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
           sudo docker image prune --all --force > /dev/null || true
           df -h /
-      # Версия Flutter и суммы архивов берутся из scripts/env.sh, как и локально.
-      - name: Flutter 3.50.0, JDK и Android SDK
+      # The Flutter version and archive checksums come from scripts/env.sh, as they do locally.
+      - name: Flutter 3.50.0, JDK and Android SDK
         run: bash scripts/setup-wsl.sh
-      - name: Анализатор и тесты
+      - name: Analyzer and tests
         run: bash scripts/test.sh
-      - name: APK с отладочной подписью
+      - name: APK with debug signing
         run: bash scripts/build-apk.sh --debug
-      # Последовательно: второй вариант использует уже собранные зависимости Gradle.
-      - name: Подставной APK с отладочной подписью
+      # Sequentially: the second variant reuses the Gradle dependencies already built.
+      - name: Fake APK with debug signing
         run: bash scripts/build-apk.sh --debug --fake

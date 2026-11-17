@@ -1,5 +1,5 @@
 name: audiobook_reader
-description: "Читалка книг для Android, которая читает вслух голосами Google Gemini TTS."
+description: "Android book reader that reads aloud with Google Gemini TTS voices."
 publish_to: 'none'
 version: 0.1.0+2
 
@@ -7,13 +7,13 @@ environment:
   sdk: ^3.14.0
   flutter: 3.50.0
 
-# Версии закреплены точно. Flutter — scripts/env.sh.
+# Versions are pinned exactly. Flutter: scripts/env.sh.
 dependencies:
   flutter:
     sdk: flutter
   material_ui: 1.11.0
-  # Локализация: ARB + gen-l10n (l10n.yaml). Системные подписи Material — GlobalMaterialLocalizations из
-  # material_ui; flutter_localizations нужен сгенерированному классу строк.
+  # Localization: ARB + gen-l10n (l10n.yaml). Material system labels come from GlobalMaterialLocalizations in
+  # material_ui; flutter_localizations is needed by the generated strings class.
   flutter_localizations:
     sdk: flutter
   intl: 0.20.3
@@ -41,7 +41,7 @@ flutter:
     - assets/demo/covers/
 
   fonts:
-    # Текст книги и названия книг. OFL, источник — assets/fonts/SOURCES.txt.
+    # Book text and book titles. OFL, source: assets/fonts/SOURCES.txt.
     - family: Merriweather
       fonts:
         - asset: assets/fonts/Merriweather-Regular.ttf
@@ -52,8 +52,8 @@ flutter:
         - asset: assets/fonts/Merriweather-BoldItalic.ttf
           weight: 700
           style: italic
-    # Интерфейс. На Android это системный шрифт; встроен, чтобы веб-прототип и снимки тестов
-    # выглядели как на телефоне и не ходили за шрифтом в сеть.
+    # Interface. On Android this is the system font; bundled so that the web prototype and test goldens
+    # look like the phone and do not fetch the font over the network.
     - family: Roboto
       fonts:
         - asset: assets/fonts/Roboto-Regular.ttf

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Кликабельный прототип в браузере.
-#   bash scripts/prototype.sh start    # собрать веб-версию и поднять на http://127.0.0.1:8642/
+# The clickable prototype in the browser.
+#   bash scripts/prototype.sh start    # build the web version and serve it at http://127.0.0.1:8642/
 #   bash scripts/prototype.sh stop
 #   bash scripts/prototype.sh status
-# Сборка не ходит в сеть за CanvasKit и шрифтами (--no-web-resources-cdn, шрифты встроены).
+# The build does not go online for CanvasKit and fonts (--no-web-resources-cdn, fonts are bundled).
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
@@ -38,7 +38,7 @@ case "${1:-}" in
     require_flutter
     mkdir -p "${RUN_DIR}"
     "${FLUTTER_BIN}" pub get >/dev/null
-    echo "Собираю веб-версию…"
+    echo "Building the web version…"
     "${FLUTTER_BIN}" build web --release --no-web-resources-cdn --no-source-maps
     stop
     nohup setsid python3 -I "${PROJECT_ROOT}/scripts/prototype-server.py" \
@@ -50,25 +50,25 @@ case "${1:-}" in
     done
     code="$(http_code)"
     if [[ "${code}" != "200" ]]; then
-      echo "Сервер не ответил 200 (ответ: ${code}). Лог: ${LOG_FILE}" >&2
+      echo "The server did not answer 200 (answer: ${code}). Log: ${LOG_FILE}" >&2
       exit 1
     fi
-    echo "Прототип: ${URL} (HTTP ${code}, pid $(cat "${PID_FILE}"))"
+    echo "Prototype: ${URL} (HTTP ${code}, pid $(cat "${PID_FILE}"))"
     ;;
   stop)
     stop
-    echo "Остановлен."
+    echo "Stopped."
     ;;
   status)
     if running; then
-      echo "Работает: ${URL} (HTTP $(http_code), pid $(cat "${PID_FILE}"))"
+      echo "Running: ${URL} (HTTP $(http_code), pid $(cat "${PID_FILE}"))"
     else
-      echo "Не запущен."
+      echo "Not running."
       exit 3
     fi
     ;;
   *)
-    echo "Использование: bash scripts/prototype.sh start|stop|status" >&2
+    echo "Usage: bash scripts/prototype.sh start|stop|status" >&2
     exit 2
     ;;
 esac
