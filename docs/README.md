@@ -1,61 +1,64 @@
-# Документы проекта
+# Project documents
 
-Указатель. Источник правды — код и история git; документ, разошедшийся с кодом, правится тем же коммитом.
+The index. The source of truth is the code and the git history; a document that has drifted from the code is fixed in
+the same commit.
 
-## С чего начать
+## Where to start
 
-1. [WHERE_WE_ARE.md](WHERE_WE_ARE.md) — что сделано, что дальше, окружение.
-2. [CONCEPT.md](CONCEPT.md) — что строим и чего не строим.
-3. [ARCHITECTURE.md](ARCHITECTURE.md) — как устроено.
+1. [WHERE_WE_ARE.md](WHERE_WE_ARE.md) — what has been done, what is next, the environment.
+2. [CONCEPT.md](CONCEPT.md) — what we build and what we do not.
+3. [ARCHITECTURE.md](ARCHITECTURE.md) — how it is built.
 
-## Что строим
+## What we build
 
-| Документ | О чём |
+| Document | What it is about |
 |---|---|
-| [CONCEPT.md](CONCEPT.md) | замысел, читатель, состав функций, «Чего не делаем» |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | модули и их зависимости, модель книги, раскладка страниц, озвучка, хранение, замеры |
-| [specs/001-first-version.md](specs/001-first-version.md) | спека первой версии: решения, требования по этапам, критерии приёмки, журнал решений (Changelog) |
-| [specs/002-cleanup-after-reviews.md](specs/002-cleanup-after-reviews.md) | спека доработки по итогам ревью архитектуры: дефекты, повторы, удаление лишнего |
-| [GEMINI_TTS.md](GEMINI_TTS.md) | форма запроса к Gemini TTS, голоса, тарифы, замеры задержки |
-| [GOOGLE_PLAY_PLAN.md](GOOGLE_PLAY_PLAN.md) | планы на потом: публикация в Google Play и платный сервис; не решение |
+| [CONCEPT.md](CONCEPT.md) | the idea, the reader, the set of features, "Out of scope" |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | modules and their dependencies, the book model, page layout, narration, storage, measurements |
+| [specs/001-first-version.md](specs/001-first-version.md) | the first-version spec: decisions, requirements by stage, acceptance criteria, the decision log (Changelog) |
+| [specs/002-cleanup-after-reviews.md](specs/002-cleanup-after-reviews.md) | the spec of the rework after the architecture review: defects, repetitions, removing the superfluous |
+| [specs/003-open-source.md](specs/003-open-source.md) | the spec of preparing the open-source publication: GPL-3.0, English documentation, the fifth language, the release workflow |
+| [GEMINI_TTS.md](GEMINI_TTS.md) | the shape of the Gemini TTS request, voices, rates, latency measurements |
+| [GOOGLE_PLAY_PLAN.md](GOOGLE_PLAY_PLAN.md) | plans for later: publication in Google Play and a paid service; not a decision |
 
-## Как выглядит
+## What it looks like
 
-| Документ | О чём |
+| Document | What it is about |
 |---|---|
-| [prototype/README.md](prototype/README.md) | прототип экранов на Flutter — он задаёт вид; запуск, жесты, палитра, снимки |
-| [mockup/](mockup/) | статический макет: справка по составу экранов и текстам, не эталон вида |
-| [logo.svg](logo.svg) | знак приложения; те же контуры — в значке Android |
+| [prototype/README.md](prototype/README.md) | the Flutter screen prototype — it sets the look; running, gestures, palette, screenshots |
+| [mockup/](mockup/) | the static mock-up: a reference for the composition of screens and texts, not a standard of the look |
+| [logo.svg](logo.svg) | the app's mark; the same outlines are in the Android icon |
 
-## Как проверяем
+## How we verify
 
-| Документ | О чём |
+| Document | What it is about |
 |---|---|
-| [DEVICE_CHECKLIST.md](DEVICE_CHECKLIST.md) | ручная проверка на телефоне: фон, экран блокировки, гарнитура, звонок |
-| [CODEX_INDEPENDENT_REVIEW.md](CODEX_INDEPENDENT_REVIEW.md) | как запускать независимое ревью |
+| [DEVICE_CHECKLIST.md](DEVICE_CHECKLIST.md) | manual phone check: background, lock screen, headset, a call |
+| [CODEX_INDEPENDENT_REVIEW.md](CODEX_INDEPENDENT_REVIEW.md) | how to run an independent review |
 
-## Ревью и проверки (`reviews/`)
+## Reviews and checks (`reviews/`)
 
-Записи того, что было найдено и что с этим сделано. Источником правды не служат.
+Records of what was found and what was done about it. They are not a source of truth.
 
-| Запись | Что проверялось |
+| Record | What was checked |
 |---|---|
-| [CODEX_REVIEW_ARCH_2026-11-14.md](reviews/CODEX_REVIEW_ARCH_2026-11-14.md) | архитектура |
-| [CODEX_REVIEW_SPEC_2026-11-14.md](reviews/CODEX_REVIEW_SPEC_2026-11-14.md) | спека первой версии |
-| [CODEX_REVIEW_MOCKUP_2026-11-14.md](reviews/CODEX_REVIEW_MOCKUP_2026-11-14.md) | статический макет |
-| [CODEX_REVIEW_PROTOTYPE_2026-11-14.md](reviews/CODEX_REVIEW_PROTOTYPE_2026-11-14.md) | прототип экранов |
-| [CODEX_REVIEW_LOGIC_2026-11-14.md](reviews/CODEX_REVIEW_LOGIC_2026-11-14.md) | логика экранов прототипа |
-| [JOURNEY_AUDIT_2026-11-14.md](reviews/JOURNEY_AUDIT_2026-11-14.md) | пути пользователя |
-| [GESTURE_AUDIT_2026-11-14.md](reviews/GESTURE_AUDIT_2026-11-14.md) | жесты |
-| [FABLE_REVIEW_001_STAGE1_2026-11-15.md](reviews/FABLE_REVIEW_001_STAGE1_2026-11-15.md) | код этапа 1 «Читалка» |
-| [FABLE_REVIEW_001_STAGE2_2026-11-15.md](reviews/FABLE_REVIEW_001_STAGE2_2026-11-15.md) | код этапа 2 «Озвучка» |
-| [FABLE_REVIEW_001_NAV_TXT_2026-11-15.md](reviews/FABLE_REVIEW_001_NAV_TXT_2026-11-15.md) | переходы по абзацам, возврат страницы, TXT |
-| [READER_SCREEN_REVIEW_2026-11-15.md](reviews/READER_SCREEN_REVIEW_2026-11-15.md) | экран чтения во время озвучки: два независимых ревью (Opus 5.5 и gpt-6-astra) |
-| [ARCH_REVIEW_2026-11-16.md](reviews/ARCH_REVIEW_2026-11-16.md) | архитектура, разделение ответственности, повторы, качество кода Codex: два независимых ревью |
-| [EXPERIMENT_CODEX_IMPL.md](reviews/EXPERIMENT_CODEX_IMPL.md) | журнал эксперимента: код пишут агенты Codex, принимает оркестратор |
+| [CODEX_REVIEW_ARCH_2026-11-14.md](reviews/CODEX_REVIEW_ARCH_2026-11-14.md) | the architecture |
+| [CODEX_REVIEW_SPEC_2026-11-14.md](reviews/CODEX_REVIEW_SPEC_2026-11-14.md) | the first-version spec |
+| [CODEX_REVIEW_MOCKUP_2026-11-14.md](reviews/CODEX_REVIEW_MOCKUP_2026-11-14.md) | the static mock-up |
+| [CODEX_REVIEW_PROTOTYPE_2026-11-14.md](reviews/CODEX_REVIEW_PROTOTYPE_2026-11-14.md) | the screen prototype |
+| [CODEX_REVIEW_LOGIC_2026-11-14.md](reviews/CODEX_REVIEW_LOGIC_2026-11-14.md) | the prototype's screen logic |
+| [JOURNEY_AUDIT_2026-11-14.md](reviews/JOURNEY_AUDIT_2026-11-14.md) | user journeys |
+| [GESTURE_AUDIT_2026-11-14.md](reviews/GESTURE_AUDIT_2026-11-14.md) | gestures |
+| [FABLE_REVIEW_001_STAGE1_2026-11-15.md](reviews/FABLE_REVIEW_001_STAGE1_2026-11-15.md) | the code of stage 1 "Reader" |
+| [FABLE_REVIEW_001_STAGE2_2026-11-15.md](reviews/FABLE_REVIEW_001_STAGE2_2026-11-15.md) | the code of stage 2 "Narration" |
+| [FABLE_REVIEW_001_NAV_TXT_2026-11-15.md](reviews/FABLE_REVIEW_001_NAV_TXT_2026-11-15.md) | jumps by paragraph, page return, TXT |
+| [READER_SCREEN_REVIEW_2026-11-15.md](reviews/READER_SCREEN_REVIEW_2026-11-15.md) | the reading screen during narration: two independent reviews (Opus 5.5 and gpt-6-astra) |
+| [ARCH_REVIEW_2026-11-16.md](reviews/ARCH_REVIEW_2026-11-16.md) | the architecture, separation of responsibility, repetitions, the quality of Codex's code: two independent reviews |
+| [EXPERIMENT_CODEX_IMPL.md](reviews/EXPERIMENT_CODEX_IMPL.md) | the experiment log: Codex agents write the code, the orchestrator accepts |
 
-## Правила именования
+## Naming rules
 
-- Спека — `specs/NNN-<slug>.md`; в ней решения, требования, приёмка, «Не делаем», Changelog.
-- Запись ревью — `reviews/<КТО>_REVIEW_<что>_<дата>.md`.
-- Решение владельца записывается в спеку или концепцию в тот же день, с датой.
+- A spec is `specs/NNN-<slug>.md`; it holds decisions, requirements, acceptance, "Out of scope", Changelog.
+- A review record is `reviews/<WHO>_REVIEW_<what>_<date>.md`.
+- The owner's decision is recorded in the spec or the concept on the same day, with the date.
+- Documentation, code comments and commit messages are in English (decision of 2026-11-17).

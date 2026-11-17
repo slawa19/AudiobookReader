@@ -1,4 +1,4 @@
-# Макет интерфейса
+# Interface mock-up
 
-Файл макета FigCraft и его снимки экранов. Сервер MCP FigCraft, описанный в `.mcp.json`, может писать только в эту
-папку.
+The FigCraft mock-up file and its screenshots. The FigCraft MCP server (configured in a local, untracked `.mcp.json`)
+can write only to this folder.

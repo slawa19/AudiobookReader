@@ -1,34 +1,35 @@
-# Журнал изменений
+# Changelog
 
-Что менялось для читателя. Формат — [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Решения и их причины —
-в Changelog спеки ([docs/specs/001-first-version.md](docs/specs/001-first-version.md)); подробности — в истории git.
+What changed for the reader. Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Decisions and their
+reasons are in the spec's Changelog ([docs/specs/001-first-version.md](docs/specs/001-first-version.md)); details are
+in the git history.
 
-## Не выпущено — 0.1.0
+## Unreleased — 0.1.0
 
-Первая версия, в разработке; выпусков ещё не было. Номер сборки — 2: состояние после доработки по
-ревью и полной проверки на телефоне 2026-11-16.
+The first version, in development; there have been no releases yet. The build number is 2: the state after the rework
+following the review and the full phone check of 2026-11-16.
 
-### Добавлено
+### Added
 
-- Полка книг: добавление кнопкой «+», через «Открыть с помощью» и «Поделиться»; удаление книги и её озвучки.
-- Форматы FB2, FB2.ZIP, EPUB, TXT; оглавление, сноски, картинки, стихи.
-- Чтение по страницам: светлая и тёмная тема, размер шрифта, сохранение позиции.
-- Озвучка голосами Google Gemini TTS: «Слушать» с любого абзаца, подсветка звучащего абзаца, следование страницы
-  за голосом, скорость, таймер сна, выбор голоса с пробой.
-- «Назад» и «вперёд» плеера переходят по абзацам.
-- Фоновое воспроизведение, управление из уведомления, с экрана блокировки и с гарнитуры.
-- Озвученное хранится на телефоне и повторно не оплачивается; расход виден в настройках; «Скачать главу» с оценкой
-  цены.
-- Интерфейс на русском, английском, польском и немецком.
-- Значок приложения: раскрытая книга, строки которой становятся звуком.
+- The book shelf: adding with the "+" button, through "Open with" and "Share"; deleting a book and its narration.
+- The formats FB2, FB2.ZIP, EPUB, TXT; table of contents, footnotes, images, verse.
+- Paged reading: light and dark themes, font size, saving the position.
+- Narration with Google Gemini TTS voices: "Listen" from any paragraph, highlight of the sounding paragraph, the page
+  following the voice, speed, sleep timer, voice choice with a voice probe.
+- The player's "back" and "forward" move by paragraphs.
+- Background playback, controls from the notification, the lock screen and the headset.
+- What has been narrated is stored on the phone and not paid for again; the spend is visible in settings; "Download
+  chapter" with a price estimate.
+- The interface in Russian, English, Polish, German and Ukrainian (Ukrainian added on 2026-11-17).
+- The app icon: an open book whose lines turn into sound.
 
-### Исправлено
+### Fixed
 
-- После «вперёд» могла показаться страница из одной строки, а следование за голосом выключалось.
-- Размер книги на полке после перезапуска приложения считал озвучку дважды.
-- Уведомление плеера оставалось на шторке после конца книги и после закрытия плеера.
-- Длинное имя голоса обрезалось на панели плеера, хотя место было.
-- Ошибка программы при запросе к Gemini останавливает озвучку, а не повторяется как сетевая.
-- После паузы, листания и «продолжить» экран возвращается на ту же страницу, а не раскладывает текст заново.
-- Название главы на карточке «Продолжить» и в шапке чтения занимает не больше двух строк.
-- После выбора главы в оглавлении панели не мелькают: страница открывается сразу без них.
+- After "forward" a one-line page could appear, and following the voice was turned off.
+- The size of a book on the shelf counted the narration twice after the app restarted.
+- The player notification stayed in the shade after the end of the book and after the player was closed.
+- A long voice name was truncated on the player panel even though there was room.
+- A program error during a request to Gemini stops narration instead of being retried as a network error.
+- After pause, paging and "continue" the screen returns to the same page instead of laying the text out again.
+- The chapter title on the "Continue" card and in the reading header takes no more than two lines.
+- After choosing a chapter in the table of contents the panels do not flash: the page opens at once without them.

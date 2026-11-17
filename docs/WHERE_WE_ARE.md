@@ -1,90 +1,101 @@
-# Где мы сейчас
+# Where we are
 
-Навигация по состоянию проекта. Источник правды — код и история git; этот файл правится тем же коммитом, что
-меняет состояние. Хеши коммитов и числа тестов сюда не пишутся: они устаревают раньше, чем их прочтут.
+Navigation through the project's state. The source of truth is the code and git history; this file is edited in the
+same commit that changes the state. Commit hashes and test counts are not written here: they go stale before anyone
+reads them.
 
-## Состояние
+## State
 
-Репозиторий создан 2026-11-14. Идёт реализация спеки 001 (первая версия).
+The repository was created on 2026-11-14. Spec 001 (the first version) is being implemented.
 
-| Этап спеки 001 | Написано | Проверено на телефоне | Принято владельцем |
+| Spec 001 stage | Written | Verified on the phone | Accepted by the owner |
 |---|---|---|---|
-| 0. Окружение, сборка, CI | да | да | закрыт, кроме замера FR-E6 на мобильной сети |
-| 1. Читалка: FB2, FB2.ZIP, EPUB, полка, чтение | да | да, на книгах FB2 владельца; настоящих EPUB и FB2.ZIP в наборе не было | **да, 2026-11-15 (SC-1)** |
-| 2. Озвучка: Gemini, очередь, плеер, фон, расход, ключ | да | да, 2026-11-16 по чек-листу через adb: плеер, переходы, возврат страницы, фон, уведомление, кнопки гарнитуры эмуляцией; погашенный экран, экран блокировки, настоящие наушники, звонок — нет | **нет (SC-2)**; голос, скорость и стыки абзацев владелец принял 2026-11-15 |
-| 3. Доводка: TXT, таймер сна, «Скачать главу», «Удалить озвучку» | да | таймер сна, «Скачать главу», «Удалить озвучку» — да, 2026-11-16 на подставной сборке; TXT на телефоне — нет (файла на нём не было) | нет (SC-3) |
+| 0. Environment, build, CI | yes | yes | closed, except the FR-E6 measurement on a mobile network |
+| 1. Reader: FB2, FB2.ZIP, EPUB, shelf, reading | yes | yes, on the owner's FB2 books; the set had no real EPUB or FB2.ZIP files | **yes, 2026-11-15 (SC-1)** |
+| 2. Narration: Gemini, queue, player, background, spend, key | yes | yes, 2026-11-16 by checklist through adb: player, jumps, page return, background, notification, headset buttons by emulation; screen off, lock screen, real headphones, a phone call — no | **no (SC-2)**; the owner accepted the voice, speed and paragraph joins on 2026-11-15 |
+| 3. Polish: TXT, sleep timer, "Download chapter", "Delete narration" | yes | sleep timer, "Download chapter", "Delete narration" — yes, 2026-11-16 on the fake build; TXT on the phone — no (there was no such file on it) | no (SC-3) |
 
-Внешнее ревью кода проведено по этапам 1 и 2, по пачке «переходы и TXT», по экрану чтения и по архитектуре в целом;
-находки приземлены ([reviews/](reviews/)), доработка по ревью архитектуры — спека 002, влита. Полная проверка на
-телефоне 2026-11-16 нашла два дефекта — уведомление после конца прослушивания и обрезанное имя голоса; оба
-исправлены и перепроверены на телефоне. У приложения есть свой значок ([logo.svg](logo.svg)).
+External code review was done for stages 1 and 2, for the "jumps and TXT" batch, for the reading screen and for the
+architecture as a whole; the findings have been landed ([reviews/](reviews/)), the rework after the architecture
+review is spec 002, merged. The full phone check of 2026-11-16 found two defects — the notification after listening
+ended and a truncated voice name; both were fixed and re-verified on the phone. The app has its own icon
+([logo.svg](logo.svg)).
 
-**Что дальше** — всё за владельцем, с компьютера это не проверяется:
+Since 2026-11-17 the repository is being prepared for open-source publication under GPL-3.0 (owner decisions of
+2026-11-17): documentation and code comments in English, Ukrainian as the fifth interface language (done and merged),
+a release workflow with signed APKs. Everything about it is in [specs/003-open-source.md](specs/003-open-source.md).
 
-1. прослушивание настоящим голосом: речь на слух, «назад/вперёд», возврат страницы;
-2. оставшиеся пункты [DEVICE_CHECKLIST.md](DEVICE_CHECKLIST.md): погашенный экран и экран блокировки, наушники,
-   звонок, звук другого приложения, режим полёта, крупный системный шрифт;
-3. книги EPUB, FB2.ZIP и TXT на телефоне;
-4. замер FR-E6 на мобильной сети — компьютер подключается через точку доступа телефона;
-5. приёмка SC-2 и SC-3, итог эксперимента с агентами Codex.
+**What is next** — all with the owner, none of it can be verified from a computer:
 
-На телефоне владельца стоит одна сборка — настоящая, подписанная постоянным ключом. Сборка с подставным голосом
-(`build-apk.sh --fake`) ставится рядом только на время проверки. Веб-прототип: его тесты проходят, сама веб-сборка
-после реализации не запускалась.
+1. listening with the real voice: speech by ear, "back/forward", page return;
+2. the remaining items of [DEVICE_CHECKLIST.md](DEVICE_CHECKLIST.md): screen off and lock screen, headphones, a phone
+   call, another app's sound, airplane mode, a large system font;
+3. EPUB, FB2.ZIP and TXT books on the phone;
+4. the FR-E6 measurement on a mobile network — the computer is connected through the phone's hotspot;
+5. acceptance of SC-2 and SC-3, the outcome of the experiment with Codex agents.
 
-Порядок работ, заданный владельцем 2026-11-14:
+The owner's phone has one build installed — the real one, signed with the permanent key. The build with the fake voice
+(`build-apk.sh --fake`) is installed alongside only for the duration of a check. The web prototype: its tests pass,
+but the web build itself has not been run since the implementation.
 
-1. архитектура → ревью Codex — сделано;
-2. спека первой версии → ревью Codex — сделано, находки внесены;
-3. прототип экранов → ревью Codex и владельца. Статический макет FigCraft (`docs/mockup/`) владелец отклонил по
-   элементам интерфейса; вид теперь задаёт прототип на Flutter (`docs/prototype/README.md`), он запускается
-   `scripts/prototype.sh` и открывается по адресу http://127.0.0.1:8642/. Интерфейс на русском, английском,
-   польском и немецком. Ревью Codex прототипа проведено (ДОРАБОТАТЬ, 21 находка), находки внесены; **ждёт ревью
-   владельца**; прототип принят владельцем 2026-11-15;
-4. реализация — начата 2026-11-15 по спеке 001; состояние по этапам — в таблице выше.
+The order of work set by the owner on 2026-11-14:
 
-**Как идёт реализация (эксперимент, решение владельца 2026-11-15).** Порядок отличается от `AGENTS.md`,
-«Оркестратор и агенты»: код пишут агенты Codex (`gpt-6.1-sol`, усилие high; запрошенная `gpt-6.2-sol` учётной
-записи недоступна) без песочницы — иначе им не виден WSL и тесты, — каждый в своём дереве
-`D:\Temp\claude\wt-<slug>`; оркестратор (Claude) ставит задачи, принимает работу и сливает; внешнее ревью пачки
-делает Fable 5.2, а не Codex. После завершения владелец оценивает эффективность; журнал запусков —
-[reviews/EXPERIMENT_CODEX_IMPL.md](reviews/EXPERIMENT_CODEX_IMPL.md). Владелец 2026-11-15: оркестратор
-ведёт разработку и тестирование сам, работу агентов принимает сам, большую пачку отдаёт на ревью отдельному Fable.
+1. architecture → Codex review — done;
+2. the first-version spec → Codex review — done, findings incorporated;
+3. the screen prototype → review by Codex and the owner. The owner rejected the static FigCraft mock-up
+   (`docs/mockup/`) over interface elements; the look is now set by the Flutter prototype
+   (`docs/prototype/README.md`), which is started by `scripts/prototype.sh` and opens at http://127.0.0.1:8642/. The
+   interface is in Russian, English, Polish and German (Ukrainian was added as the fifth language on 2026-11-17). The
+   Codex review of the prototype was done (REWORK, 21 findings), the findings were incorporated; **awaiting the owner's
+   review**; the prototype was accepted by the owner on 2026-11-15;
+4. implementation — begun on 2026-11-15 under spec 001; the state by stages is in the table above.
 
-Документы (полный указатель — [README.md](README.md)):
+**How the implementation is going (an experiment, the owner's decision of 2026-11-15).** The order differs from
+`AGENTS.md`, "Orchestrator and agents": the code is written by Codex agents (`gpt-6.1-sol`, effort high; the requested
+`gpt-6.2-sol` is unavailable to the account) without a sandbox — otherwise they cannot see WSL and the tests — each in
+its own worktree `D:\Temp\claude\wt-<slug>`; the orchestrator (Claude) sets the tasks, accepts the work and merges;
+the external review of a batch is done by Fable 5.2, not Codex. After it finishes the owner assesses the efficiency;
+the log of launches is [reviews/EXPERIMENT_CODEX_IMPL.md](reviews/EXPERIMENT_CODEX_IMPL.md). The owner, 2026-11-15:
+the orchestrator leads development and testing itself, accepts the agents' work itself, and gives a large batch to a
+separate Fable for review.
 
-- [CONCEPT.md](CONCEPT.md) — концепция; все предложения раздела 9 приняты владельцем 2026-11-14 (Flutter; MOBI во
-  второй версии; системного голоса нет; книги из студии — позже).
-- [ARCHITECTURE.md](ARCHITECTURE.md) — архитектура, версия 3.
-- [specs/001-first-version.md](specs/001-first-version.md) — спека первой версии; идёт реализация.
-- [specs/002-cleanup-after-reviews.md](specs/002-cleanup-after-reviews.md) — доработка по ревью архитектуры
-  2026-11-16; сделана и влита 2026-11-16; на телефоне проверена подставной сборкой.
-- [reviews/](reviews/) — записи ревью: документов и прототипа (Codex, 2026-11-14), кода по этапам, экрана чтения
-  и архитектуры (2026-11-15 и 2026-11-16), журнал эксперимента.
-- [prototype/README.md](prototype/README.md) — прототип: запуск, жесты, палитра, языки, снимки экранов.
-- [GEMINI_TTS.md](GEMINI_TTS.md) — проверенная в AudiobookStudio форма запроса, голоса, тарифы.
-- [GOOGLE_PLAY_PLAN.md](GOOGLE_PLAY_PLAN.md) — планы на потом: публикация в Google Play и платный сервис; не решение.
-- [CODEX_INDEPENDENT_REVIEW.md](CODEX_INDEPENDENT_REVIEW.md) — как запускать независимое ревью.
-- `AGENTS.md` — правила работы агентов.
+Documents (the full index is [README.md](README.md)):
 
-## Окружение
+- [CONCEPT.md](CONCEPT.md) — the concept; all proposals of section 9 were accepted by the owner on 2026-11-14
+  (Flutter; MOBI in the second version; no system voice; books from Studio — later).
+- [ARCHITECTURE.md](ARCHITECTURE.md) — the architecture, version 3.
+- [specs/001-first-version.md](specs/001-first-version.md) — the first-version spec; being implemented.
+- [specs/002-cleanup-after-reviews.md](specs/002-cleanup-after-reviews.md) — the rework after the architecture review
+  of 2026-11-16; done and merged on 2026-11-16; verified on the phone with the fake build.
+- [specs/003-open-source.md](specs/003-open-source.md) — preparation for open-source publication (2026-11-17).
+- [reviews/](reviews/) — review records: of documents and the prototype (Codex, 2026-11-14), of code by stages, of the
+  reading screen and of the architecture (2026-11-15 and 2026-11-16), the experiment log.
+- [prototype/README.md](prototype/README.md) — the prototype: running, gestures, palette, languages, screenshots.
+- [GEMINI_TTS.md](GEMINI_TTS.md) — the request shape, voices and rates verified in AudiobookStudio.
+- [GOOGLE_PLAY_PLAN.md](GOOGLE_PLAY_PLAN.md) — plans for later: publication in Google Play and a paid service; not a
+  decision.
+- [CODEX_INDEPENDENT_REVIEW.md](CODEX_INDEPENDENT_REVIEW.md) — how to run an independent review.
+- `AGENTS.md` — the agents' working rules.
 
-- Flutter 3.50.0 установлен в WSL Debian (`~/sdk/flutter-3.50.0`, `scripts/setup-wsl.sh`); в Windows Flutter нет.
-  JDK и Android SDK стоят там же (`~/sdk`), версии — `scripts/env.sh`; команды — `AGENTS.md`, «Стек и runtime».
-  `scripts/build-apk.sh` собирает APK, подписанный постоянным ключом (создан 2026-11-15, вне репозитория, параметры
-  в `.env`). `adb` стоит в Windows.
-- Этап 0 спеки 001: окружение, сборка и CI сделаны, первый запуск CI зелёный. Телефон владельца подключён по USB
-  2026-11-15 (SM-S948B, Android 17, API 37; навигация тремя кнопками; отладка разрешена): APK поставлен через `adb`,
-  вторая сборка встала поверх первой. Замеры FR-E6 сделаны 2026-11-15 (короткий текст, одновременные запросы — `GEMINI_TTS.md`), кроме замера на
-  мобильной сети: для него компьютер надо подключить через точку доступа телефона.
-- FigCraft: `D:\Program Files\ArtCraft\FigCraft\`. Сервер MCP — `figcraft-cli.exe mcp`, прописан в `.mcp.json`;
-  подключается у сессии, запущенной из каталога проекта. Без MCP тот же движок доступен как
-  `figcraft-cli.exe run <сценарий.json>` и `render`.
-- Замер задержки Gemini с рабочего компьютера сделан 2026-11-14 ([GEMINI_TTS.md](GEMINI_TTS.md)); с телефона и
-  мобильной сети — нет. Оставшиеся замеры и их этапы — [ARCHITECTURE.md](ARCHITECTURE.md), раздел 11; платные — только
-  с согласия владельца.
-- Ключ Gemini лежит в `.env` проекта.
+## Environment
 
-## Что не делать
+- Flutter 3.50.0 is installed in WSL Debian (`~/sdk/flutter-3.50.0`, `scripts/setup-wsl.sh`); there is no Flutter in
+  Windows. The JDK and Android SDK are there too (`~/sdk`), versions in `scripts/env.sh`; commands in `AGENTS.md`,
+  "Stack and runtime". `scripts/build-apk.sh` builds an APK signed with the permanent key (created 2026-11-15, outside
+  the repository, parameters in `.env`). `adb` is installed in Windows.
+- Stage 0 of spec 001: the environment, build and CI are done, the first CI run is green. The owner's phone was
+  connected by USB on 2026-11-15 (SM-S948B, Android 17, API 37; three-button navigation; debugging allowed): the APK
+  was installed through `adb`, the second build went over the first. The FR-E6 measurements were done on 2026-11-15
+  (short text, simultaneous requests — `GEMINI_TTS.md`), except the measurement on a mobile network: for it the
+  computer must be connected through the phone's hotspot.
+- FigCraft: `D:\Program Files\ArtCraft\FigCraft\`. Its MCP server is `figcraft-cli.exe mcp`, configured in a local
+  `.mcp.json` that is not tracked in the repository; it connects for a session started from the project directory.
+  Without MCP the same engine is available as `figcraft-cli.exe run <scenario.json>` and `render`.
+- The Gemini latency measurement from a work computer was done on 2026-11-14 ([GEMINI_TTS.md](GEMINI_TTS.md)); from the
+  phone and a mobile network — not. The remaining measurements and their stages — [ARCHITECTURE.md](ARCHITECTURE.md),
+  section 11; the paid ones only with the owner's consent.
+- The Gemini key is in the project's `.env`.
 
-- Не возвращать отклонённое из раздела «Чего не делаем» концепции и раздела 10 архитектуры.
+## What not to do
+
+- Do not bring back what was rejected in the concept's "Out of scope" section and in section 10 of the architecture.

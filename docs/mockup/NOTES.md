@@ -1,183 +1,192 @@
-# Макет читалки: что в нём и как его читать
+# The reader mock-up: what is in it and how to read it
 
-Версия 2026-11-14. Источник макета — `build_mockup.py`; `reader.figcraft` и `png/` из него собираются. Правится
-генератор, а не файл макета.
+Version of 2026-11-14. The mock-up's source is `build_mockup.py`; `reader.figcraft` and `png/` are built from it. The
+generator is edited, not the mock-up file. The mock-up itself is drawn with Russian texts; the quotes below give the
+English string of the same key from `lib/screens/l10n/app_en.arb`.
 
-## Сборка
+## Build
 
 ```
-# в WSL, из docs/mockup (только стандартная библиотека Python):
+# in WSL, from docs/mockup (Python standard library only):
 python3 build_mockup.py <scratch>/script.json
-# в Windows:
+# in Windows:
 figcraft-cli run <scratch>/script.json --out reader.figcraft --no-system-fonts > <scratch>/run.log
-# в WSL — сверка номеров слоёв с выводом run:
+# in WSL — reconcile the layer numbers with the output of run:
 python3 build_mockup.py --check <scratch>/script.json <scratch>/run.log
-# в Windows:
+# in Windows:
 figcraft-cli export reader.figcraft --out png --scale 2 --no-system-fonts
 ```
 
-Флаг `--no-system-fonts` обязателен: тогда картинка одинакова на любой машине.
+The `--no-system-fonts` flag is mandatory: then the picture is identical on any machine.
 
-## Шрифты
+## Fonts
 
-| Где | Гарнитура | Почему |
+| Where | Typeface | Why |
 |---|---|---|
-| Интерфейс | **Roboto** (системный шрифт Android) | встраивать не нужно |
-| Текст книги, названия книг, заголовок полки | **Merriweather** (OFL, встраивается в приложение) | экранная антиква с кириллицей и крупным очком, держит мелкий кегль |
+| Interface | **Roboto** (the Android system font) | no need to embed |
+| Book text, book titles, the shelf heading | **Merriweather** (OFL, embedded in the app) | a screen serif with Cyrillic and a large x-height, holds up at a small size |
 
-Source Sans 3 и Source Serif 4 из черновика во встроенном наборе FigCraft отсутствуют (проверено
-`text.fonts`), а системные шрифты макет не использует. Если владельцу нужен Source Serif 4 — его можно встроить в
-приложение, но тогда макет перестанет совпадать с экраном.
+Source Sans 3 and Source Serif 4 from the draft are absent from FigCraft's built-in set (checked with `text.fonts`),
+and the mock-up does not use system fonts. If the owner wants Source Serif 4 — it can be embedded in the app, but then
+the mock-up will stop matching the screen.
 
-### Текст книги: ступени размера
+### Book text: the size steps
 
-Гарнитура одна — Merriweather Regular (курсив — Merriweather Italic, полужирный — Bold). Ступеней шесть, общий
-множитель интерлиньяжа ≈ 1,7, выравнивание по левому краю, без переносов:
+One typeface — Merriweather Regular (italic — Merriweather Italic, bold — Bold). There are six steps, a common
+line-height multiplier of ≈ 1.7, left alignment, no hyphenation:
 
-| Ступень | 1 | 2 | **3 (по умолчанию)** | 4 | 5 | 6 |
+| Step | 1 | 2 | **3 (default)** | 4 | 5 | 6 |
 |---|---|---|---|---|---|---|
-| Кегль, sp | 14 | 15 | **16** | 18 | 20 | 22 |
-| Интерлиньяж, dp | 24 | 26 | **27** | 30 | 34 | 37 |
+| Font size, sp | 14 | 15 | **16** | 18 | 20 | 22 |
+| Line height, dp | 24 | 26 | **27** | 30 | 34 | 37 |
 
-Размер текста книги задаётся только этой настройкой и **не умножается на системный масштаб шрифта** (решение,
-требует подтверждения — см. ниже); интерфейс системный масштаб соблюдает.
+The size of the book text is set only by this setting and is **not multiplied by the system font scale** (a decision
+that needs confirmation — see below); the interface respects the system scale.
 
-### Проверочная комбинация «узкий экран + крупный шрифт» (FR-R8)
+### The check combination "narrow screen + large font" (FR-R8)
 
-Экраны проверяются на **ширине 320 dp (высота 640 dp) при системном масштабе шрифта 1,3** (`textScaleFactor`
-1,3 — «самый крупный» на Android до 14-й версии), текст книги — на ступени 6. Критерий: ни одна подпись не
-обрезана без многоточия, кнопки не наезжают друг на друга, панели плеера и чтения не вылезают за экран. Сам макет
-на этой комбинации **не рисовался** — нарисован только 360 × 800 при масштабе 1,0.
+Screens are checked at **a width of 320 dp (height 640 dp) with a system font scale of 1.3** (`textScaleFactor` 1.3 —
+"the largest" on Android before version 14), the book text at step 6. Criterion: no caption is cut off without an
+ellipsis, the buttons do not overlap each other, the player and reading panels do not extend beyond the screen. The
+mock-up itself was **not drawn** at this combination — only 360 × 800 at scale 1.0 was drawn.
 
-### Шкала интерфейса (Roboto)
+### The interface scale (Roboto)
 
-| Роль | Начертание | Кегль / интерлиньяж |
+| Role | Weight | Size / line height |
 |---|---|---|
-| Заголовок полки «Книги» | Merriweather Bold | 26 / 32 |
-| Заголовок экрана, листа, диалога | Medium | 20 / 26 |
-| Заголовок в шапке чтения, пункт с названием | Medium | 16 / 22 |
-| Основной текст, значения настроек | Regular | 16 / 22 |
-| Кнопки | Medium | 15 / 20 |
-| Второстепенный текст | Regular / Medium | 14 / 20 |
-| Подписи, пояснения | Regular | 13 / 18 |
-| Надписи разделов (ЖЕНСКИЕ, ПОТРАЧЕНО) | Medium, прописные, разрядка 6 % | 12 / 16 |
+| The shelf heading "Books" | Merriweather Bold | 26 / 32 |
+| A screen, sheet, dialog heading | Medium | 20 / 26 |
+| A heading in the reading header, an item with a title | Medium | 16 / 22 |
+| Body text, setting values | Regular | 16 / 22 |
+| Buttons | Medium | 15 / 20 |
+| Secondary text | Regular / Medium | 14 / 20 |
+| Captions, explanations | Regular | 13 / 18 |
+| Section labels (FEMALE, SPENT) | Medium, uppercase, letter-spacing 6% | 12 / 16 |
 
-Числа с единицами («96 МБ», «0,19 $», «34 %») — через неразрывный пробел.
+Numbers with units ("96 МБ", "0,19 $", "34 %" in the Russian mock-up) use a non-breaking space.
 
-## Палитра
+## Palette
 
-Один акцент — терракота. Каждая тема — один набор токенов; интерфейс и страница книги берут цвета из одной темы.
+One accent — terracotta. Each theme is one set of tokens; the interface and the book page take their colors from one
+theme.
 
-| Токен | Светлая | Сепия | Тёмная | Где |
+| Token | Light | Sepia | Dark | Where |
 |---|---|---|---|---|
-| `bg` | `#F8F4EC` | `#F0E4CC` | `#16130F` | фон экрана и страницы |
-| `surface` | `#FFFDF9` | `#F7EDDA` | `#221D18` | шапка, панели, листы, карточки, диалоги |
-| `ink` | `#221D17` | `#3A2D1F` | `#E8E0D2` | основной текст |
-| `ink2` | `#675E54` | `#6B5A45` | `#A09584` | второстепенный текст, неактивные иконки |
-| `line` | `#E3DBCE` | `#DCCBAE` | `#383029` | разделители, дорожки, контуры |
-| `accent` | `#A8431F` | `#9A3D1B` | `#E08A5B` | главная кнопка, ссылки, текущее, сноска |
-| `on_accent` | `#FFFDF9` | `#FFF8EC` | `#16130F` | текст и иконки на акценте |
-| `hl` | `#F3DFCF` | `#E6C9AC` | `#3D2B1F` | подсветка звучащего / выбранного абзаца, текущий пункт |
-| затемнение | `ink` × 0,42 | `ink` × 0,42 | `#000` × 0,55 | под листами и диалогами |
+| `bg` | `#F8F4EC` | `#F0E4CC` | `#16130F` | the background of the screen and the page |
+| `surface` | `#FFFDF9` | `#F7EDDA` | `#221D18` | header, panels, sheets, cards, dialogs |
+| `ink` | `#221D17` | `#3A2D1F` | `#E8E0D2` | main text |
+| `ink2` | `#675E54` | `#6B5A45` | `#A09584` | secondary text, inactive icons |
+| `line` | `#E3DBCE` | `#DCCBAE` | `#383029` | dividers, tracks, outlines |
+| `accent` | `#A8431F` | `#9A3D1B` | `#E08A5B` | the main button, links, the current item, a footnote |
+| `on_accent` | `#FFFDF9` | `#FFF8EC` | `#16130F` | text and icons on the accent |
+| `hl` | `#F3DFCF` | `#E6C9AC` | `#3D2B1F` | highlight of the sounding / selected paragraph, the current item |
+| scrim | `ink` × 0.42 | `ink` × 0.42 | `#000` × 0.55 | under sheets and dialogs |
 
-Контраст (WCAG, считает генератор): светлая — ink/bg 15,2, ink2/bg 5,8, accent/bg 5,5, on_accent/accent 5,9,
-ink/hl 13,0; сепия — 10,6 / 5,3 / 5,5 / 6,5 / 8,5; тёмная — 14,1 / 6,3 / 7,0 / 7,0 / 10,2. Всё ≥ 4,5.
+Contrast (WCAG, computed by the generator): light — ink/bg 15.2, ink2/bg 5.8, accent/bg 5.5, on_accent/accent 5.9,
+ink/hl 13.0; sepia — 10.6 / 5.3 / 5.5 / 6.5 / 8.5; dark — 14.1 / 6.3 / 7.0 / 7.0 / 10.2. All ≥ 4.5.
 
-Обложки-заглушки (`#7A3B2E`, `#3D5A4C`, `#40506B`, `#6B5A3A`, `#5B3F5E`) — только для макета; книга без обложки
-получает заглушку цвета `line` с первой буквой названия.
+The placeholder covers (`#7A3B2E`, `#3D5A4C`, `#40506B`, `#6B5A3A`, `#5B3F5E`) are for the mock-up only; a book
+without a cover gets a placeholder in the `line` color with the first letter of the title.
 
-## Сетка и размеры (dp)
+## Grid and sizes (dp)
 
-- Экран 360 × 800. Поля интерфейса — **16**. Колонка текста книги — **24** от краёв (кадр страницы с x = 16,
-  абзац — ещё 8 внутри; эти 8 — запас под подсветку).
-- Цели касания — не меньше **48 × 48**. Иконки 24 в клетке 48; у плеера «назад/вперёд» — 32 в клетке 48.
-- Строка состояния 28. На экране чтения без панелей её нет (полноэкранный режим).
-- Шапка: 28 + 56, фон `surface`, линия 1 снизу. Иконка «назад/закрыть» x = 16; заголовок x = 64; клетки справа
-  по 48 от правого поля 4.
-- **Страница:** шаг строки 27 при ступени 3; красная строка 24; отступов между абзацами нет. Высота страницы кратна
-  шагу строки — последняя строка не режется. Заголовок главы — блок в 4 строки (108), текст прижат к низу блока с
-  отступом 14 (поэтому шапка панели его не перекрывает). Подсветка абзаца — `hl`, скругление 6, выходит на 8 за
-  колонку слева и справа и ровно по строкам сверху и снизу. Знак сноски — `accent`, Bold.
-- Нижняя панель чтения: 168. Ползунок: дорожка 4 на 24 от краёв, бегунок 20; подпись «34 % книги» ниже;
-  «Слушать» — во всю ширину минус 16, высота 52.
-- **Панель плеера: 152**, фон `surface`, линия 1 сверху. Ряд A: y + 4, высота 48 — «Голос: Aoede ▾» слева,
-  «✕» справа (иконка x = 320, y + 16). Ряд B: y + 60, высота 64 — скорость (клетка 56 × 48, x = 12), «назад»
-  (клетка 48, x = 84), «играть/пауза» (круг 64 по центру, иконка 32), «вперёд» (клетка 48, x = 228), таймер сна
-  (клетка 56 × 48, x = 292). Низ — 28 под жесты.
-- Панель ошибки — по содержимому: поля 16 / 16 / 20 / 16, между текстом и кнопками 16, две кнопки по 160 с зазором
-  8 (или одна во всю ширину).
-- Кнопки — пилюли высотой 48 (радиус 24), иконка 20 + зазор 8. Текстовая кнопка у правого края прижимает подпись к
-  полю 16.
-- Нижний лист: скругление 24 сверху, ручка 32 × 4 на 10 от верха, заголовок на 30 от верха и 24 от края.
-- Диалог: поля экрана 24, скругление 24, внутренние поля 24; кнопки справа внизу, «Отмена» — текстовая.
-- Полка: карточка «Продолжить» 172 (обложка 96 × 140, скругление карточки 16); строки по 92 (обложка 52 × 72,
-  разделитель с x = 84); кнопка «+» 56 × 56, скругление 16, в 16 от правого и 24 от нижнего края.
-- Строки списков: оглавление 48 (отступ уровня 24), голоса 64, настройки 72, таймер 52.
+- The screen is 360 × 800. Interface margins are **16**. The book text column is **24** from the edges (the page frame
+  starts at x = 16, the paragraph has another 8 inside; those 8 are a reserve for the highlight).
+- Touch targets are at least **48 × 48**. Icons are 24 in a 48 cell; the player's "back/forward" are 32 in a 48 cell.
+- The status bar is 28. On the reading screen without panels there is none (full-screen mode).
+- The header: 28 + 56, `surface` background, a 1 line below. The "back/close" icon at x = 16; the title at x = 64;
+  the cells on the right are 48 each from a right margin of 4.
+- **The page:** line step 27 at step 3; first-line indent 24; no spacing between paragraphs. The page height is a
+  multiple of the line step — the last line is not cut. A chapter heading is a block of 4 lines (108), the text is
+  pressed to the bottom of the block with an inset of 14 (so the panel header does not overlap it). The paragraph
+  highlight is `hl`, radius 6, extends 8 beyond the column on the left and on the right and exactly by lines at the top
+  and bottom. The footnote mark is `accent`, Bold.
+- The bottom reading panel: 168. The slider: a track of 4 at 24 from the edges, a thumb of 20; the caption "34% of the
+  book" below; "Listen" — full width minus 16, height 52.
+- **The player panel: 152**, `surface` background, a 1 line on top. Row A: y + 4, height 48 — "Voice: Aoede ▾" on the
+  left, "✕" on the right (icon x = 320, y + 16). Row B: y + 60, height 64 — speed (a 56 × 48 cell, x = 12), "back"
+  (a 48 cell, x = 84), "play/pause" (a circle of 64 in the center, icon 32), "forward" (a 48 cell, x = 228), the sleep
+  timer (a 56 × 48 cell, x = 292). The bottom — 28 for gestures.
+- The error panel — by content: margins 16 / 16 / 20 / 16, 16 between the text and the buttons, two buttons of 160
+  with a gap of 8 (or one full width).
+- Buttons are pills of height 48 (radius 24), icon 20 + a gap of 8. A text button at the right edge pushes the caption
+  to the margin of 16.
+- The bottom sheet: radius 24 at the top, a handle of 32 × 4 at 10 from the top, the heading at 30 from the top and 24
+  from the edge.
+- The dialog: screen margins 24, radius 24, inner margins 24; the buttons at the bottom right, "Cancel" is a text
+  button.
+- The shelf: the "Continue" card 172 (cover 96 × 140, card radius 16); rows of 92 (cover 52 × 72, the divider from
+  x = 84); the "+" button 56 × 56, radius 16, 16 from the right and 24 from the bottom edge.
+- List rows: table of contents 48 (level indent 24), voices 64, settings 72, timer 52.
 
-## Экраны и требования
+## Screens and requirements
 
-| Экран | Что закрывает |
+| Screen | What it covers |
 |---|---|
-| 01 Полка | FR-L4 (порядок, обложка или буква, автор, доля), «последняя крупнее» (CONCEPT §3), FR-L2 «+» |
-| 02 Полка — пустая | FR-L4 «приглашение добавить» |
-| 03 Полка — добавление | FR-L2 «Добавляется», отказы FR-B2 и FR-B6 (с технической причиной мелко) |
-| 04 Полка — меню книги | FR-L5 «Удалить», FR-D3 «Удалить озвучку» с объёмом |
-| 05 Полка — удаление | FR-L5 подтверждение с названием и объёмом |
-| 06 Чтение | FR-R1, FR-R2, FR-R3 (заголовок, красная строка, знак сноски), доля книги |
-| 07 Чтение — панели | FR-R2 (касание центра), входы в FR-R4 и FR-R6, FR-R5 ползунок, FR-P3 «Слушать» |
-| 08 Чтение — стихи и картинка | FR-R3 (эпиграф-стихи, картинка вписана в страницу, подпись) |
-| 09 Вид текста | FR-R6 (ступени размера, четыре темы); страница за листом уже в сепии |
-| 10 Оглавление | FR-R4 (уровни, текущая), FR-D2 оценка до начала |
-| 11 Оглавление — скачивание | FR-D2 доля готового и «Остановить», А§6.7 (идёт, пока приложение открыто) |
-| 12 Сноска | FR-R3 сноска поверх страницы |
-| 13 Читать отсюда | FR-P3 долгое нажатие |
-| 14 Слушает | FR-P1 `playing`, FR-P4 подсветка звучащего абзаца |
-| 15 Слушает — листаю сам | FR-P4 «К месту чтения» |
-| 16 Слушает — тёмная | FR-R6 тёмная тема на главном экране |
-| 17 Плеер — состояния | FR-P1, FR-P6: `preparing` «Готовлю голос…», `waiting` «Жду связь…», `paused` с включённым таймером сна (FR-D1), «Книга закончилась» |
-| 18 Плеер — остановка | FR-P6, FR-P7: 402 «Пополнить», 404 «Выбрать модель», прочие — текст Google |
-| 19 Скорость | FR-P5 |
-| 20 Таймер сна | FR-D1 |
-| 21 Голос | FR-V1 (группы, характер, «Проба», текущий), FR-V2 голос книги |
-| 22 Настройки | FR-V2, FR-V3, FR-M2 (два месяца), FR-M3 |
-| 23 Настройки — нет ключа | FR-P7 «Слушать» без ключа ведёт сюда, поле ключа в фокусе |
-| 24 Настройки — модель | FR-V3, FR-M1 (цена сейчас и с 01.01.2027) |
-| 25 Настройки — очистка | FR-M3 подтверждение |
+| 01 Shelf | FR-L4 (order, cover or letter, author, share), "the latest is larger" (CONCEPT §3), FR-L2 "+" |
+| 02 Shelf — empty | FR-L4 "an invitation to add" |
+| 03 Shelf — adding | FR-L2 "Adding…", the refusals FR-B2 and FR-B6 (with the technical reason in small print) |
+| 04 Shelf — book menu | FR-L5 "Delete", FR-D3 "Delete narration" with the size |
+| 05 Shelf — deletion | FR-L5 confirmation with the title and size |
+| 06 Reading | FR-R1, FR-R2, FR-R3 (heading, first-line indent, footnote mark), the share of the book |
+| 07 Reading — panels | FR-R2 (tap in the center), entries to FR-R4 and FR-R6, FR-R5 slider, FR-P3 "Listen" |
+| 08 Reading — verse and an image | FR-R3 (epigraph verses, an image fitted to the page, a caption) |
+| 09 Text appearance | FR-R6 (size steps, four themes); the page behind the sheet is already in sepia |
+| 10 Table of contents | FR-R4 (levels, the current one), FR-D2 estimate before the start |
+| 11 Table of contents — downloading | FR-D2 the ready share and "Stop", A§6.7 (runs while the app is open) |
+| 12 Footnote | FR-R3 a footnote over the page |
+| 13 Read from here | FR-P3 long press |
+| 14 Listening | FR-P1 `playing`, FR-P4 highlight of the sounding paragraph |
+| 15 Listening — paging myself | FR-P4 "to the reading place" |
+| 16 Listening — dark | FR-R6 the dark theme on the main screen |
+| 17 Player — states | FR-P1, FR-P6: `preparing` "Preparing the voice…", `waiting` "Waiting for connection…", `paused` with the sleep timer on (FR-D1), "End of the book" |
+| 18 Player — stop | FR-P6, FR-P7: 402 "Top up", 404 "Choose model", others — Google's text |
+| 19 Speed | FR-P5 |
+| 20 Sleep timer | FR-D1 |
+| 21 Voice | FR-V1 (groups, character, "Sample", the current one), FR-V2 the book's voice |
+| 22 Settings | FR-V2, FR-V3, FR-M2 (two months), FR-M3 |
+| 23 Settings — no key | FR-P7 "Listen" without a key leads here, the key field is focused |
+| 24 Settings — model | FR-V3, FR-M1 (the price now and from 01.01.2027) |
+| 25 Settings — clearing | FR-M3 confirmation |
 
-17 и 18 — доски состояний, а не экраны телефона: панель в каждом состоянии нарисована отдельно, с кодом
-состояния над ней. На телефоне панель стоит внизу экрана чтения, как на 14.
+17 and 18 are state boards, not phone screens: the panel is drawn separately in every state, with the state code above
+it. On the phone the panel sits at the bottom of the reading screen, as in 14.
 
-Учтено по ревью спеки: «стр. N из M в главе» убрано (в панели только доля книги); «✕» на панели плеера есть во
-всех состояниях — он завершает прослушивание, панель исчезает; добавлено «Книга закончилась»; про звонок в
-интерфейсе ничего нет; на экране «Голос» панели плеера нет (выбор голоса ставит чтение на паузу).
+Taken into account from the spec review: "page N of M in the chapter" removed (the panel has only the share of the
+book); the "✕" on the player panel is present in all states — it ends listening, the panel disappears; "End of the
+book" added; there is nothing about a phone call in the interface; there is no player panel on the "Voice" screen
+(choosing a voice pauses the reading).
 
-## Решения, которые принял я и которые надо подтвердить
+## Decisions I made that need confirming
 
-1. **Шрифты** Roboto + Merriweather вместо Source Sans 3 + Source Serif 4 (причина выше).
-2. **Светлая тема светлее черновика** (`#F8F4EC` вместо `#F7F2E8`), чтобы отличаться от сепии; сепия получила свою
-   палитру.
-3. **Панели поверх страницы:** касание центра не сдвигает текст. Строка состояния видна только вместе с панелями.
-4. **Пока идёт прослушивание**, внизу стоит панель плеера вместо нижней панели чтения; касание центра показывает
-   только шапку (не нарисовано). Ползунка по книге во время прослушивания нет.
-5. **Голос книги выбирается из панели плеера** («Голос: Aoede ▾»), а не из нижней панели чтения: там только
-   ползунок и «Слушать», как просили. Первая строка экрана голоса — «Как в настройках».
-6. **Скорость — отдельным листом** из шести кнопок, а не перебором по касанию (шесть значений перебором неудобны).
-7. **Ошибки добавления — строками на полке**, висят до «✕», без всплывающих окон.
-8. **«Скачать главу» — только для текущей главы**, блоком под ней в оглавлении; полностью озвученные главы
-   помечены «озвучена». Это пометка не из спеки, но без неё не видно, что уже скачано.
-9. **В поле ключа — кнопка «Вставить»**: ключ на телефоне вводят только вставкой.
-10. **Текст книги не следует системному масштабу шрифта** — у него своя настройка (FR-R6).
-11. **«Удалить озвучку» одной книги тоже спрашивает подтверждение** тем же диалогом, что 05 и 25 (не нарисовано).
-12. **Доля прочитанного на полке**: «новая» вместо 0 % и «прочитана» вместо 100 %.
-13. **Таймер сна включён** — значок луны акцентного цвета и оставшиеся минуты под ним (17, `paused`).
-14. **Текст ошибки** — своими словами одной строкой, ниже ответ Google как есть (FR-P6 требует «текст ошибки»;
-    английский ответ Google без пояснения непонятен).
+1. **Fonts** Roboto + Merriweather instead of Source Sans 3 + Source Serif 4 (the reason is above).
+2. **The light theme is lighter than the draft** (`#F8F4EC` instead of `#F7F2E8`), to differ from sepia; sepia got its
+   own palette.
+3. **Panels over the page:** a tap in the center does not shift the text. The status bar is visible only together with
+   the panels.
+4. **While listening is under way**, the player panel stands at the bottom instead of the bottom reading panel; a tap
+   in the center shows only the header (not drawn). There is no slider across the book during listening.
+5. **The book's voice is chosen from the player panel** ("Voice: Aoede ▾"), not from the bottom reading panel: there
+   is only the slider and "Listen", as asked. The first row of the voice screen is "Same as in Settings".
+6. **Speed is a separate sheet** of six buttons, not cycling by taps (six values by cycling are inconvenient).
+7. **Add errors are rows on the shelf**, they hang until "✕", no pop-up windows.
+8. **"Download chapter" is only for the current chapter**, a block under it in the table of contents; fully narrated
+   chapters are marked "narrated". This mark is not from the spec, but without it one cannot see what has already been
+   downloaded.
+9. **A "Paste" button in the key field**: the key on a phone is entered only by pasting.
+10. **The book text does not follow the system font scale** — it has its own setting (FR-R6).
+11. **"Delete narration" of one book also asks for confirmation** with the same dialog as 05 and 25 (not drawn).
+12. **The share read on the shelf**: "new" instead of 0% and "read" ("прочитана" in the mock-up) instead of 100%.
+13. **The sleep timer is on** — a moon icon in the accent color and the remaining minutes under it (17, `paused`).
+14. **The error text** — in our own words on one line, below it Google's response as is (FR-P6 requires "the error
+    text"; Google's English response without an explanation is unclear).
 
-## Что не нарисовано
+## What is not drawn
 
-- Строка «Подставной голос» в настройках (FR-T5) — только в отладочной сборке.
-- Шапка поверх экрана прослушивания; листы и диалоги в тёмной теме и сепии (цвета те же токены).
-- Мужская группа голосов (список прокручивается; заголовок «МУЖСКИЕ · 16» устроен как «ЖЕНСКИЕ · 14»).
-- Медиа-уведомление и экран блокировки — системные, их рисует Android.
-- Разделитель «* * *» на странице: по центру колонки, `ink2`, отступы по строке сверху и снизу.
-- Проверочная комбинация 320 dp × 1,3.
+- The "Fake voice" line in settings (FR-T5) — only in the debug build.
+- The header over the listening screen; sheets and dialogs in the dark theme and sepia (the colors are the same
+  tokens).
+- The male group of voices (the list scrolls; the heading "MALE · 16" is built like "FEMALE · 14").
+- The media notification and the lock screen — system ones, drawn by Android.
+- The divider "* * *" on the page: centered in the column, `ink2`, with a line of space above and below.
+- The check combination 320 dp × 1.3.
