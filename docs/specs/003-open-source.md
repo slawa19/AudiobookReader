@@ -70,7 +70,7 @@ The app's behavior for the reader does not change, except for the fifth interfac
   test text, reading-style prompts, sentence-boundary examples and the Russian page names in the source notes, each with
   a gloss in documents; one leftover (the comment in `docs/logo.svg`) was translated.
 - **SC-3.** The links between documents resolve, including anchors; `git diff --check` is clean. Verified on 2026-11-17
-  by a script over all tracked `*.md` files: 315 relative links and anchors, none broken; the quoted names of
+  by a script over all tracked `*.md` files: 326 relative links and anchors, none broken; the quoted names of
   documents' sections and the `A§N` references all point to existing headings.
 - **SC-4.** A tag `vX.Y.Z` produces a release with the APK, `SHA-256` checksums and an attestation, and the commands in
   `docs/RELEASING.md` verify it. **Not verified:** no release exists yet (the dry run does not attest).
