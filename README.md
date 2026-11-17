@@ -1,105 +1,133 @@
 <p align="center">
-  <img src="docs/logo.svg" width="112" alt="Знак AudiobookReader: раскрытая книга, строки на правой странице становятся звуком">
+  <img src="docs/logo.svg" width="112" alt="AudiobookReader logo: an open book whose lines on the right page turn into sound">
 </p>
 
 # AudiobookReader
 
-Читалка книг для Android, которая читает вслух голосами Google Gemini TTS. Одна позиция на чтение и прослушивание:
-можно читать глазами, включить голос с любого абзаца и вернуться к тексту там, где он остановился.
+An Android book reader that reads aloud with Google Gemini TTS voices. One position for reading and listening: read
+with your eyes, start the voice from any paragraph, and return to the text where it stopped.
 
-Приложение одного пользователя: без сервера, учётных записей и синхронизации. Ключ Gemini — свой, хранится на
-телефоне в защищённом хранилище Android.
+It is a single-user app: no server, no accounts, no sync. The Gemini key is your own and is kept on the phone in
+Android's secure storage.
+
+## Features
+
+- **Books:** FB2, FB2.ZIP, EPUB and TXT — with the "+" button, through "Open with" and through "Share". Table of
+  contents, footnotes, images, verse.
+- **Reading:** pages, light and dark themes, font size; the position is saved automatically.
+- **Narration:** "Listen" from any paragraph, the sounding paragraph is highlighted, the page turns after the voice.
+  "Back" and "forward" move by paragraphs; speed, sleep timer, voice choice with a voice probe.
+- **Background:** the sound plays with the screen off; control from the notification, the lock screen and the headset.
+- **Money in view:** what has been narrated is stored on the phone and is not paid for a second time; the spend is
+  shown in settings; a chapter can be downloaded in advance, and its price estimate is shown before you press.
+- **Interface languages:** Russian, English, Polish, German, Ukrainian.
+
+What the app does not do, and why — [docs/CONCEPT.md](docs/CONCEPT.md), section 7, "Out of scope".
+
+## Screenshots
+
+<!-- screenshots: updated by a later step -->
 
 <p align="center">
-  <img src="docs/prototype/screens/01-shelf.png" width="200" alt="Полка">
-  <img src="docs/prototype/screens/06-reading.png" width="200" alt="Чтение">
-  <img src="docs/prototype/screens/14-listening.png" width="200" alt="Прослушивание">
-  <img src="docs/prototype/screens/16-listening-dark.png" width="200" alt="Прослушивание, тёмная тема">
+  <img src="docs/prototype/screens/01-shelf.png" width="200" alt="Shelf">
+  <img src="docs/prototype/screens/06-reading.png" width="200" alt="Reading">
+  <img src="docs/prototype/screens/14-listening.png" width="200" alt="Listening">
+  <img src="docs/prototype/screens/16-listening-dark.png" width="200" alt="Listening, dark theme">
 </p>
 
-## Что умеет
+## Requirements and cost
 
-- **Книги:** FB2, FB2.ZIP, EPUB и TXT — кнопкой «+», через «Открыть с помощью» и «Поделиться». Оглавление, сноски,
-  картинки, стихи.
-- **Чтение:** страницы, светлая и тёмная тема, размер шрифта; позиция сохраняется сама.
-- **Озвучка:** «Слушать» с любого абзаца, звучащий абзац подсвечен, страница листается за голосом. «Назад» и
-  «вперёд» — по абзацам, скорость, таймер сна, выбор голоса с пробой.
-- **Фон:** звук идёт при погашенном экране; управление — из уведомления, с экрана блокировки и с гарнитуры.
-- **Деньги на виду:** озвученное хранится на телефоне и второй раз не оплачивается; расход показан в настройках;
-  главу можно скачать заранее, оценка цены видна до нажатия.
-- **Языки интерфейса:** русский, английский, польский, немецкий.
+- Android 12 or newer (`minSdk 31`).
+- **Your own Gemini API key** (get one in Google AI Studio), entered in the app's settings. Narration is paid by you
+  directly to Google; the project has no server and takes no payment.
+- Narration is paid: about $0.8 per hour of audio now and about $1.6 from 01.01.2027 on the default model
+  (3.8 Flash); a book of 500 thousand characters is about $8 now and $15 from 2027. The calculation and the
+  measurements are in [docs/GEMINI_TTS.md](docs/GEMINI_TTS.md), section "Price". Only a small reserve is narrated ahead,
+  not the whole book; the spent counter is computed from the tokens Google actually billed.
+- Only Gemini needs the network: no analytics, no crash reports, no book catalogs. The text of a paragraph sent for
+  narration is the only thing that leaves the phone.
 
-Чего приложение не делает и почему — [docs/CONCEPT.md](docs/CONCEPT.md), раздел «Чего не делаем».
+## Status
 
-## Состояние
+Version 0.1.0, in development; there have been no releases yet. All features of the first version are written.
+Reading has been accepted by the owner on the phone. Narration, the player and background playback have been passed on
+the phone by the checklist; what remains for the owner is what can only be done by hand and by ear: the lock screen,
+headphones, a phone call. What has been done and what is next — [docs/WHERE_WE_ARE.md](docs/WHERE_WE_ARE.md).
 
-Версия 0.1.0, в разработке; выпусков не было, в магазине приложений его нет. Все функции первой версии написаны.
-Чтение принято владельцем на телефоне. Озвучка, плеер и фоновое воспроизведение пройдены на телефоне по чек-листу;
-владельцу осталось проверить то, что делается только руками и на слух: экран блокировки, наушники, звонок. Что сделано и что дальше — [docs/WHERE_WE_ARE.md](docs/WHERE_WE_ARE.md).
+## Install
 
-## Сборка и проверка
+Signed APKs are published on the Releases page; see docs/RELEASING.md for how to verify them.
 
-Рабочее окружение — Linux или WSL Debian. Flutter 3.50.0, JDK и Android SDK закреплённых версий ставит скрипт;
-в Windows Flutter не нужен.
+To install an APK you built yourself: `adb install -r build/app/outputs/flutter-apk/app-real-release.apk`.
+
+## Build from source
+
+The working environment is Linux or WSL Debian. The script installs the pinned versions of Flutter 3.50.0, the JDK and
+the Android SDK; Flutter is not needed in Windows.
 
 ```sh
-bash scripts/setup-wsl.sh           # один раз: Flutter, JDK, Android SDK в ~/sdk, пакеты
-bash scripts/test.sh                # анализатор без замечаний и все тесты
-bash scripts/build-apk.sh --debug   # APK отладочным ключом → build/app/outputs/flutter-apk/
-bash scripts/build-apk.sh           # APK постоянным ключом из .env (см. .env.example)
-bash scripts/build-apk.sh --fake    # отдельное приложение с подставным голосом — без ключа и без расходов
-bash scripts/prototype.sh start     # веб-прототип экранов на http://127.0.0.1:8642/
+bash scripts/setup-wsl.sh           # once: Flutter, JDK, Android SDK in ~/sdk, packages
+bash scripts/test.sh                # the analyzer with no findings and all tests
+bash scripts/build-apk.sh --debug   # APK with the debug key → build/app/outputs/flutter-apk/
+bash scripts/build-apk.sh           # APK with the permanent key from .env (see .env.example)
+bash scripts/build-apk.sh --fake    # a separate app with a fake voice — no key and no cost
+bash scripts/prototype.sh start     # the web prototype of the screens at http://127.0.0.1:8642/
 ```
 
-Из Windows те же команды запускаются через `wsl.exe -d Debian --cd "<каталог проекта>" -- bash scripts/…`;
-подробности и грабли рабочего места — в [AGENTS.md](AGENTS.md), «Стек и runtime».
+From Windows the same commands are run through `wsl.exe -d Debian --cd "<project directory>" -- bash scripts/…`;
+details and pitfalls of the maintainer's workplace are in [AGENTS.md](AGENTS.md), "Stack and runtime".
 
-Тесты никогда не обращаются к Gemini: синтез в них подставной. Android требуется 12 и новее (`minSdk 31`).
+Tests never call Gemini: synthesis in them is fake.
 
-Установка на телефон: `adb install -r build/app/outputs/flutter-apk/app-real-release.apk`. Ключ Gemini вводится в
-настройках приложения; получить его можно в Google AI Studio.
-
-## Устройство кода
+## Code layout
 
 ```
 lib/
-  app/        корень сборки: связывает модули, тема
-  screens/    экраны и строки интерфейса (ARB, четыре языка)
-  reader/     раскладка текста по страницам
-  playback/   контроллер озвучки, очередь синтеза, плеер, таймер сна, «Скачать главу»
-  library/    полка и хранение на файлах, настройки, расход
-  tts/        клиент Gemini TTS, деление текста на отрезки, голоса
-  audio/      хранилище звука и кодировщик
-  platform/   каналы к Android: файлы, кодировщик AAC, медиасессия
-  book/       модель книги и разборщики FB2 / EPUB / TXT
-android/      оболочка Android (Kotlin): приём файлов, кодировщик, служба плеера
-test/         тесты; правила зависимостей между модулями проверяет architecture_test.dart
-scripts/      установка окружения, тесты, сборка, прототип
-docs/         концепция, архитектура, спеки, ревью
+  app/        the composition root: connects the modules, the theme
+  screens/    screens and interface strings (ARB, five languages)
+  reader/     laying the text out into pages
+  playback/   the narration controller, the synthesis queue, the player, the sleep timer, "Download chapter"
+  library/    the shelf and file-based storage, settings, spend
+  tts/        the Gemini TTS client, splitting the text into pieces, voices
+  audio/      the audio store and the encoder
+  platform/   channels to Android: files, the AAC encoder, the media session
+  book/       the book model and the FB2 / EPUB / TXT parsers
+android/      the Android shell (Kotlin): file intake, the encoder, the player service
+test/         tests; the dependency rules between modules are checked by architecture_test.dart
+scripts/      environment setup, tests, build, prototype
+docs/         concept, architecture, specs, reviews
 ```
 
-Кто от кого может зависеть и почему — [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), раздел 2.
+Who may depend on whom and why — [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), section 2.
 
-## Документы
+## Documentation
 
-| Документ | О чём |
+| Document | What it is about |
 |---|---|
-| [docs/WHERE_WE_ARE.md](docs/WHERE_WE_ARE.md) | состояние и следующий шаг — читать первым |
-| [docs/CONCEPT.md](docs/CONCEPT.md) | что строим и чего не строим |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | модули, модель книги, раскладка, озвучка, хранение |
-| [docs/specs/001-first-version.md](docs/specs/001-first-version.md) | спека первой версии: требования, приёмка, журнал решений |
-| [docs/GEMINI_TTS.md](docs/GEMINI_TTS.md) | запрос к Gemini TTS, голоса, цена, замеры |
-| [docs/DEVICE_CHECKLIST.md](docs/DEVICE_CHECKLIST.md) | что проверяется только на телефоне |
-| [docs/README.md](docs/README.md) | полный указатель документов, включая ревью |
-| [CHANGELOG.md](CHANGELOG.md) | что менялось для читателя |
-| [AGENTS.md](AGENTS.md) | правила работы для ассистентов и автоматизации |
+| [docs/WHERE_WE_ARE.md](docs/WHERE_WE_ARE.md) | the state and the next step — read first |
+| [docs/CONCEPT.md](docs/CONCEPT.md) | what we build and what we do not |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | modules, the book model, layout, narration, storage |
+| [docs/specs/001-first-version.md](docs/specs/001-first-version.md) | the first-version spec: requirements, acceptance, the decision log |
+| [docs/GEMINI_TTS.md](docs/GEMINI_TTS.md) | the Gemini TTS request, voices, price, measurements |
+| [docs/DEVICE_CHECKLIST.md](docs/DEVICE_CHECKLIST.md) | what is checked only on a phone |
+| [docs/README.md](docs/README.md) | the full index of documents, including reviews |
+| [CHANGELOG.md](CHANGELOG.md) | what changed for the reader |
+| [AGENTS.md](AGENTS.md) | working rules for assistants and automation |
 
-Если документ и код расходятся, прав код.
+If a document and the code disagree, the code is right.
 
-## Права
+## License
 
-Лицензия не выбрана: код принадлежит автору, все права сохранены. Шрифты Merriweather и Roboto в `assets/fonts/`
-распространяются по SIL Open Font License (тексты лицензий лежат рядом).
+AudiobookReader is free software: you can redistribute it and modify it under the terms of the GNU General Public
+License, version 3 or (at your option) any later version (GPL-3.0-or-later); see the `LICENSE` file.
 
-Родственные проекты автора: DocxAICorrector (перевод и подготовка книг) и AudiobookStudio (озвучка книги в mp3 по
-главам).
+The fonts Merriweather and Roboto in `assets/fonts/` are distributed under the SIL Open Font License 1.1 (the license
+texts are next to them). The demo texts are public-domain works from Wikisource.
+
+The author's related projects: DocxAICorrector (translating and preparing books) and AudiobookStudio (narrating a book
+to mp3 by chapters).
+
+## Disclaimer
+
+This project is not affiliated with, endorsed by or sponsored by Google. Gemini and Android are trademarks of
+Google LLC.

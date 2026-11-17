@@ -1,199 +1,211 @@
-# Концепция: читалка с озвучкой Gemini
+# Concept: a reader with Gemini narration
 
-Версия 1 от 2026-11-14. Решения владельца — в разделе 9. Как это устроено внутри —
+Version 1 of 2026-11-14. The owner's decisions are in section 9. How it works inside —
 [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## 1. Что это
+## 1. What it is
 
-Приложение для телефона на Android. Открывает книгу из файла, показывает её как обычная читалка и читает вслух
-голосом Google Gemini TTS — тем, что выиграл слепой тест на русском тексте. Читать глазами и слушать можно
-вперемешку: позиция одна.
+An Android phone app. It opens a book from a file, shows it like an ordinary reader and reads it aloud with a Google
+Gemini TTS voice — the one that won a blind test on Russian text. Reading with the eyes and listening can be mixed
+freely: there is one position.
 
-Пользователь один — владелец. Сервера, учётных записей и синхронизации нет. Ключ Gemini свой, вводится один раз.
+There is one user — the owner. There is no server, no accounts and no sync. The Gemini key is your own and is entered
+once.
 
-Чем отличается от готовых читалок: они озвучивают системным синтезатором Android. Здесь голос — нейросетевой
-рассказчик, а всё остальное сделано ровно настолько, чтобы этим было удобно пользоваться.
+How it differs from ready-made readers: they narrate with the Android system synthesizer. Here the voice is a neural
+narrator, and everything else is built just far enough to make that convenient to use.
 
-## 2. Сценарий
+## 2. Scenario
 
-1. Владелец скачал `.fb2` и нажал на файл в загрузках или в мессенджере → «Открыть в читалке». Книга на полке.
-2. Открыл, читает. Листает касанием края экрана или смахиванием.
-3. Нажал «Слушать». Через несколько секунд голос начинает с того места, где остановился в прошлый раз, а если
-   его нет на экране — с первого предложения на странице. Текущий абзац подсвечен,
-   страницы переворачиваются сами.
-4. Погасил экран, убрал телефон в карман. Пауза и продолжение — с экрана блокировки и кнопкой гарнитуры.
-5. Вечером открыл книгу — она на том месте, где замолчал голос.
+1. The owner downloaded an `.fb2` and tapped the file in downloads or in a messenger → "Open in the reader". The book
+   is on the shelf.
+2. Opens it and reads. Turns pages by tapping the screen edge or by swiping.
+3. Taps "Listen". After a few seconds the voice starts from the place where it stopped last time, or, if that place is
+   not on the screen, from the first sentence on the page. The current paragraph is highlighted, and pages turn by
+   themselves.
+4. Turns off the screen and puts the phone in a pocket. Pause and resume — from the lock screen and with the headset
+   button.
+5. In the evening opens the book — it is at the place where the voice fell silent.
 
-## 3. Функции первой версии
+## 3. Features of the first version
 
-### Полка
+### Shelf
 
-- Список книг с обложкой, названием, автором и долей прочитанного. Порядок — по последнему открытию; последняя
-  книга наверху крупнее остальных.
-- Добавление: кнопка «+» открывает системный выбор файла; файл также открывается из другого приложения
-  («Открыть с помощью»). Книга копируется внутрь приложения, исходный файл можно удалять.
-- Удаление: долгое нажатие → «Удалить». Вместе с книгой удаляется её озвучка; сколько места освободится, написано в
-  подтверждении.
-- Поиска, папок, тегов и сортировок нет: у одного человека на полке десятки книг, а не тысячи.
+- A list of books with cover, title, author and the share read. The order is by last opening; the latest book is on
+  top and larger than the others.
+- Adding: the "+" button opens the system file picker; a file can also be opened from another app ("Open with"). The
+  book is copied inside the app, and the source file can be deleted.
+- Deleting: long press → "Delete". The book's narration is deleted with it; how much space will be freed is stated in
+  the confirmation.
+- There is no search, folders, tags or sorting: one person has dozens of books on the shelf, not thousands.
 
-### Чтение
+### Reading
 
-- Постраничный показ, листание касанием и смахиванием. Шапка и нижняя панель появляются по касанию центра.
-- Оглавление и ползунок по книге.
-- Размер шрифта и тема: светлая, сепия, тёмная. По умолчанию тема следует за системой.
-- Картинки из книги — в тексте. Сноски открываются поверх страницы, без перехода.
-- Позиция запоминается сама — по абзацу и месту в нём, а не по номеру страницы, поэтому переживает смену шрифта и
-  поворот экрана.
+- Paged display, turning by tap and swipe. The header and the bottom panel appear on a tap in the center.
+- Table of contents and a slider across the book.
+- Font size and theme: light, sepia, dark. By default the theme follows the system.
+- Images from the book are in the text. Footnotes open over the page, without navigating away.
+- The position is remembered automatically — by paragraph and the place within it, not by page number, so it survives
+  a font change and screen rotation.
 
-### Озвучка
+### Narration
 
-- «Слушать» продолжает с места, где голос остановился, если оно на экране; иначе читает с первого предложения,
-  которое начинается на странице. Долгое нажатие на абзац → «Читать отсюда».
-- Пауза и продолжение; к предыдущему и следующему абзацу. Перемотки по секундам нет: единица озвучки — абзац
-  (несколько коротких реплик подряд идут одной единицей).
-- Скорость 0,75–2× меняет плеер, без нового синтеза и без денег.
-- Работает при погашенном экране и в фоне: уведомление с управлением, экран блокировки, кнопки гарнитуры.
-  Звонок и другое приложение со звуком ставят чтение на паузу; продолжает пользователь сам.
-- Таймер сна: 15, 30, 60 минут, до конца главы.
-- Выбор голоса: 30 голосов Gemini двумя группами, у каждого кнопка «Проба» на одной и той же фразе. Голос — общий
-  для приложения; у книги можно выбрать свой.
-- Озвученное хранится и второй раз не оплачивается: повтор, возврат назад и новое прослушивание бесплатны.
-- «Скачать главу» озвучивает главу заранее — для дороги без связи. Перед началом показана оценка цены.
-- Сноски, подписи к картинкам и оглавление вслух не читаются.
+- "Listen" continues from the place where the voice stopped if it is on the screen; otherwise it reads from the first
+  sentence that begins on the page. Long press on a paragraph → "Read from here".
+- Pause and resume; to the previous and next paragraph. There is no rewind by seconds: the unit of narration is the
+  paragraph (several short lines in a row go as one unit).
+- Speed 0.75–2× is changed by the player, with no new synthesis and no money.
+- Works with the screen off and in the background: a notification with controls, the lock screen, headset buttons. A
+  call or another app with sound pauses the reading; the user resumes it.
+- Sleep timer: 15, 30, 60 minutes, until the end of the chapter.
+- Voice choice: 30 Gemini voices in two groups, each with a "Sample" button (the voice probe) on the same phrase. The voice is common to
+  the app; a book can have its own.
+- What has been narrated is stored and not paid for a second time: repeating, going back and listening again are free.
+- "Download chapter" narrates a chapter in advance — for a trip without a connection. A price estimate is shown before
+  it starts.
+- Footnotes, image captions and the table of contents are not read aloud.
 
-### Настройки
+### Settings
 
-Один экран: ключ Gemini (со ссылкой, где его взять), голос, модель (3.8 Flash или Flash-Lite), потрачено за месяц,
-место под озвучку с кнопкой «Очистить».
+One screen: the Gemini key (with a link to where to get it), voice, model (3.8 Flash or Flash-Lite), spent this month,
+space used by narration with a "Clear" button.
 
-### Деньги на виду
+### Money in view
 
-Озвучка платная: около 0,8 $ за час звука сейчас и около 1,6 $ с 01.01.2027 на модели по умолчанию; книга в
-500 тысяч знаков — примерно 8 $ и 15 $ (расчёт — [GEMINI_TTS.md](GEMINI_TTS.md), раздел «Цена»). Поэтому:
+Narration is paid: about $0.8 per hour of audio now and about $1.6 from 01.01.2027 on the default model; a book of 500
+thousand characters is about $8 and $15 (calculation — [GEMINI_TTS.md](GEMINI_TTS.md), section "Price"). Therefore:
 
-- вперёд озвучивается только небольшой запас, а не вся книга: остановился — дальше не платишь;
-- оценка цены показывается перед каждым действием крупнее запаса («Скачать главу»);
-- счётчик потраченного считается по оплаченным токенам из ответов Google, а не по оценке;
-- при пустом балансе (ответ 402) чтение останавливается с кнопкой «Пополнить» и продолжается с того же абзаца.
+- only a small reserve is narrated ahead, not the whole book: you stopped — you stop paying;
+- a price estimate is shown before every action larger than the reserve ("Download chapter");
+- the spent counter is computed from the billed tokens in Google's responses, not from an estimate;
+- on an empty balance (a 402 response) reading stops with a "Top up" button and resumes from the same paragraph.
 
-## 4. Форматы
+## 4. Formats
 
-| Формат | Версия | Замечание |
+| Format | Version | Note |
 |---|---|---|
-| FB2, FB2.ZIP | 1 | главный формат русскоязычных библиотек; кодировка берётся из заголовка XML (часто windows-1251) |
-| EPUB 2 и 3 | 1 | без DRM |
-| TXT | 1 | кодировка определяется по содержимому; абзацы — по пустым строкам |
-| MOBI, AZW3 | 2 | без DRM; готового разборщика для выбранного стека нет, пишется свой — отдельная спека |
-| PDF, DJVU | не делаем | это страницы, а не текст: на телефоне их не перевёрстывают, и вслух читать нечего без распознавания |
+| FB2, FB2.ZIP | 1 | the main format of Russian-language libraries; the encoding is taken from the XML header (often windows-1251) |
+| EPUB 2 and 3 | 1 | no DRM |
+| TXT | 1 | the encoding is detected from the content; paragraphs by blank lines |
+| MOBI, AZW3 | 2 | no DRM; there is no ready-made parser for the chosen stack, so one is written — a separate spec |
+| PDF, DJVU | out of scope | these are pages, not text: they are not reflowed on a phone, and there is nothing to read aloud without recognition |
 
-Книги с DRM не открываются; об этом сказано при добавлении.
+Books with DRM do not open; this is stated when adding.
 
-MOBI отложен на вторую версию сознательно. FB2 и EPUB — это XML и ZIP с документированной структурой. MOBI —
-двоичный контейнер с двумя поколениями разметки и собственным сжатием; сделать его «заодно» значит задержать всё
-остальное.
+MOBI is deferred to the second version deliberately. FB2 and EPUB are XML and ZIP with a documented structure. MOBI is
+a binary container with two generations of markup and its own compression; doing it "along the way" would delay
+everything else.
 
-## 5. Как устроено
+## 5. How it works
 
-**Одна модель книги для всех форматов.** Разборщик любого формата выдаёт одно и то же: главы, в них блоки —
-заголовок, абзац, картинка, сноска. У каждого блока постоянный номер. Экран чтения, озвучка и позиция работают
-только с этой моделью и о форматах не знают. Новый формат — новый разборщик и ничего больше.
+**One book model for all formats.** The parser of any format produces the same thing: chapters, and in them blocks —
+heading, paragraph, image, footnote. Every block has a permanent number. The reading screen, narration and position
+work only with this model and know nothing about formats. A new format is a new parser and nothing more.
 
-**Позиция** — номер блока и смещение в нём. Одна на чтение и на озвучку.
+**Position** is a block number and an offset within it. One for reading and for narration.
 
-**Текст рисует само приложение**, без встроенного браузера. Иначе нельзя надёжно знать, какой абзац на экране,
-подсветить читаемый и перевернуть страницу вслед за голосом.
+**The app draws the text itself**, without an embedded browser. Otherwise one cannot reliably know which paragraph is
+on the screen, highlight the one being read and turn the page after the voice.
 
-**Озвучка — очередь абзацев.** Один абзац — один запрос и один звуковой файл; длинный абзац делится по
-предложениям, короткие реплики подряд объединяются. Имя файла — отпечаток текста и
-профиля голоса (модель + голос + стиль), как в студии: «файл есть» значит «этот абзац этим голосом уже озвучен».
-Плеер играет файлы подряд; очередь держит запас в несколько абзацев впереди и останавливается вместе с плеером.
-Временная ошибка сети или Gemini повторяется сама, пока в запасе есть звук, пользователь её не замечает.
+**Narration is a queue of paragraphs.** One paragraph is one request and one audio file; a long paragraph is split by
+sentences, short consecutive lines are merged. The file name is the fingerprint of the text and the voice profile
+(model + voice + style), as in Studio: "the file exists" means "this paragraph has already been narrated with this
+voice". The player plays the files in a row; the queue keeps a reserve of a few paragraphs ahead and stops together
+with the player. A transient network or Gemini error is retried by itself, and as long as there is audio in reserve
+the user does not notice it.
 
-**Хранение.** Книга и её картинки — в памяти приложения. Полка и позиции — файлами в папке книги, без базы данных. Звук — там же, сжатый. Ключ — в защищённом хранилище Android.
+**Storage.** The book and its images are in the app's storage. The shelf and positions are files in the book's folder,
+with no database. Audio is there too, compressed. The key is in Android's secure storage.
 
-**Сети нужен только Gemini.** Ни аналитики, ни отчётов о сбоях, ни каталогов книг.
+**Only Gemini needs the network.** No analytics, no crash reports, no book catalogs.
 
-## 6. Стек
+## 6. Stack
 
-Предлагаю согласиться с Flutter. Довод не в том, что он кроссплатформенный — платформа одна, — а в том, как
-проверяется работа агентов.
+I propose agreeing to Flutter. The argument is not that it is cross-platform — there is one platform — but how the
+agents' work is verified.
 
 | | Flutter | Kotlin + Compose |
 |---|---|---|
-| Проверка без телефона | тесты логики, экранов и снимки экранов идут в WSL и в CI | тесты экранов требуют эмулятора или Robolectric |
-| Фоновое воспроизведение | готовые пакеты `just_audio` и `audio_service` | родной Media3, надёжнее всего |
-| Разбор FB2, EPUB, TXT | чистый Dart, проверяется на файлах-образцах без устройства | то же на Kotlin |
-| MOBI | писать самим | писать самим либо тянуть C-библиотеку |
-| Свой рендер текста с разбивкой на страницы | есть средства измерения текста | есть |
-| Сжатие звука | через системный кодек Android, небольшой мост на Kotlin | напрямую |
+| Verification without a phone | logic and screen tests and screenshots run in WSL and in CI | screen tests need an emulator or Robolectric |
+| Background playback | ready-made packages `just_audio` and `audio_service` | native Media3, the most reliable |
+| FB2, EPUB, TXT parsing | pure Dart, verified on sample files without a device | the same in Kotlin |
+| MOBI | write it ourselves | write it ourselves or pull in a C library |
+| Own text rendering with pagination | text measurement tools exist | exist |
+| Audio compression | through the Android system codec, a small Kotlin bridge | directly |
 
-Проект пишут агенты, а не человек в Android Studio. Агенту нужен быстрый проверяемый цикл «правка → прогон» в том
-же WSL, где он работает; у Flutter он есть, у Compose его обеспечивает только эмулятор, который в WSL запустить
-трудно. Это и решает.
+The project is written by agents, not by a human in Android Studio. An agent needs a fast verifiable "edit → run"
+loop in the same WSL where it works; Flutter has it, while with Compose it is provided only by an emulator, which is
+hard to run in WSL. That decides it.
 
-Цена выбора: два места требуют родного кода Android (сжатие звука; возможно, тонкости медиасессии). Они
-изолируются в один небольшой модуль.
+The price of the choice: two places need native Android code (audio compression; possibly the subtleties of the media
+session). They are isolated in one small module.
 
-Kotlin стоит выбрать, если владелец хочет когда-нибудь поддерживать код руками в Android Studio или считает
-фоновый плеер главным риском. iOS не планируется и доводом не является.
+Kotlin is worth choosing if the owner ever wants to maintain the code by hand in Android Studio or considers the
+background player the main risk. iOS is not planned and is not an argument.
 
-Версии Flutter и пакетов фиксируются при установке, по актуальной документации, а не по памяти.
+Flutter and package versions are pinned at installation, from current documentation, not from memory.
 
-## 7. Чего не делаем
+## 7. Out of scope
 
-Отклонено сознательно; возвращается только решением владельца.
+Rejected deliberately; comes back only by the owner's decision.
 
-- Синхронизация, облако, учётные записи, свой сервер.
-- Каталоги и магазины книг, OPDS, встроенная загрузка из сети.
-- Закладки, цитаты, заметки, выделения, словарь, перевод.
-- Поиск по тексту книги — первый кандидат на вторую версию, если понадобится.
-- Статистика чтения, цели, достижения.
-- Настройка шрифтов, полей, интервалов, выравнивания, жестов: один хорошо подобранный набор.
-- PDF, DJVU, комиксы, DRM.
-- Несколько голосов в одной книге, роли, редактирование текста перед озвучкой — это задача AudiobookStudio.
-- Экспорт озвучки в mp3 — тоже студия.
-- iOS, планшетная вёрстка, публикация в Google Play: приложение ставится файлом APK.
+- Sync, cloud, accounts, a server of our own.
+- Book catalogs and stores, OPDS, built-in downloading from the network.
+- Bookmarks, quotes, notes, highlights, dictionary, translation.
+- Search in the book text — the first candidate for the second version, if needed.
+- Reading statistics, goals, achievements.
+- Customizing fonts, margins, spacing, alignment, gestures: one well-chosen set.
+- PDF, DJVU, comics, DRM.
+- Several voices in one book, roles, editing the text before narration — that is AudiobookStudio's job.
+- Export of narration to mp3 — Studio as well.
+- iOS, tablet layout, publication in Google Play: the app is installed as an APK file. (Since 2026-11-17 signed APKs
+  are published on the GitHub Releases page of the open-source repository; Google Play and F-Droid are still out of
+  scope — [specs/003-open-source.md](specs/003-open-source.md).)
 
-## 8. Этапы
+## 8. Stages
 
-Каждый этап заканчивается тем, что можно взять в руки. Порядок реализации и нумерация её этапов — в
-[спеке 001](specs/001-first-version.md), раздел 2; здесь — общий план.
+Each stage ends with something you can hold in your hands. The order of implementation and the numbering of its
+stages are in [spec 001](specs/001-first-version.md), section 2; here is the general plan.
 
-0. **Замеры и окружение.** Замер задержки и скорости синтеза с рабочего компьютера сделан 2026-11-14
-   ([GEMINI_TTS.md](GEMINI_TTS.md), «Задержка и скорость синтеза»); по нему выбран стартовый отрезок. Установка
-   Flutter и сборки APK в WSL, пустое приложение на телефоне и оставшиеся замеры (мобильная сеть, одновременные
-   запросы, короткий текст) — этап 0 спеки 001 ([ARCHITECTURE.md](ARCHITECTURE.md), раздел 11); платные — с
-   согласия владельца.
-1. **Макет** в FigCraft: полка, чтение, панель чтения, плеер, оглавление, выбор голоса, настройки, пустая полка,
-   нет ключа, нет денег.
-2. **Читалка без звука:** модель книги, FB2 и EPUB, полка, чтение, позиция. Уже полезна сама по себе.
-3. **Озвучка:** клиент Gemini, очередь, плеер, фон и экран блокировки, выбор голоса, счётчик денег.
-4. **Доводка:** TXT, таймер сна, «Скачать главу», очистка места.
-5. **Вторая версия:** MOBI и AZW3.
+0. **Measurements and environment.** The measurement of latency and synthesis speed from a work computer was done on
+   2026-11-14 ([GEMINI_TTS.md](GEMINI_TTS.md), "Latency and synthesis speed"); the starting piece was chosen from it.
+   Installing Flutter and building the APK in WSL, an empty app on the phone and the remaining measurements (mobile
+   network, simultaneous requests, short text) — stage 0 of spec 001 ([ARCHITECTURE.md](ARCHITECTURE.md), section 11);
+   the paid ones — with the owner's consent.
+1. **Mock-up** in FigCraft: shelf, reading, reading panel, player, table of contents, voice choice, settings, empty
+   shelf, no key, no money.
+2. **Reader without sound:** the book model, FB2 and EPUB, shelf, reading, position. Already useful on its own.
+3. **Narration:** the Gemini client, queue, player, background and lock screen, voice choice, money counter.
+4. **Polish:** TXT, sleep timer, "Download chapter", clearing space.
+5. **Second version:** MOBI and AZW3.
 
-## 9. Решения владельца
+## 9. The owner's decisions
 
-**Все шесть предложений приняты владельцем 2026-11-14.**
+**All six proposals were accepted by the owner on 2026-11-14.**
 
-| № | Вопрос | Решение |
+| No. | Question | Decision |
 |---|---|---|
-| 1 | Стек | Flutter (раздел 6) |
-| 2 | Бесплатный системный голос Android как второй вариант — читать без денег и без связи | не в первой версии: по качеству он из тех, что уже отклонены, а второй движок удваивает логику плеера. Интерфейс движка оставляет дверь открытой |
-| 3 | MOBI | во второй версии (раздел 4) |
-| 4 | Слушать на телефоне книги, уже озвученные в AudiobookStudio (файл книги и mp3 глав) | после первой версии, отдельной спекой: звук уже оплачен, но это второй источник книг |
-| 5 | Листание страницами или прокрутка | страницы, как просил владелец; прокрутки как режима нет |
-| 6 | Репозиторий | закрытый, `slawa19/AudiobookReader` |
+| 1 | Stack | Flutter (section 6) |
+| 2 | The free Android system voice as a second option — reading without money and without a connection | not in the first version: by quality it is among those already rejected, and a second engine doubles the player logic. The engine interface leaves the door open |
+| 3 | MOBI | in the second version (section 4) |
+| 4 | Listening on the phone to books already narrated in AudiobookStudio (the book file and the chapters' mp3) | after the first version, as a separate spec: the audio is already paid for, but it is a second source of books |
+| 5 | Turning pages or scrolling | pages, as the owner asked; there is no scrolling mode |
+| 6 | Repository | open source under GPL-3.0, `slawa19/AudiobookReader` (decision of 2026-11-17; it was private from 2026-11-14 until then) |
 
-## 10. Риски
+Interface languages: Russian, English, Polish and German (decision of 2026-11-14); Ukrainian added as the fifth
+(decision of 2026-11-17). Everything about publication — [specs/003-open-source.md](specs/003-open-source.md).
 
-- **Задержка до первого звука.** Если запрос на абзац идёт десять секунд и дольше, «нажал и слушаю» не получится
-  без потокового ответа или деления первого абзаца по предложениям. Замер с компьютера 2026-11-14 решён стартовым
-  отрезком ([ARCHITECTURE.md](ARCHITECTURE.md), раздел 6.1); мобильная сеть проверяется на этапе 0 спеки 001.
-- **Android останавливает фоновые приложения.** Производители по-разному режут фон; плеер делается как служба
-  переднего плана с медиа-уведомлением и проверяется на телефоне владельца, а не на эмуляторе.
-- **Цена с 2027 года вдвое выше.** Flash-Lite на треть дешевле и доступен в настройках; счётчик показывает
-  реальный расход.
-- **Модели Google отключаются по расписанию.** Идентификаторы моделей лежат в одном месте; ответ 404 на модель
-  ведёт в настройки, а не в сбой.
-- **Грязные файлы.** FB2 из сетевых библиотек бывает с битым XML и неверно объявленной кодировкой. Разборщик
-  проверяется на настоящих файлах владельца, а не только на образцовых.
+## 10. Risks
+
+- **Latency to first audio.** If a paragraph request takes ten seconds or more, "press and listen" will not work
+  without a streaming response or splitting the first paragraph by sentences. The measurement from a computer on
+  2026-11-14 was resolved by the starting piece ([ARCHITECTURE.md](ARCHITECTURE.md), section 6.1); the mobile network
+  is checked at stage 0 of spec 001.
+- **Android stops background apps.** Manufacturers cut the background differently; the player is built as a
+  foreground service with a media notification and is verified on the owner's phone, not on an emulator.
+- **The price doubles from 2027.** Flash-Lite is a third cheaper and available in settings; the counter shows the
+  real spend.
+- **Google's models are shut down on a schedule.** Model identifiers are in one place; a 404 response on a model
+  leads to settings, not to a failure.
+- **Dirty files.** FB2 from network libraries can have broken XML and a wrongly declared encoding. The parser is
+  verified on the owner's real files, not only on sample ones.

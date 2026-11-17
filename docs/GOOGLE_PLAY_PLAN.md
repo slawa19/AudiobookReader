@@ -1,143 +1,148 @@
-# Google Play и платный сервис: планы на потом
+# Google Play and a paid service: plans for later
 
-Записано 2026-11-15 по вопросу владельца: реально ли выложить приложение в Google Play и что для этого
-доработать; возможно, оно станет платным сервисом — с покупкой токенов для озвучки или подпиской.
+Written on 2026-11-15 in response to the owner's question: whether it is realistic to put the app in Google Play and
+what to rework for it; it may become a paid service — with the purchase of narration tokens or a subscription.
 
-**Статус: не решение и не план работ.** Первая версия по-прежнему строится для одного пользователя
-([CONCEPT.md](CONCEPT.md)). К этому документу возвращаемся, когда владелец скажет, что пришло время.
+**Status: not a decision and not a work plan.** The first version is still built for a single user
+([CONCEPT.md](CONCEPT.md)). We return to this document when the owner says the time has come. (Since 2026-11-17 the
+repository is open source and signed APKs are published on GitHub Releases; Google Play stays out of scope —
+[specs/003-open-source.md](specs/003-open-source.md).)
 
-**Откуда сведения.** Требования Google Play ниже записаны по памяти ассистента, без сверки с действующими
-правилами. Числа (взнос, число тестировщиков, сроки, комиссии) и формулировки политик перед любым решением надо
-проверить по справке Play Console — это первый пункт списка дел.
+**Where the information comes from.** The Google Play requirements below were written from the assistant's memory,
+without checking against the current rules. The numbers (fee, number of testers, timelines, commissions) and the
+wording of policies must be checked against the Play Console help before any decision — that is the first item on the
+to-do list.
 
-## 1. Короткий ответ
+## 1. Short answer
 
-Выложить в Google Play реально. Модерация — не главный барьер: это читалка файлов пользователя, без своего
-контента, рекламы и учётных записей. Главный вопрос — не «пройдёт ли», а **кто платит Google за озвучку**:
+Putting it in Google Play is realistic. Moderation is not the main barrier: it is a reader of the user's own files,
+without its own content, ads or accounts. The main question is not "will it pass" but **who pays Google for the
+narration**:
 
-- **А. Ключ пользователя** (как сейчас). Человек сам получает ключ Gemini, включает оплату и вставляет его в
-  настройки. Приложение почти не меняется. Аудитория узкая: посторонний человек из магазина этот путь, скорее
-  всего, не пройдёт.
-- **Б. Платный сервис.** Озвучка идёт через сервер владельца с его ключом; пользователь покупает минуты или
-  подписку. Это другой продукт: сервер, учётные записи, платежи, поддержка, ответственность за чужие деньги и
-  данные.
+- **A. The user's key** (as now). The person gets a Gemini key themselves, turns on billing and pastes it into the
+  settings. The app hardly changes. The audience is narrow: a stranger from the store will most likely not go through
+  this path.
+- **B. A paid service.** Narration goes through the owner's server with the owner's key; the user buys minutes or a
+  subscription. This is a different product: a server, accounts, payments, support, responsibility for other people's
+  money and data.
 
-Варианты можно пройти по очереди: сначала А как бесплатное приложение «для тех, кто умеет», потом Б.
+The options can be passed in turn: first A as a free app "for those who know how", then B.
 
-## 2. Что нужно в обоих вариантах
+## 2. What is needed in both options
 
-### В приложении
+### In the app
 
-| Что | Зачем | Объём |
+| What | Why | Scope |
 |---|---|---|
-| Сборка AAB и Play App Signing | магазин принимает AAB и подписывает сам; нынешний постоянный ключ становится ключом загрузки | правка `scripts/build-apk.sh` |
-| Название, иконка, заставка | сейчас название «AudiobookReader» и стандартная иконка Flutter | решение владельца + графика |
-| Политика конфиденциальности | приложение отправляет текст книги в Gemini; нужна публичная страница | текст и хостинг страницы |
-| Форма «Безопасность данных» | что собирается, куда уходит, шифруется ли, можно ли удалить | анкета в консоли |
-| Декларация службы переднего плана | фоновое воспроизведение — служба типа «воспроизведение медиа»; магазин просит объяснить назначение, обычно с видео | анкета + короткое видео |
-| Анкета возрастного рейтинга | обязательна | анкета |
-| Страница магазина | описание, снимки экранов на четырёх языках интерфейса | тексты + снимки (эталонные снимки тестов — заготовка) |
-| Проверка на чужих телефонах | сейчас проверено на одном Samsung, Android 17, `minSdk 31`; узкие экраны, другие оболочки, жестовая навигация | закрытое тестирование |
-| Отчёты о сбоях | в «Не делаем» первой версии; без них чужие падения не увидеть | пересмотр решения |
-| Правила про генеративный ИИ | у магазина есть требования к приложениям с ИИ-контентом (например, возможность пожаловаться на результат); относится ли к ним озвучка чужого текста — неизвестно | выяснить по действующим правилам |
+| AAB build and Play App Signing | the store accepts AAB and signs it itself; the current permanent key becomes the upload key | an edit to `scripts/build-apk.sh` |
+| Name, icon, splash screen | currently the name is "AudiobookReader" and the standard Flutter icon | the owner's decision + graphics |
+| Privacy policy | the app sends the book's text to Gemini; a public page is needed | the text and hosting of the page |
+| The "Data safety" form | what is collected, where it goes, whether it is encrypted, whether it can be deleted | a questionnaire in the console |
+| Foreground service declaration | background playback is a service of the "media playback" type; the store asks to explain the purpose, usually with a video | a questionnaire + a short video |
+| Age rating questionnaire | mandatory | a questionnaire |
+| Store listing | description, screenshots in the five interface languages | texts + screenshots (the tests' golden screenshots are a starting point) |
+| Check on other people's phones | so far verified on one Samsung, Android 17, `minSdk 31`; narrow screens, other vendor skins, gesture navigation | closed testing |
+| Crash reports | in the first version's "Out of scope"; without them other people's crashes cannot be seen | a revision of the decision |
+| Generative AI rules | the store has requirements for apps with AI content (for example, the ability to report a result); whether they apply to narrating someone else's text is unknown | find out from the current rules |
 
-### Вне приложения
+### Outside the app
 
-- Учётная запись разработчика: разовый взнос и подтверждение личности.
-- Для новых личных учётных записей — закрытое тестирование с группой тестировщиков в течение установленного срока
-  до публикации. Это условие определяет сроки; проверить первым.
-- Юридическое лицо или физическое: влияет на налоги, выплаты и на то, что видно покупателям в магазине.
+- A developer account: a one-time fee and identity verification.
+- For new personal accounts — closed testing with a group of testers for the set period before publication. This
+  condition determines the timeline; check it first.
+- A legal entity or an individual: affects taxes, payouts and what buyers see in the store.
 
-### Что уже в порядке
+### What is already in order
 
-Свежая целевая версия Android; из разрешений — только интернет и служба воспроизведения; резервное копирование
-данных выключено; один сетевой адрес; ключ в защищённом хранилище; книги не покидают телефон, кроме текста,
-отправляемого на озвучку.
+A recent target Android version; of permissions — only the internet and the playback service; data backup is turned
+off; one network address; the key in secure storage; books do not leave the phone, except the text sent for narration.
 
-## 3. Вариант А: ключ пользователя
+## 3. Option A: the user's key
 
-Дополнительно к разделу 2:
+In addition to section 2:
 
-- **Вход в озвучку для новичка.** Пошаговое объяснение, где взять ключ и что это стоит; проверка ключа при вводе;
-  понятные слова для отказов Google (часть уже есть: 402, 404, неверный ключ).
-- **Чтение без озвучки** должно быть полноценным: человек без ключа получает обычную читалку.
-- **Оценка цены до нажатия** — сколько будет стоить глава и книга (частично есть: «Скачать главу»).
-- Проверить условия Gemini API: допустимо ли приложение, где конечный пользователь вносит свой ключ, и возрастные
-  ограничения сервиса.
+- **The entry to narration for a newcomer.** A step-by-step explanation of where to get a key and what it costs;
+  validating the key on entry; plain words for Google's refusals (some already exist: 402, 404, a wrong key).
+- **Reading without narration** must be complete: a person without a key gets an ordinary reader.
+- **A price estimate before pressing** — how much a chapter and a book will cost (partly there: "Download chapter").
+- Check the Gemini API terms: whether an app where the end user enters their own key is permitted, and the service's
+  age restrictions.
 
-Цена варианта: недели, а не месяцы; сервер не нужен; расходов владельца на озвучку нет.
+The price of the option: weeks, not months; no server needed; no narration costs for the owner.
 
-## 4. Вариант Б: платный сервис
+## 4. Option B: a paid service
 
-Здесь меняется архитектура. Сейчас приложение ходит в Gemini напрямую и хранит ключ на телефоне; в платном сервисе
-ключ владельца на телефоне быть не может — он уйдёт к первому, кто разберёт приложение.
+Here the architecture changes. Now the app calls Gemini directly and keeps the key on the phone; in a paid service the
+owner's key cannot be on the phone — it would go to the first person who takes the app apart.
 
-### Что придётся построить
+### What will have to be built
 
-1. **Сервер-посредник.** Принимает текст отрезка и профиль голоса, вызывает Gemini ключом владельца, отдаёт звук.
-   Проверяет, что запрос пришёл от оплатившего пользователя; считает расход; ограничивает частоту.
-2. **Учётные записи или их замена.** Баланс надо к чему-то привязать: к учётной записи (вход через Google) либо к
-   покупке в магазине без регистрации. От этого зависит, переживёт ли баланс смену телефона.
-3. **Платежи.** За цифровые услуги внутри приложения магазин требует свою платёжную систему и берёт комиссию.
-   Нужны: товары в консоли, проверка покупок на сервере, восстановление покупок, возвраты.
-4. **Учёт и защита от злоупотреблений.** Лимиты на пользователя, защита от повторного использования покупки,
-   от накрутки, от использования сервера чужими приложениями.
-5. **Кеш звука на сервере — или нет.** Одинаковый текст одним голосом можно не озвучивать дважды для разных людей;
-   это экономит деньги, но означает хранение текстов и звука чужих книг на сервере — другой уровень
-   ответственности за данные и за авторское право.
-6. **Поддержка и эксплуатация.** Мониторинг сервера, оповещения, ответы пользователям, возвраты, обновления при
-   смене тарифов и моделей Google.
-7. **Правовое.** Пользовательское соглашение, политика конфиденциальности для сервиса, обрабатывающего тексты
-   книг; требования к персональным данным в странах, где приложение продаётся; налоги с продаж.
-8. **В приложении.** Экран покупки и баланса; вход; работа без сети и с пустым балансом; выбор «свой ключ или
-   сервис» — оставить ли оба пути.
+1. **An intermediary server.** Accepts the piece's text and the voice profile, calls Gemini with the owner's key,
+   returns the audio. Checks that the request came from a paying user; counts the spend; limits the rate.
+2. **Accounts or their replacement.** The balance has to be tied to something: an account (sign-in with Google) or a
+   store purchase without registration. Whether the balance survives a change of phone depends on this.
+3. **Payments.** For digital services inside the app the store requires its own payment system and takes a commission.
+   Needed: products in the console, server-side purchase verification, purchase restoration, refunds.
+4. **Accounting and abuse protection.** Per-user limits, protection against reuse of a purchase, against fraud, and
+   against use of the server by other people's apps.
+5. **An audio cache on the server — or not.** The same text with the same voice need not be narrated twice for
+   different people; this saves money but means storing the texts and audio of other people's books on the server — a
+   different level of responsibility for data and for copyright.
+6. **Support and operations.** Server monitoring, alerts, answering users, refunds, updates when Google's rates and
+   models change.
+7. **Legal.** A user agreement, a privacy policy for a service that processes book texts; personal data requirements
+   in the countries where the app is sold; sales taxes.
+8. **In the app.** A purchase and balance screen; sign-in; working offline and with an empty balance; the choice "own
+   key or service" — whether to keep both paths.
 
-### Экономика — считать до начала работ
+### Economics — calculate before starting
 
-Известно на 2026-11-15 ([GEMINI_TTS.md](GEMINI_TTS.md)): час звука на 3.8 Flash стоит владельцу 0,81 $, с
-01.01.2027 — 1,62 $; книга в 500 тысяч знаков (≈ 9,6 часа) — ≈ 7,8 $ сейчас и ≈ 15,5 $ с 2027 года; Flash-Lite
-дешевле на треть. Сверху — комиссия магазина, налоги, сервер, возвраты.
+Known as of 2026-11-15 ([GEMINI_TTS.md](GEMINI_TTS.md)): an hour of audio on 3.8 Flash costs the owner $0.81, from
+01.01.2027 — $1.62; a book of 500 thousand characters (≈ 9.6 hours) — ≈ $7.8 now and ≈ $15.5 from 2027; Flash-Lite is
+a third cheaper. On top — the store's commission, taxes, the server, refunds.
 
-Отсюда вопросы, без ответа на которые модель оплаты не выбрать:
+Hence the questions, without answers to which the payment model cannot be chosen:
 
-- Готов ли человек платить за озвучку одной книги больше, чем стоит готовая аудиокнига?
-- Подписка «без ограничений» при цене часа около доллара убыточна на активном слушателе; значит, подписка должна
-  включать ограниченное число часов — тогда чем она лучше пакета минут?
-- Что будет с ценами и остатками пользователей, когда Google сменит тариф (удвоение с 2027 года уже объявлено)?
-- Не дешевле ли другая модель озвучки или другой поставщик при том же качестве?
+- Is a person ready to pay more for narrating one book than a ready-made audiobook costs?
+- An "unlimited" subscription at a price of about a dollar per hour is unprofitable on an active listener; so the
+  subscription has to include a limited number of hours — then how is it better than a package of minutes?
+- What will happen to prices and users' balances when Google changes the rate (a doubling from 2027 has already been
+  announced)?
+- Is another narration model or another provider not cheaper at the same quality?
 
-## 5. Вопросы, с которыми надо определиться
+## 5. Questions to settle
 
-Сначала — о продукте, потом — о технике.
+First about the product, then about the technology.
 
-1. **Для кого это.** Для владельца и таких же, как он, или для широкой аудитории? От ответа зависит всё остальное.
-2. **А, Б или А, затем Б.**
-3. **Пакеты минут, подписка или и то и другое.** Что происходит с неиспользованным остатком.
-4. **В каких странах продаётся.** Влияет на налоги, правовые тексты, доступность Gemini и платежей.
-5. **Физическое или юридическое лицо.**
-6. **Учётные записи: нужны или нет.** Перенос баланса и книг между телефонами.
-7. **Хранит ли сервер тексты и звук.** Экономия против ответственности.
-8. **Остаётся ли путь со своим ключом** рядом с платным сервисом.
-9. **Только Android или ещё iPhone.** Flutter это позволяет, но платформенная часть (кодировщик звука, приём
-   файлов, служба воспроизведения) написана только для Android, и у App Store свои правила и комиссия.
-10. **Название и вид.** Название, иконка, страница магазина.
-11. **Что из «Не делаем» первой версии возвращается** ради чужих пользователей: отчёты о сбоях, проверка
-    обновлений, поиск по тексту, закладки, папки на полке, MOBI.
-12. **Кто отвечает пользователям** и сколько времени на это есть.
+1. **Who it is for.** For the owner and people like them, or for a wide audience? Everything else depends on the
+   answer.
+2. **A, B, or A then B.**
+3. **Packages of minutes, a subscription, or both.** What happens to the unused balance.
+4. **In which countries it is sold.** Affects taxes, legal texts, the availability of Gemini and payments.
+5. **An individual or a legal entity.**
+6. **Accounts: needed or not.** Transferring the balance and books between phones.
+7. **Whether the server stores texts and audio.** Savings against responsibility.
+8. **Whether the own-key path stays** next to the paid service.
+9. **Android only or iPhone too.** Flutter allows it, but the platform part (the audio encoder, file intake, the
+   playback service) is written only for Android, and the App Store has its own rules and commission.
+10. **Name and look.** The name, the icon, the store page.
+11. **What from the first version's "Out of scope" comes back** for the sake of other people's users: crash reports,
+    update checks, search in the text, bookmarks, shelf folders, MOBI.
+12. **Who answers users** and how much time there is for it.
 
-## 6. Порядок, когда придёт время
+## 6. The order, when the time comes
 
-1. Сверить этот документ с действующими правилами Google Play и условиями Gemini API; исправить числа.
-2. Ответить на вопросы 1–5 раздела 5.
-3. Попользоваться первой версией самому достаточно долго, чтобы знать, что в ней мешает.
-4. Если выбран вариант А — отдельная спека «публикация»: раздел 2 и раздел 3.
-5. Если вариант Б — сначала расчёт экономики (раздел 4), затем архитектура сервера отдельным документом с ревью,
-   затем спеки: сервер, платежи, изменения в приложении.
+1. Check this document against the current Google Play rules and the Gemini API terms; fix the numbers.
+2. Answer questions 1–5 of section 5.
+3. Use the first version yourself long enough to know what bothers you in it.
+4. If option A is chosen — a separate "publication" spec: section 2 and section 3.
+5. If option B — first the economics calculation (section 4), then the server architecture as a separate document
+   with a review, then specs: the server, payments, changes in the app.
 
-## 7. Что в нынешней архитектуре поможет, а что помешает
+## 7. What in the current architecture will help and what will get in the way
 
-- **Поможет:** синтез спрятан за интерфейсом `TtsEngine` — замена прямого вызова Gemini на вызов своего сервера
-  не затрагивает очередь, плеер и экраны; звук хранится по отпечатку текста и профиля — повтор бесплатен при любом
-  источнике; расход уже считается по ответам.
-- **Помешает:** отсутствие учётных записей и сервера — осознанное решение первой версии; интерфейс рассчитан на
-  человека, который сам ввёл ключ; проверка сделана на одном телефоне.
+- **Will help:** synthesis is hidden behind the `TtsEngine` interface — replacing the direct Gemini call with a call
+  to our own server does not touch the queue, the player and the screens; audio is stored by the fingerprint of the
+  text and profile — repeating is free with any source; the spend is already counted from the responses.
+- **Will get in the way:** the absence of accounts and a server is a deliberate decision of the first version; the
+  interface is designed for a person who entered the key themselves; verification was done on one phone.
