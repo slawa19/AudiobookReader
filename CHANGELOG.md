@@ -34,6 +34,9 @@ following the review and the full phone check of 2026-11-16.
 
 ### Project
 
+- The public name of the app is **Book AudioReader**: the Android label, the license page, the web prototype and the
+  README. The repository, the package and the applicationId keep the name `AudiobookReader`, so updating an installed
+  app is not affected.
 - The repository is prepared for open-source publication under GPL-3.0-or-later (`LICENSE`; the fonts and the demo
   texts keep their own licenses, see `assets/*/SOURCES.txt`). Documentation, code comments, test names and commit
   messages are in English ([spec 003](docs/specs/003-open-source.md)).

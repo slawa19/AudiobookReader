@@ -4,7 +4,7 @@ The owner's phone: **Samsung SM-S948B, Android 17**, **three-button** navigation
 gesture. All items are awaiting a check; the tick is put by the person checking. In the report give the date, SHA, APK
 version, the result and the measured values; do not write down or screenshot the key.
 
-The fake build: `build-apk.sh --debug --fake`, named "AudiobookReader (fake)", applicationId
+The fake build: `build-apk.sh --debug --fake`, named "Book AudioReader (fake)", applicationId
 `io.github.slawa19.audiobook_reader.fake`. The real one: `build-apk.sh --debug`, without the `.fake` suffix. Both work
 with the real files, encoder, player and media service. Instead of speech the fake engine produces a tone and needs no
 key. Its synthesis delay is constant — 2 s for audio that is not there yet; a repeat from the cache has no delay. There

@@ -1,7 +1,8 @@
-# Releasing and verifying AudiobookReader
+# Releasing and verifying Book AudioReader
 
-Signed APKs are published in [GitHub Releases](https://github.com/slawa19/AudiobookReader/releases). That is the only
-distribution channel (spec 003, R6). Every APK is built by the repository's own workflow,
+Signed APKs of Book AudioReader are published in [GitHub Releases](https://github.com/slawa19/AudiobookReader/releases).
+The repository and the APK file keep the working name `AudiobookReader`. That is the only distribution channel (spec
+003, R6). Every APK is built by the repository's own workflow,
 [`.github/workflows/release.yml`](../.github/workflows/release.yml), from a `vX.Y.Z` tag, and is published with a
 `SHA256SUMS` file and a build-provenance attestation.
 

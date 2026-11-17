@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="216" height="216" role="img" aria-label="AudiobookReader">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="216" height="216" role="img" aria-label="Book AudioReader">
   <!-- The app's mark: an open book, text lines on the left page turn into sound bars on the right.
        The same outlines are in android/app/src/main/res/drawable/ic_launcher_foreground.xml. -->
   <rect width="108" height="108" rx="24" fill="#A8431F"/>

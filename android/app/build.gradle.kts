@@ -26,7 +26,7 @@ android {
 
     defaultConfig {
         applicationId = "io.github.slawa19.audiobook_reader" + if (fakeTts) ".fake" else ""
-        manifestPlaceholders["appLabel"] = if (fakeTts) "AudiobookReader (fake)" else "AudiobookReader"
+        manifestPlaceholders["appLabel"] = if (fakeTts) "Book AudioReader (fake)" else "Book AudioReader"
         minSdk = 31
         targetSdk = flutter.targetSdkVersion
         // The app version is taken from pubspec.yaml.

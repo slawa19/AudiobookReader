@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
-const appName = 'AudiobookReader';
+const appName = 'Book AudioReader';
 
 /// The version shown on the license page. Kept equal to the part of `version:` in pubspec.yaml before the `+`; the
 /// test `licenses_test.dart` fails when they differ. The Android build takes the version from pubspec.yaml too.

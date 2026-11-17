@@ -35,7 +35,7 @@ The options can be passed in turn: first A as a free app "for those who know how
 | What | Why | Scope |
 |---|---|---|
 | AAB build and Play App Signing | the store accepts AAB and signs it itself; the current permanent key becomes the upload key | an edit to `scripts/build-apk.sh` |
-| Name, icon, splash screen | currently the name is "AudiobookReader" and the standard Flutter icon | the owner's decision + graphics |
+| Name, icon, splash screen | the name is "Book AudioReader" (the owner's decision of 2026-11-17); the app has its own icon | the splash screen and the store graphics |
 | Privacy policy | the app sends the book's text to Gemini; a public page is needed | the text and hosting of the page |
 | The "Data safety" form | what is collected, where it goes, whether it is encrypted, whether it can be deleted | a questionnaire in the console |
 | Foreground service declaration | background playback is a service of the "media playback" type; the store asks to explain the purpose, usually with a video | a questionnaire + a short video |

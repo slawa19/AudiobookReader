@@ -193,6 +193,9 @@ stages are in [spec 001](specs/001-first-version.md), section 2; here is the gen
 | 5 | Turning pages or scrolling | pages, as the owner asked; there is no scrolling mode |
 | 6 | Repository | open source under GPL-3.0, `slawa19/AudiobookReader` (decision of 2026-11-17; it was private from 2026-11-14 until then) |
 
+The public name of the app is **Book AudioReader** (decision of 2026-11-17); the repository, the package and the
+applicationId keep the working name `AudiobookReader` / `audiobook_reader`.
+
 Interface languages: Russian, English, Polish and German (decision of 2026-11-14); Ukrainian added as the fifth
 (decision of 2026-11-17). Everything about publication — [specs/003-open-source.md](specs/003-open-source.md).
 
