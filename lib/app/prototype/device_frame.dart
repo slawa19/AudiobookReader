@@ -40,7 +40,7 @@ class _DeviceFrameState extends State<DeviceFrame> {
     final d = _devices[_device];
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Читалка — прототип',
+      title: 'Book AudioReader — prototype',
       theme: ThemeData(
         useMaterial3: true,
         fontFamily: 'Roboto',

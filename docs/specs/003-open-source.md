@@ -15,6 +15,7 @@ The app's behavior for the reader does not change, except for the fifth interfac
 | D3 | Russian comments in code, scripts, CI and tests are translated to English; text that is data (strings of the Russian interface, book samples, fixtures, reading-style prompts) stays in its own language | the owner, 2026-11-17 |
 | D4 | Ukrainian (`uk`) is the **fifth** interface language (ru, en, pl, de, uk); it is also a known book language for the TTS reading style and the voice-probe phrase (`lib/tts/book_language.dart`); unknown book languages still fall back to English | the owner, 2026-11-17 |
 | D5 | Public APKs are built by GitHub Actions from a `vX.Y.Z` tag, signed with the owner's permanent key from GitHub Secrets, and published in Releases with SHA-256 checksums and a build-provenance attestation | the owner, 2026-11-17 |
+| D6 | The public name of the app is **Book AudioReader**; the repository, the Dart package, the applicationId and the release file name keep `AudiobookReader` / `audiobook_reader` | the owner, 2026-11-17 |
 
 ## 2. Requirements
 
@@ -106,6 +107,10 @@ The app's behavior for the reader does not change, except for the fifth interfac
   confirmation): diagnostic text that is not part of a designed interface state is written in English, like Google's
   own error text that the app already shows as is. The hard-coded Russian messages of `lib/tts/gemini.dart`, the
   exceptions in `lib/` and the Kotlin channel errors were translated; the interface strings stay in the ARB files.
+- 2026-11-17 — the owner named the app **Book AudioReader** (D6): the Android label (`Book AudioReader`,
+  `Book AudioReader (fake)`), the license page, the web prototype (`web/`, the device frame title) and the
+  documentation use it; the repository, the package, the applicationId (changing it would break updating the installed app) and the release file name
+  `AudiobookReader-<version>.apk` are unchanged.
 - 2026-11-17 — spec written; documentation translated to English (R2) by a separate agent working in its own worktree.
 - 2026-11-17 — R2 and R3 done and merged: documentation, then tests, tooling and CI messages, then `lib/`, `android/`
   and `web/` comments in English; section references are written `A§N` and spec decisions `D1…D12` with Latin letters.

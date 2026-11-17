@@ -1,11 +1,12 @@
 <p align="center">
-  <img src="docs/logo.svg" width="112" alt="AudiobookReader logo: an open book whose text lines on the left page turn into sound bars on the right">
+  <img src="docs/logo.svg" width="112" alt="Book AudioReader logo: an open book whose text lines on the left page turn into sound bars on the right">
 </p>
 
-# AudiobookReader
+# Book AudioReader
 
-An Android book reader that reads aloud with Google Gemini TTS voices. One position for reading and listening: read
-with your eyes, start the voice from any paragraph, and return to the text where it stopped.
+Book AudioReader is an Android book reader that reads aloud with Google Gemini TTS voices. One position for reading and
+listening: read with your eyes, start the voice from any paragraph, and return to the text where it stopped. The
+repository and the package keep the working name `AudiobookReader` / `audiobook_reader`.
 
 It is a single-user app: no server, no accounts, no sync. The Gemini key is your own and is kept on the phone in
 Android's secure storage.
@@ -158,7 +159,7 @@ If a document and the code disagree, the code is right.
 
 Copyright (C) 2026 Slawa Gorobets
 
-AudiobookReader is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+Book AudioReader is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
 License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
 version (GPL-3.0-or-later). It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
 the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more

@@ -30,6 +30,10 @@ workflow with the pinned toolchain ([RELEASING.md](RELEASING.md)). The four sign
 its attestation and release steps are skipped in a dry run and have never run. No release has been cut and the repository is still private; build attestations work only in a public
 repository, so the first real release is possible only after the owner switches it to public.
 
+The public name of the app is **Book AudioReader** (owner decision of 2026-11-17): the Android label, the license page,
+the web prototype and the README use it. The repository, the Dart package, the applicationId and the release file name
+keep `AudiobookReader` / `audiobook_reader`.
+
 **What is next, on the phone** — all with the owner, none of it can be verified from a computer:
 
 1. listening with the real voice: speech by ear, "back/forward", page return;
@@ -41,13 +45,11 @@ repository, so the first real release is possible only after the owner switches 
 
 **What is next, publication** — the owner's steps, in this order:
 
-1. confirm the public name of the app: the Android label is "AudiobookReader", the web prototype is still titled
-   "Читалка — прототип" (`web/index.html`, `web/manifest.json`, `lib/app/prototype/device_frame.dart`);
-2. have the Ukrainian strings (`lib/screens/l10n/app_uk.arb`) read by a native speaker; they were written by an agent;
-3. look at Settings → "Open-source licenses" on the phone;
-4. confirm the rule of spec 003 (Changelog) that technical text, as distinct from interface strings, is in English;
-5. switch the GitHub repository to public;
-6. cut the first release: bump `version:` in `pubspec.yaml` if needed, push the tag `v0.1.0` (or the bumped version),
+1. have the Ukrainian strings (`lib/screens/l10n/app_uk.arb`) read by a native speaker; they were written by an agent;
+2. look at Settings → "Open-source licenses" on the phone;
+3. confirm the rule of spec 003 (Changelog) that technical text, as distinct from interface strings, is in English;
+4. switch the GitHub repository to public;
+5. cut the first release: bump `version:` in `pubspec.yaml` if needed, push the tag `v0.1.0` (or the bumped version),
    verify the published APK as in [RELEASING.md](RELEASING.md), "For users".
 
 The owner's phone has one build installed — the real one, signed with the permanent key. The build with the fake voice

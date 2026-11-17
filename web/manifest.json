@@ -1,6 +1,6 @@
 {
-    "name": "Читалка — прототип",
-    "short_name": "Читалка",
+    "name": "Book AudioReader — prototype",
+    "short_name": "Book AudioReader",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#F8F4EC",
