@@ -11,3 +11,7 @@
 *.mobi binary
 *.azw3 binary
 *.zip binary
+
+# License texts are kept verbatim: the OFL has a trailing space, and NOTICES must equal its sources (test/licenses_test.dart).
+NOTICES -whitespace
+assets/fonts/*-OFL.txt -whitespace
