@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Раздаёт веб-сборку прототипа (build/web) на заданном адресе без кэша браузера.
+"""Serves the prototype web build (build/web) at the given address with browser caching disabled.
 
-Без `Cache-Control: no-cache` браузер после пересборки показывает старую версию.
-Запускается из scripts/prototype.sh, руками не нужен.
+Without `Cache-Control: no-cache` the browser shows the old version after a rebuild.
+Started from scripts/prototype.sh; not needed by hand.
 """
 import functools
 import http.server

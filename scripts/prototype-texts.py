@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""Готовит подставные книги прототипа: тексты общественного достояния из Викитеки → JSON модели книги (А§3).
+"""Builds the prototype's fake books: public-domain texts from Wikisource -> book-model JSON (A§3).
 
-Только для прототипа интерфейса. Это НЕ разборщик приложения: он знает разметку Викитеки и пару конкретных
-страниц, чего настоящему разбору делать нельзя. Запускается вручную, результат лежит в assets/demo/ и
-коммитится; сеть нужна только при запуске этого скрипта.
+For the interface prototype only. This is NOT the app's parser: it knows Wikisource markup and a couple of specific
+pages, which a real parser must never do. Run by hand; the result lives in assets/demo/ and is committed; the
+network is needed only when this script runs.
 
     python3 scripts/prototype-texts.py
 
-Источники (лицензия текста — PD-old-70):
-  А. С. Пушкин, «Капитанская дочка» (1836), главы I–III — ru.wikisource.org, редакция 1960 (СО);
-  А. П. Чехов, «Ионыч» (1898) и «Дама с собачкой» (1899) — ru.wikisource.org.
-Сноски: у Пушкина — три коротких примечания со страниц Викитеки как есть; у Чехова — только авторская
-(«прим. автора») и одна о Верне, написанная заново своими словами; остальные примечания редакторов Викитеки
-отброшены. Картинка «Степь перед бураном» нарисована этим скриптом — в книге её нет.
+Sources (text license: PD-old-70):
+  A. S. Pushkin, "Kapitanskaya dochka" (1836), chapters I-III - ru.wikisource.org, 1960 edition (SO);
+  A. P. Chekhov, "Ionych" (1898) and "Dama s sobachkoy" (1899) - ru.wikisource.org.
+Footnotes: Pushkin - three short notes from the Wikisource pages as they are; Chekhov - only the author's own
+("прим. автора") and one about Verne, written anew in our own words; the other notes by Wikisource editors are
+dropped. The picture "Степь перед бураном" (the steppe before the blizzard) is drawn by this script - it is not
+in the book.
 """
 import html
 import json
@@ -40,10 +41,10 @@ def fetch(title):
     return rev["slots"]["main"]["content"], rev["revid"]
 
 
-# --- разбор шаблонов с учётом вложенности -------------------------------------------------------------
+# --- parsing templates with nesting -------------------------------------------------------------
 
 def split_templates(text):
-    """Делит текст на куски: ('text', s) и ('tpl', inner) для {{…}} верхнего уровня."""
+    """Splits text into pieces: ('text', s) and ('tpl', inner) for top-level {{...}}."""
     out, i, depth, start, buf = [], 0, 0, 0, []
     while i < len(text):
         if text.startswith("{{", i):
@@ -68,7 +69,7 @@ def split_templates(text):
 
 
 def split_params(inner):
-    """Делит тело шаблона по | верхнего уровня (не внутри {{ }}, [[ ]], <poem>)."""
+    """Splits a template body on top-level | (not inside {{ }}, [[ ]], <poem>)."""
     parts, depth, buf, i = [], 0, [], 0
     while i < len(inner):
         two = inner[i:i + 2]
@@ -114,7 +115,7 @@ class Builder:
             return sum(len(t) for t in text)
 
         raw = raw.replace("<br />", "\n").replace("<br/>", "\n").replace("<br>", "\n")
-        # шаблоны внутри строки
+        # templates inside the line
         pieces = []
         for kind, s in split_templates(raw):
             if kind == "text":
@@ -135,7 +136,7 @@ class Builder:
                     pieces.append(pos_[-1])
                 elif name == "ext" and pos_:
                     pieces.append(pos_[-1])
-                # прочие шаблоны в строке отбрасываются
+                # other templates in the line are dropped
         raw = "".join(pieces)
 
         i = 0
@@ -193,7 +194,7 @@ class Builder:
         if italic_start is not None and cur() > italic_start:
             spans.append({"start": italic_start, "end": cur(), "style": "italic"})
         s = "".join(text)
-        # лишние пробелы по краям — с поправкой диапазонов
+        # extra spaces at the edges - with the span ranges adjusted
         lead = len(s) - len(s.lstrip(" "))
         s2 = s.strip(" ")
         spans = [{**sp, "start": max(0, sp["start"] - lead), "end": min(len(s2), sp["end"] - lead)}
@@ -232,7 +233,7 @@ class Builder:
 
 
 def body_of(wiki):
-    """Текст произведения без шапки {{Отексте}}, примечаний и категорий."""
+    """The work's text without the {{Отексте}} header, notes and categories."""
     parts = split_templates(wiki)
     out = []
     for kind, s in parts:
@@ -248,7 +249,7 @@ def body_of(wiki):
 
 
 def convert_chapterized(b, wiki, level, note_override=None, image_after=None):
-    """Главы по == I ==; абзацы по пустым строкам; <poem> — стихи."""
+    """Chapters by == I ==; paragraphs by blank lines; <poem> is verse."""
     text = body_of(wiki)
     chunks = re.split(r"\n(?===\s*[IVX]+\s*==)", "\n" + text)
     for chunk in chunks:
@@ -311,7 +312,7 @@ def convert_pushkin_chapter(b, wiki, image=None):
                 b.book["blocks"].append({"kind": "image", "text": image[2], "spans": [], "imageId": image[1]})
 
 
-# --- картинка-заглушка: нарисована здесь, а не взята из книги ------------------------------------------
+# --- placeholder picture: drawn here, not taken from the book ------------------------------------------
 
 def write_png(path, w, h, pixel):
     raw = bytearray()
@@ -328,7 +329,7 @@ def write_png(path, w, h, pixel):
 
 
 def steppe_picture(path):
-    """Зимняя степь перед бураном: небо, холмы, снег, кибитка. Детерминированно."""
+    """Winter steppe before a blizzard: sky, hills, snow, a kibitka. Deterministic."""
     import math
     import random
     w, h = 960, 600
@@ -379,7 +380,7 @@ def steppe_picture(path):
 
 
 def cover(path, base, motif):
-    """Обложка-заглушка 240×360: тёмный фон, светлый мотив. Без текста."""
+    """Placeholder cover 240x360: dark background, light motif. No text."""
     import math
     w, h = 240, 360
     light = tuple(min(255, int(c + (255 - c) * 0.55)) for c in base)
