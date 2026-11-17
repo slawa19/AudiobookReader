@@ -29,6 +29,7 @@ void main() {
       ('en', 'Fake voice'),
       ('pl', 'Głos testowy'),
       ('de', 'Teststimme'),
+      ('uk', 'Тестовий голос'),
     ]) {
       testWidgets('$locale: строка подставного голоса только при fakeTts=$fakeTts', (tester) async {
         final prototype = await pumpPrototype(tester, size: phone320, textScale: 2, locale: locale);

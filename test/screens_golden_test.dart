@@ -329,7 +329,7 @@ void main() {
   });
 
   group('языки', () {
-    for (final lang in ['en', 'pl', 'de']) {
+    for (final lang in ['en', 'pl', 'de', 'uk']) {
       testWidgets('$lang: полка', (tester) async {
         await pumpPrototype(tester, locale: lang);
         await snapshot(tester, 'l10n-$lang-01-shelf');
@@ -377,6 +377,23 @@ void main() {
       await tester.tap(find.byIcon(Icons.settings_outlined));
       await settle(tester);
       await snapshot(tester, 'l10n-pl-n320-22-settings');
+    });
+
+    testWidgets('uk, 320×640 ×1,3: плеер с панелями', (tester) async {
+      final p = await pumpPrototype(tester, size: phone320, textScale: 1.3, locale: 'uk');
+      await openKapitanskaya(tester, p);
+      p.narration.demoShow('sleep', book: currentBook(tester), fromBlock: 39);
+      await advance(tester, const Duration(milliseconds: 600));
+      await tapCenter(tester);
+      await advance(tester, const Duration(milliseconds: 400));
+      await snapshot(tester, 'l10n-uk-n320-14-player');
+    });
+
+    testWidgets('uk, 320×640 ×1,3: настройки', (tester) async {
+      await pumpPrototype(tester, size: phone320, textScale: 1.3, locale: 'uk');
+      await tester.tap(find.byIcon(Icons.settings_outlined));
+      await settle(tester);
+      await snapshot(tester, 'l10n-uk-n320-22-settings');
     });
   });
 

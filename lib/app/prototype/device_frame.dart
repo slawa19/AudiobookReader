@@ -86,6 +86,7 @@ class _DeviceFrameState extends State<DeviceFrame> {
                             ButtonSegment(value: 'en', label: Text('EN')),
                             ButtonSegment(value: 'pl', label: Text('PL')),
                             ButtonSegment(value: 'de', label: Text('DE')),
+                            ButtonSegment(value: 'uk', label: Text('UK')),
                           ],
                           selected: {widget.settings!.language ?? ''},
                           showSelectedIcon: false,

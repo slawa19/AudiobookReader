@@ -9,6 +9,7 @@ import 'app_localizations_de.dart';
 import 'app_localizations_en.dart';
 import 'app_localizations_pl.dart';
 import 'app_localizations_ru.dart';
+import 'app_localizations_uk.dart';
 
 // ignore_for_file: type=lint
 
@@ -100,6 +101,7 @@ abstract class AppLocalizations {
     Locale('ru'),
     Locale('pl'),
     Locale('de'),
+    Locale('uk'),
   ];
 
   /// No description provided for @mediaChannel.
@@ -816,6 +818,12 @@ abstract class AppLocalizations {
   /// **'Deutsch'**
   String get langDe;
 
+  /// No description provided for @langUk.
+  ///
+  /// In ru, this message translates to:
+  /// **'Українська'**
+  String get langUk;
+
   /// Характер голоса
   ///
   /// In ru, this message translates to:
@@ -966,7 +974,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['de', 'en', 'pl', 'ru'].contains(locale.languageCode);
+      <String>['de', 'en', 'pl', 'ru', 'uk'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -983,6 +991,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsPl();
     case 'ru':
       return AppLocalizationsRu();
+    case 'uk':
+      return AppLocalizationsUk();
   }
 
   throw FlutterError(

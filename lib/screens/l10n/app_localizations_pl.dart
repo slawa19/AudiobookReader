@@ -524,6 +524,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get langDe => 'Deutsch';
 
   @override
+  String get langUk => 'Українська';
+
+  @override
   String get voiceCharSoft => 'miękki';
 
   @override

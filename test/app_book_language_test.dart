@@ -10,6 +10,7 @@ void main() {
     ('ru', null, 'ru'),
     ('pl', null, 'pl'),
     ('de', null, 'de'),
+    ('uk', null, 'uk'),
     ('fr', null, 'en'),
     ('ru', 'en', 'en'),
     ('ru', 'pl', 'pl'),

@@ -133,6 +133,7 @@ class _DemoStatesSheet extends StatelessWidget {
                 ('en', 'EN'),
                 ('pl', 'PL'),
                 ('de', 'DE'),
+                ('uk', 'UK'),
               ])
                 ChoiceChip(
                   key: Key('demo-lang-${code ?? 'system'}'),

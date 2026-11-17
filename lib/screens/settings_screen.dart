@@ -353,7 +353,7 @@ class _ModelSheet extends StatelessWidget {
   }
 }
 
-/// «Язык»: «Как в системе» и четыре языка интерфейса, каждый назван на самом себе. Возвращает код языка или
+/// «Язык»: «Как в системе» и пять языков интерфейса, каждый назван на самом себе. Возвращает код языка или
 /// пустую строку для «Как в системе».
 class _LanguageSheet extends StatelessWidget {
   const _LanguageSheet({required this.current});

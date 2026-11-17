@@ -29,13 +29,13 @@ void main() {
     expect(p.key, isNot(const VoiceProfile(model: 'm', voiceId: 'v', style: 'S').key));
   });
 
-  test('FR-T7: четыре языка и fallback, стиль без рода и не зависит от пола голоса', () {
-    expect(readingStyles.keys.toSet(), {'ru', 'en', 'pl', 'de'});
-    expect(samplePhrases.keys.toSet(), {'ru', 'en', 'pl', 'de'});
+  test('FR-T7: пять языков и fallback, стиль без рода и не зависит от пола голоса', () {
+    expect(readingStyles.keys.toSet(), {'ru', 'en', 'pl', 'de', 'uk'});
+    expect(samplePhrases.keys.toSet(), {'ru', 'en', 'pl', 'de', 'uk'});
     final styles = <String>{};
     final samples = <String>{};
     final hashes = <String>{};
-    for (final language in ['ru', 'en', 'pl', 'de']) {
+    for (final language in ['ru', 'en', 'pl', 'de', 'uk']) {
       final style = readingStyleFor(language);
       expect(style, readingStyles[language]);
       expect(samplePhraseFor(language), samplePhrases[language]);
@@ -48,14 +48,16 @@ void main() {
       }
       hashes.add(fingerprint('Один текст', VoiceProfile(model: 'm', voiceId: 'v', style: style), 'aac'));
     }
-    expect(styles.length, 4);
-    expect(samples.length, 4);
-    expect(hashes.length, 4);
-    for (final unknown in ['', 'uk', 'fr-FR']) {
+    expect(styles.length, 5);
+    expect(samples.length, 5);
+    expect(hashes.length, 5);
+    for (final unknown in ['', 'cs', 'fr-FR']) {
       expect(readingStyleFor(unknown), readingStyles['en']);
       expect(samplePhraseFor(unknown), samplePhrases['en']);
     }
     expect(readingStyleFor('RU-ru'), readingStyles['ru']);
+    expect(readingStyleFor('uk-UA'), readingStyles['uk']);
+    expect(samplePhraseFor('uk_UA'), samplePhrases['uk']);
     expect(samplePhraseFor('pl_PL'), samplePhrases['pl']);
   });
 

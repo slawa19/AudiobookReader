@@ -162,6 +162,7 @@ List<(String code, String name)> interfaceLanguages(AppLocalizations l10n) => [
       ('en', l10n.langEn),
       ('pl', l10n.langPl),
       ('de', l10n.langDe),
+      ('uk', l10n.langUk),
     ];
 
 class BookCover extends StatelessWidget {
