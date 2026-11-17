@@ -36,6 +36,7 @@ export JAVA_HOME="${SDK_ROOT}/jdk-${JDK_VERSION}"
 export ANDROID_HOME="${SDK_ROOT}/android"
 export ANDROID_SDK_ROOT="${ANDROID_HOME}"
 SDKMANAGER="${ANDROID_HOME}/cmdline-tools/${ANDROID_CMDLINE_VERSION}/bin/sdkmanager"
+APKSIGNER="${ANDROID_HOME}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner"
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 

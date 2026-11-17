@@ -130,7 +130,7 @@ fi
 
 if [[ -f "${PROJECT_ROOT}/pubspec.yaml" ]]; then
   echo "Fetching the project packages…"
-  (cd "${PROJECT_ROOT}" && "${FLUTTER_BIN}" pub get)
+  (cd "${PROJECT_ROOT}" && "${FLUTTER_BIN}" pub get --enforce-lockfile)
 fi
 
 echo "Done: ${FLUTTER_BIN}"

@@ -11,7 +11,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 require_flutter
 cd "${PROJECT_ROOT}"
 
-"${FLUTTER_BIN}" pub get --offline >/dev/null 2>&1 || "${FLUTTER_BIN}" pub get >/dev/null
+# --enforce-lockfile: the resolved versions must match pubspec.lock exactly, so a build never picks up newer packages.
+"${FLUTTER_BIN}" pub get --offline --enforce-lockfile >/dev/null 2>&1 \
+  || "${FLUTTER_BIN}" pub get --enforce-lockfile >/dev/null
 
 echo "== flutter analyze"
 "${FLUTTER_BIN}" analyze --fatal-infos --fatal-warnings
