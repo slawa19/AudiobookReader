@@ -1,115 +1,127 @@
-# Спека 002. Доработка по итогам ревью архитектуры
+# Spec 002. Cleanup after the architecture reviews
 
-Статус: три этапа сделаны и влиты в `main` 2026-11-16; на телефоне проверено подставной сборкой (SC-5, см. Changelog). Основание — два независимых ревью
-([ARCH_REVIEW_2026-11-16.md](../reviews/ARCH_REVIEW_2026-11-16.md)); номера находок ниже — оттуда.
+Status: all three stages done and merged into `main` on 2026-11-16; verified on the phone with the fake build (SC-5, see
+Changelog). Basis: two independent reviews ([ARCH_REVIEW_2026-11-16.md](../reviews/ARCH_REVIEW_2026-11-16.md)); the
+finding numbers below come from there.
 
-Поведение приложения для читателя не меняется, кроме исправления четырёх дефектов этапа 1. Новых функций нет.
+The app's behavior for the reader does not change, except for the fixes of the four stage 1 defects. There are no new
+features.
 
-## 1. Решения
+## 1. Decisions
 
-| № | Решение | Кто и когда |
+| No. | Decision | Who and when |
 |---|---|---|
-| Р1 | Архитектура не меняется: граф модулей совпадает с заявленным, новых слоёв, портов и библиотек нет | оркестратор по двум ревью, 2026-11-16 |
-| Р2 | Правка входит в спеку, только если уменьшает код или убирает подтверждённый по коду дефект либо повтор. Случаи, не встречавшиеся на настоящей книге, не обрабатываются | владелец, 2026-11-16 («избегай крайних случаев и overengineering») |
-| Р3 | Экран чтения (`reader_screen.dart`, `pagination.dart`, `player_panel.dart`) этой спекой не трогается, кроме одной замены в FR-4: он ещё не проверен владельцем на телефоне после работы 2026-11-15 | оркестратор, 2026-11-16 |
-| Р4 | Три этапа, каждый — отдельная ветка и слияние: дефекты → одно правило в одном месте → удаление лишнего | оркестратор, 2026-11-16 |
+| Р1 | The architecture does not change: the module graph matches the declared one; no new layers, ports or libraries | orchestrator, from the two reviews, 2026-11-16 |
+| Р2 | A change enters the spec only if it reduces code or removes a defect or duplication confirmed in the code. Cases that have not occurred on a real book are not handled | owner, 2026-11-16 ("avoid edge cases and overengineering") |
+| Р3 | This spec does not touch the reading screen (`reader_screen.dart`, `pagination.dart`, `player_panel.dart`), except for one replacement in FR-4: the owner has not yet checked it on the phone after the 2026-11-15 work | orchestrator, 2026-11-16 |
+| Р4 | Three stages, each a separate branch and merge: defects → one rule in one place → removal of the superfluous | orchestrator, 2026-11-16 |
 
-## 2. Требования
+## 2. Requirements
 
-### Этап 1. Дефекты
+### Stage 1. Defects
 
-Каждая правка — с тестом, который падает до неё.
+Each fix comes with a test that fails before it.
 
-- **FR-1** (находка 1). Размер книги на полке не включает озвучку: после перезапуска приложения полка показывает
-  «книга + озвучка», а не «книга + две озвучки». Каталог `audio/` в размер книги не входит.
-- **FR-2** (находка 2). Ошибка одной команды в очереди плеера (`QueuedPlayer`) не останавливает следующие команды —
-  так же, как это уже сделано в `FileLibrary._enqueue`.
-- **FR-3** (находка 3). Клиент Gemini считает временной только ошибку-`Exception` из транспорта; ошибка программы
-  (`Error`) доходит до очереди и останавливает озвучку по общему правилу. Текст ошибки по-прежнему не содержит ключа.
-  Тест `tts_client_test.dart`, закрепляющий повтор для `StateError`, исправляется.
-- **FR-4** (находка 4). Контракт `NarrationController` отдаёт звучащее место позицией (абзац и смещение), а не долей
-  абзаца; экран её не пересчитывает. `blockProgress` удаляется, если после замены не нужен панели плеера.
+- **FR-1** (finding 1). The book size on the shelf does not include the narration: after the app restarts, the shelf
+  shows "book + narration", not "book + two narrations". The `audio/` directory is not part of the book size.
+- **FR-2** (finding 2). An error in one command in the player queue (`QueuedPlayer`) does not stop the following
+  commands, just as is already done in `FileLibrary._enqueue`.
+- **FR-3** (finding 3). The Gemini client treats only an `Exception` from the transport as transient; a program error
+  (`Error`) reaches the queue and stops narration under the general rule. The error text still does not contain the
+  key. The `tts_client_test.dart` test that pins the retry for `StateError` is corrected.
+- **FR-4** (finding 4). The `NarrationController` contract reports the sounding spot as a position (paragraph and
+  offset), not as a fraction of the paragraph; the screen does not recompute it. `blockProgress` is removed if the
+  player panel does not need it after the replacement.
 
-### Этап 2. Одно правило в одном месте
+### Stage 2. One rule in one place
 
-- **FR-5** (находка 5). Подпись главы считает одна функция в `book`. Библиотека записывает подпись вместе с позицией
-  чтения; полка берёт её из записи и книгу не загружает. Параметры `fraction` и `chapterTitle` у `savePosition`
-  удаляются. До первой записи позиции после обновления подпись на полке может быть пустой — это допустимо.
-- **FR-6** (находка 6). Профиль голоса книги собирает одна функция; её вызывают и плеер, и «Скачать главу». У
-  `VoiceProfile` остаются только имена `voiceId` и `model`.
-- **FR-7** (находка 7). Выбор места по «Слушать» и поиск ближайшего читаемого абзаца — две чистые функции рядом с
-  контрактом; настоящий и подставной контроллеры вызывают их. Сами контроллеры не объединяются.
-- **FR-8** (находка 8). Книга открывается одним путём: прототип передаёт свой `openBook`, запасной путь на полке
-  удаляется. Открытые книги хранит только библиотека.
+- **FR-5** (finding 5). One function in `book` computes the chapter caption. The library records the caption together
+  with the reading position; the shelf takes it from the record and does not load the book. The `fraction` and
+  `chapterTitle` parameters of `savePosition` are removed. Until the first position write after the update, the
+  caption on the shelf may be empty; this is acceptable.
+- **FR-6** (finding 6). One function assembles the book's voice profile; both the player and "Download chapter" call
+  it. `VoiceProfile` keeps only the names `voiceId` and `model`.
+- **FR-7** (finding 7). Choosing the spot on "Listen" and finding the nearest readable paragraph are two pure
+  functions next to the contract; the real and the fake controllers call them. The controllers themselves are not
+  merged.
+- **FR-8** (finding 8). A book is opened in one way: the prototype passes its own `openBook`, and the fallback path on
+  the shelf is removed. Only the library holds open books.
 
-### Этап 3. Удаление лишнего и документы
+### Stage 3. Removal of the superfluous, and documents
 
-- **FR-9** (находка 9). Номера сеанса удаляются из `SynthesisQueue`; поколения и отмена задач остаются.
-- **FR-10** (находка 10). Тест архитектуры видит `import … as`, `show`, `hide` и `export`; в тесте есть пример, где
-  проверка срабатывает, и пример, где молчит.
-- **FR-11.** Снято 2026-11-16 (см. «Не делаем»).
-- **FR-12** (находка 12). Удаляются: `BookPageLayout.containsBlock`, `FakeChapterDownloads.demoFail`,
-  `ChapterDownloadTask.error`, `TtsError.billingUrl` с его копированием (адрес остаётся один), недостижимые ветки
-  `media_session.dart`, тест `tts_source_test.dart`. Перед удалением каждого — поиск использований в `lib` и `test`.
-- **FR-13** (находка 13). `ARCHITECTURE.md` приводится к коду: кто держит состояние экранов, API хранилища звука,
-  место тарифов, что именно подсвечивается при озвучке, как устроена защита от поздних ответов.
-- **FR-14.** Комментарии, пересказывающие историю правок («№N ревью …»), в затронутых файлах заменяются причиной или
-  удаляются. Отдельного прохода по всему коду ради этого нет.
+- **FR-9** (finding 9). Session numbers are removed from `SynthesisQueue`; generations and task cancellation stay.
+- **FR-10** (finding 10). The architecture test sees `import … as`, `show`, `hide` and `export`; the test contains an
+  example where the check fires and an example where it stays silent.
+- **FR-11.** Withdrawn 2026-11-16 (see "Out of scope").
+- **FR-12** (finding 12). Removed: `BookPageLayout.containsBlock`, `FakeChapterDownloads.demoFail`,
+  `ChapterDownloadTask.error`, `TtsError.billingUrl` with its copying (the address stays in one place), the
+  unreachable branches of `media_session.dart`, the `tts_source_test.dart` test. Before each removal, a search for
+  usages in `lib` and `test`.
+- **FR-13** (finding 13). `ARCHITECTURE.md` is brought in line with the code: who holds the screens' state, the audio
+  storage API, where the tariffs live, what exactly is highlighted during narration, how the protection against late
+  responses works.
+- **FR-14.** Comments that retell edit history ("review No. N …") in the affected files are replaced with the reason
+  or deleted. There is no separate pass over all the code for this.
 
-## 3. Критерии приёмки
+## 3. Acceptance criteria
 
-- **SC-1.** Полный `scripts/test.sh` зелёный в главном дереве после каждого слияния; `git status --porcelain` пуст;
-  CI на GitHub зелёный.
-- **SC-2.** Эталонные снимки экранов не меняются.
-- **SC-3.** Этапы 2 и 3 уменьшают `lib/`: суммарно строк становится меньше (ожидание ревьюеров — на 150–200).
-- **SC-4.** Каждый дефект этапа 1 закрыт тестом, падавшим до правки; тесты FR-1 и FR-10 показывают обе стороны.
-- **SC-5.** На телефоне после этапа 1: размер книги с озвучкой на полке одинаков до и после перезапуска приложения;
-  «Слушать» с середины абзаца не перелистывает страницу назад.
+- **SC-1.** The full `scripts/test.sh` is green in the main tree after each merge; `git status --porcelain` is
+  empty; CI on GitHub is green.
+- **SC-2.** The reference screenshots of the screens do not change.
+- **SC-3.** Stages 2 and 3 reduce `lib/`: the total line count goes down (the reviewers expected 150–200 lines).
+- **SC-4.** Each stage 1 defect is closed by a test that failed before the fix; the FR-1 and FR-10 tests show both
+  sides.
+- **SC-5.** On the phone after stage 1: the size of a book with narration on the shelf is the same before and after
+  restarting the app; "Listen" from the middle of a paragraph does not turn the page back.
 
-Оценка объёма: около дня работы агентов, три запуска.
+Scope estimate: about a day of agent work, three launches.
 
-## 4. Не делаем
+## 4. Out of scope
 
-Записано, чтобы не возвращалось.
+Recorded so that it does not come back.
 
-- Переписывать навигацию экрана чтения одной операцией: 3–5 дней, высокий риск; покадровый тест свойств зелёный.
-  Возврат к вопросу — только если телефон покажет новый дефект того же рода.
-- Собирать шесть полей «ожидающей раскладки» экрана чтения в одну запись (находка 15): отложено до проверки экрана
-  на телефоне (Р3).
-- Отменять запрос к Gemini при таймауте (находка 14): Google берёт деньги за принятый запрос и при отмене; случай не
-  встречался.
-- Убирать сравнение голоса с экрана выбора голоса (находка 16).
-- Переносить удаление повреждённого файла звука из контроллера в хранилище (находка 11): правка добавляет 15–30
-  строк и не убирает ни дефекта, ни повтора — не проходит по Р2.
-- Заменять подставной контроллер прототипа настоящим в прототипе и в ~300 тестах. Новые тесты экранов пишутся на
-  настоящем контроллере (`AppHarness`), старые не переносятся.
-- Делить `controller.dart`, `file_library.dart`, `parse.dart`, `native_application.dart` по размеру.
-- Вводить DI, библиотеку состояния, новые порты; общий помощник «последовательной цепочки» для всех очередей.
-- Заменять свой XML-разборщик пакетом; урезать таблицу HTML-сущностей.
-- Вытеснение открытых книг из памяти, кэши готовности глав, ускорение проверки файлов — до замера на телефоне.
-- Переносить `FakePlayer` и `WavAudioEncoder` из `lib/` в тесты; отдельная упаковка демо-ресурсов (260 КБ).
-- Заменять оставшиеся фиксированные паузы `ioSettled()` в тестах очереди — пока CI снова не покажет сбой.
-- Проверка `dart format` и единая ширина строки.
+- Rewriting the reading screen's navigation as a single operation: 3–5 days, high risk; the frame-by-frame property
+  test is green. Return to the question only if the phone shows a new defect of the same kind.
+- Merging the six fields of the reading screen's "pending layout" into one record (finding 15): postponed until the
+  screen is checked on the phone (Р3).
+- Cancelling the Gemini request on timeout (finding 14): Google charges for an accepted request even when it is
+  cancelled; the case has not occurred.
+- Removing the voice comparison from the voice selection screen (finding 16).
+- Moving the deletion of a corrupted audio file from the controller into the storage (finding 11): the change adds
+  15–30 lines and removes neither a defect nor a duplication, so it does not pass Р2.
+- Replacing the prototype's fake controller with the real one in the prototype and in ~300 tests. New screen tests
+  are written against the real controller (`AppHarness`); old ones are not migrated.
+- Splitting `controller.dart`, `file_library.dart`, `parse.dart`, `native_application.dart` by size.
+- Introducing DI, a state library, new ports; a common "sequential chain" helper for all queues.
+- Replacing the in-house XML parser with a package; trimming the HTML entity table.
+- Evicting open books from memory, chapter-readiness caches, speeding up file checks: not before a measurement on the
+  phone.
+- Moving `FakePlayer` and `WavAudioEncoder` from `lib/` into the tests; separate packaging of the demo resources
+  (260 KB).
+- Replacing the remaining fixed `ioSettled()` pauses in the queue tests: not until CI shows a failure again.
+- A `dart format` check and a uniform line width.
 
 ## 5. Changelog
 
-- 2026-11-16 — спека написана по двум ревью (Opus 5.5 и gpt-6-astra); каждая находка проверена оркестратором по
-  коду. Находки 14 и 16 отклонены, 15 отложена.
-- 2026-11-16 — владелец запустил спеку в работу с условием «не шлифовать крайние случаи». Оркестратор перечитал
-  требования по Р2 и снял FR-11: оно добавляло код ради чистоты порта.
-- 2026-11-16 — этап 1 влит (`s005-defects`): FR-1…FR-4, 26 строк в `lib`, каждый дефект закрыт тестом, падавшим до
-  правки. `blockProgress` в контракте оставлен: им пользуются медиасессия и тесты.
-- 2026-11-16 — этап 2 влит (`s006-single-rule`): FR-5…FR-7 и урезанный FR-8, в `lib` на 127 строк меньше.
-  FR-8 урезан оркестратором до «открытые книги хранит только библиотека»: объединение двух путей открытия книги
-  оказалось переносом кода с усложнением прототипа. Параметр `fraction` у `savePosition` оставлен: экран передаёт им
-  «последняя страница — книга дочитана». Следствия для читателя: подпись главы на полке — всегда до двух строк; у
-  книг, добавленных раньше, она появляется после первого открытия книги.
-- 2026-11-16 — этап 3 влит (`s007-removal`): FR-9, FR-10, FR-12…FR-14. Оставлены `ChapterDownloadTask.error`,
-  `TtsError.billingUrl` и `defaultBillingUrl`: ими пользуются тесты, ревью ошиблось. Итог спеки: `lib` 16 892 →
-  16 755 строк (−137 с учётом +17 этапа 1), 872 теста зелёные, эталонные снимки не менялись. SC-3 выполнен ниже
-  ожидания ревьюеров (150–200): часть «мёртвого» кода оказалась живой, FR-11 и половина FR-8 сняты.
-- 2026-11-16 — проверка на телефоне владельца (Samsung, подставная сборка из `35a2304`, оркестратор через adb).
-  SC-5: размер книги с озвучкой до и после перезапуска приложения одинаков (7 МБ, озвучка 3 МБ). Подпись главы на
-  карточке «Продолжить» появилась после первого открытия книги. Вторая половина SC-5 («Слушать» с середины абзаца
-  не перелистывает назад) отдельно не воспроизводилась: исходный дефект был прогнозом ревью. Настоящая сборка
-  установлена поверх прежней, книги и позиции на месте; голосом Gemini не проверялось.
+- 2026-11-16 — spec written from the two reviews (Opus 5.5 and gpt-6-astra); the orchestrator checked each finding
+  against the code. Findings 14 and 16 rejected, 15 postponed.
+- 2026-11-16 — the owner started the spec with the condition "do not polish edge cases". The orchestrator re-read the
+  requirements against Р2 and withdrew FR-11: it added code for the sake of port purity.
+- 2026-11-16 — stage 1 merged (`s005-defects`): FR-1…FR-4, 26 lines in `lib`, each defect closed by a test that
+  failed before the fix. `blockProgress` stays in the contract: the media session and the tests use it.
+- 2026-11-16 — stage 2 merged (`s006-single-rule`): FR-5…FR-7 and a trimmed FR-8, 127 lines fewer in `lib`. FR-8 was
+  trimmed by the orchestrator to "only the library holds open books": merging the two ways of opening a book turned
+  out to be moving code around while complicating the prototype. The `fraction` parameter of `savePosition` stays:
+  the screen uses it to pass "last page — the book is finished". Consequences for the reader: the chapter caption on
+  the shelf is always up to two lines; for books added earlier it appears after the book is first opened.
+- 2026-11-16 — stage 3 merged (`s007-removal`): FR-9, FR-10, FR-12…FR-14. `ChapterDownloadTask.error`,
+  `TtsError.billingUrl` and `defaultBillingUrl` were kept: the tests use them, the review was wrong. Spec result:
+  `lib` 16 892 → 16 755 lines (−137 counting the +17 of stage 1), 872 tests green, reference screenshots unchanged.
+  SC-3 was met below the reviewers' expectation (150–200): part of the "dead" code turned out to be alive, and FR-11
+  and half of FR-8 were withdrawn.
+- 2026-11-16 — check on the owner's phone (Samsung, fake build from `35a2304`, orchestrator via adb). SC-5: the size
+  of a book with narration is the same before and after restarting the app (7 MB, narration 3 MB). The chapter
+  caption on the "Continue" card appeared after the book was first opened. The second half of SC-5 ("Listen" from the
+  middle of a paragraph does not turn back) was not reproduced separately: the original defect was a review forecast.
+  The real build was installed over the previous one, books and positions are intact; not checked with the Gemini
+  voice.
