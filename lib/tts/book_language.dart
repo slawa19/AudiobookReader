@@ -16,6 +16,8 @@ const readingStyles = <String, String>{
       'bez zbędnych pauz wewnątrz zdań.',
   'de': 'Lies diesen Text im Stil eines professionellen Hörbuchs: lebendig, natürlich, mit ausdrucksvoller '
       'Betonung und ohne unnötige Pausen innerhalb der Sätze.',
+  'uk': 'Прочитай цей текст у манері професійної аудіокниги: жваво, природно, з виразною інтонацією, '
+      'без зайвих пауз усередині фраз.',
 };
 
 /// Фраза «Пробы» голоса по языку книги — одна и та же для всех голосов (А§6.8), поэтому звук пробы
@@ -25,6 +27,7 @@ const samplePhrases = <String, String>{
   'en': 'Hello! This is how your book will sound: calm, clear and expressive.',
   'pl': 'Dzień dobry! Tak będzie brzmiała twoja książka: spokojnie, wyraźnie i z wyrazem.',
   'de': 'Guten Tag! So wird Ihr Buch klingen: ruhig, klar und ausdrucksvoll.',
+  'uk': 'Вітаємо! Так звучатиме ваша книга: спокійно, чітко й виразно.',
 };
 
 String _lang(String language) {

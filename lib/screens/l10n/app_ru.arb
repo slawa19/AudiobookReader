@@ -381,6 +381,7 @@
   "langEn": "English",
   "langPl": "Polski",
   "langDe": "Deutsch",
+  "langUk": "Українська",
   "voiceCharSoft": "мягкий",
   "@voiceCharSoft": {
     "description": "Характер голоса"

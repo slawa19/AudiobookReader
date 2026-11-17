@@ -22,9 +22,9 @@ import 'prototype/phone_chrome.dart';
 import 'theme.dart';
 
 /// Языки интерфейса (решение владельца 2026-11-14). Первый — запасной для языка телефона не из списка.
-const supportedLocales = [Locale('en'), Locale('ru'), Locale('pl'), Locale('de')];
+const supportedLocales = [Locale('en'), Locale('ru'), Locale('pl'), Locale('de'), Locale('uk')];
 
-/// Язык телефона, если он из четырёх, иначе английский.
+/// Язык телефона, если он из пяти, иначе английский.
 Locale resolveLocale(List<Locale>? preferred, Iterable<Locale> supported) {
   for (final p in preferred ?? const <Locale>[]) {
     for (final s in supported) {
