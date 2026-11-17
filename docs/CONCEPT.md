@@ -191,10 +191,10 @@ stages are in [spec 001](specs/001-first-version.md), section 2; here is the gen
 | 3 | MOBI | in the second version (section 4) |
 | 4 | Listening on the phone to books already narrated in AudiobookStudio (the book file and the chapters' mp3) | after the first version, as a separate spec: the audio is already paid for, but it is a second source of books |
 | 5 | Turning pages or scrolling | pages, as the owner asked; there is no scrolling mode |
-| 6 | Repository | open source under GPL-3.0, `slawa19/AudiobookReader` (decision of 2026-11-17; it was private from 2026-11-14 until then) |
+| 6 | Repository | open source under GPL-3.0, `slawa19/BookAudioReader` (decision of 2026-11-17; it was private from 2026-11-14 until then) |
 
-The public name of the app is **Book AudioReader** (decision of 2026-11-17); the repository, the package and the
-applicationId keep the working name `AudiobookReader` / `audiobook_reader`.
+The public name of the app is **Book AudioReader** (decision of 2026-11-17); the repository was renamed to
+`BookAudioReader` the same day; the Dart package and the applicationId keep the working name `audiobook_reader`.
 
 Interface languages: Russian, English, Polish and German (decision of 2026-11-14); Ukrainian added as the fifth
 (decision of 2026-11-17). Everything about publication — [specs/003-open-source.md](specs/003-open-source.md).

@@ -27,15 +27,15 @@ language; documentation, code comments, test names and technical messages in Eng
 "Open-source licenses" page and the demo-text attribution; English README screenshots; the tag-triggered release
 workflow with the pinned toolchain ([RELEASING.md](RELEASING.md)). The four signing secrets and the variable
 `SIGNING_CERT_SHA256` are set in GitHub. The dry run of the release workflow passed on 2026-11-17 (run 44035431681);
-its attestation and release steps are skipped in a dry run and have never run. No release has been cut and the repository is still private; build attestations work only in a public
-repository, so the first real release is possible only after the owner switches it to public. The independent Codex
+its attestation and release steps are skipped in a dry run and have never run. The repository was switched to public and
+renamed to `slawa19/BookAudioReader` on 2026-11-17 (owner decisions); the first release is cut from the tag `v0.1.0`. The independent Codex
 review of spec 003 (REWORK, nine findings) has been landed
 ([reviews/CODEX_REVIEW_003_2026-11-17.md](reviews/CODEX_REVIEW_003_2026-11-17.md)); one finding, the keystore path with
 the Windows user account in two old commits, stays in the history by the owner's decision (spec 003, R7).
 
 The public name of the app is **Book AudioReader** (owner decision of 2026-11-17): the Android label, the license page,
-the web prototype and the README use it. The repository, the Dart package, the applicationId and the release file name
-keep `AudiobookReader` / `audiobook_reader`.
+the web prototype and the README use it. The repository and the release file are named `BookAudioReader`; the Dart package and the
+applicationId keep `audiobook_reader`.
 
 Two defects seen on the owner's phone on 2026-11-17 are fixed: the license page listed the app twice (as "Book
 AudioReader" and as "audiobook_reader"; the app's entries now live in the root `NOTICES` file), and App info showed

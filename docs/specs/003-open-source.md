@@ -15,7 +15,7 @@ The app's behavior for the reader does not change, except for the fifth interfac
 | D3 | Russian comments in code, scripts, CI and tests are translated to English; text that is data (strings of the Russian interface, book samples, fixtures, reading-style prompts) stays in its own language | the owner, 2026-11-17 |
 | D4 | Ukrainian (`uk`) is the **fifth** interface language (ru, en, pl, de, uk); it is also a known book language for the TTS reading style and the voice-probe phrase (`lib/tts/book_language.dart`); unknown book languages still fall back to English | the owner, 2026-11-17 |
 | D5 | Public APKs are built by GitHub Actions from a `vX.Y.Z` tag, signed with the owner's permanent key from GitHub Secrets, and published in Releases with SHA-256 checksums and a build-provenance attestation | the owner, 2026-11-17 |
-| D6 | The public name of the app is **Book AudioReader**; the repository, the Dart package, the applicationId and the release file name keep `AudiobookReader` / `audiobook_reader` | the owner, 2026-11-17 |
+| D6 | The public name of the app is **Book AudioReader**; the repository and the release file are named `BookAudioReader` (renamed 2026-11-17); the Dart package and the applicationId keep `audiobook_reader` | the owner, 2026-11-17 |
 
 ## 2. Requirements
 
@@ -127,8 +127,9 @@ The app's behavior for the reader does not change, except for the fifth interfac
   exceptions in `lib/` and the Kotlin channel errors were translated; the interface strings stay in the ARB files.
 - 2026-11-17 — the owner named the app **Book AudioReader** (D6): the Android label (`Book AudioReader`,
   `Book AudioReader (fake)`), the license page, the web prototype (`web/`, the device frame title) and the
-  documentation use it; the repository, the package, the applicationId (changing it would break updating the installed app) and the release file name
-  `AudiobookReader-<version>.apk` are unchanged.
+  documentation use it; the package and the applicationId (changing it would break updating the installed app) are unchanged.
+- 2026-11-17 — The owner had the repository switched to public and renamed to `slawa19/BookAudioReader`; the release
+  file is `BookAudioReader-<version>.apk`. Links, the attestation command and the license notice follow.
 - 2026-11-17 — spec written; documentation translated to English (R2) by a separate agent working in its own worktree.
 - 2026-11-17 — R2 and R3 done and merged: documentation, then tests, tooling and CI messages, then `lib/`, `android/`
   and `web/` comments in English; section references are written `A§N` and spec decisions `D1…D12` with Latin letters.
@@ -136,7 +137,7 @@ The app's behavior for the reader does not change, except for the fifth interfac
   `SHA256SUMS` → attestation → GitHub Release), `docs/RELEASING.md`, the Gradle distribution checksum,
   `pub get --enforce-lockfile` in the scripts, actions pinned by commit SHA; the certificate fingerprint is published in
   `RELEASING.md`. The signing secrets and `SIGNING_CERT_SHA256` were set in GitHub; the dry run of 2026-11-17 passed (attestation
-  and release steps are skipped in a dry run). No release has been cut and the repository is still private.
+  and release steps are skipped in a dry run). No release had been cut at that point and the repository was still private.
 - 2026-11-17 — consistency pass over the documents after the merges: status documents, index, changelog and links
   brought in line; `scripts/prototype.sh` now runs `pub get --enforce-lockfile` like the other scripts.
 - 2026-11-17 — the history was rewritten once (the owner's decision): the personal author and committer e-mail was

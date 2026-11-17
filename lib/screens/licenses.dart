@@ -6,7 +6,7 @@ const appName = 'Book AudioReader';
 /// test `licenses_test.dart` fails when they differ. The Android build takes the version from pubspec.yaml too.
 const appVersion = '0.1.0';
 
-const repositoryUrl = 'https://github.com/slawa19/AudiobookReader';
+const repositoryUrl = 'https://github.com/slawa19/BookAudioReader';
 
 const _copyright = '© 2026 Slawa Gorobets';
 

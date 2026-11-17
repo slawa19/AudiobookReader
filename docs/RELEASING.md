@@ -1,7 +1,7 @@
 # Releasing and verifying Book AudioReader
 
-Signed APKs of Book AudioReader are published in [GitHub Releases](https://github.com/slawa19/AudiobookReader/releases).
-The repository and the APK file keep the working name `AudiobookReader`. That is the only distribution channel (spec
+Signed APKs of Book AudioReader are published in [GitHub Releases](https://github.com/slawa19/BookAudioReader/releases).
+That is the only distribution channel (spec
 003, R6). Every APK is built by the repository's own workflow,
 [`.github/workflows/release.yml`](../.github/workflows/release.yml), from a `vX.Y.Z` tag, and is published with a
 `SHA256SUMS` file and a build-provenance attestation.
@@ -13,9 +13,9 @@ The repository and the APK file keep the working name `AudiobookReader`. That is
 
 ### Download
 
-Open the [latest release](https://github.com/slawa19/AudiobookReader/releases/latest) and download two files:
+Open the [latest release](https://github.com/slawa19/BookAudioReader/releases/latest) and download two files:
 
-- `AudiobookReader-<version>.apk` — the app;
+- `BookAudioReader-<version>.apk` — the app;
 - `SHA256SUMS` — its SHA-256 checksum.
 
 The APK works on Android 12 or newer (minSdk 31). All ABIs are in one file.
@@ -30,11 +30,11 @@ Do at least step (b) or (c); step (a) only detects a damaged download.
 sha256sum -c SHA256SUMS
 ```
 
-It must print `AudiobookReader-<version>.apk: OK`. On Windows (PowerShell) print the hash and compare it with the line
+It must print `BookAudioReader-<version>.apk: OK`. On Windows (PowerShell) print the hash and compare it with the line
 in `SHA256SUMS` (the case does not matter):
 
 ```
-(Get-FileHash .\AudiobookReader-<version>.apk -Algorithm SHA256).Hash
+(Get-FileHash .\BookAudioReader-<version>.apk -Algorithm SHA256).Hash
 ```
 
 A checksum proves only that the file was downloaded intact. It does not say who built it: whoever could replace the APK
@@ -44,14 +44,14 @@ on the release page could replace `SHA256SUMS` as well. Steps (b) and (c) answer
 GitHub account), then run:
 
 ```
-gh attestation verify AudiobookReader-<version>.apk --repo slawa19/AudiobookReader --signer-workflow slawa19/AudiobookReader/.github/workflows/release.yml --source-ref refs/tags/v<version> --deny-self-hosted-runners
+gh attestation verify BookAudioReader-<version>.apk --repo slawa19/BookAudioReader --signer-workflow slawa19/BookAudioReader/.github/workflows/release.yml --source-ref refs/tags/v<version> --deny-self-hosted-runners
 ```
 
 Replace `<version>` in both places (for example `0.1.0`). A successful result (`Verification succeeded!`) means that
 GitHub holds a signed attestation, issued through Sigstore, for exactly this file (matched by its SHA-256 digest), and
 that the command enforced each of these about the run that produced it:
 
-- `--repo`: the run belonged to the repository `slawa19/AudiobookReader`;
+- `--repo`: the run belonged to the repository `slawa19/BookAudioReader`;
 - `--signer-workflow`: the attestation was signed by the workflow `.github/workflows/release.yml` of that repository,
   not by any other workflow;
 - `--source-ref`: the run was started from the tag `v<version>`;
@@ -66,7 +66,7 @@ What this proves and what it does not is described in [What the checks prove](#w
 (`apksigner`, in `build-tools/<version>/`):
 
 ```
-apksigner verify --print-certs AudiobookReader-<version>.apk
+apksigner verify --print-certs BookAudioReader-<version>.apk
 ```
 
 The command must succeed, print exactly one signer, and its `certificate SHA-256 digest` must equal this fingerprint
@@ -98,7 +98,7 @@ Android's secure storage. Narration is billed by Google to that key. See [GEMINI
 ### What the checks prove
 
 - **The attestation (b)**, with the flags above, proves that this APK file was produced by `release.yml` of
-  `slawa19/AudiobookReader`, in a run started from the tag `v<version>`, on a GitHub-hosted runner. The workflow
+  `slawa19/BookAudioReader`, in a run started from the tag `v<version>`, on a GitHub-hosted runner. The workflow
   refuses to release a commit that is not on `main`. It identifies where the file came from. It does not prove that the source at
   that commit is free of bugs or malicious code; the source is public and can be read.
 - **The signing certificate (c)** proves that the file is signed by the same key as earlier releases, that is, by the
@@ -114,8 +114,8 @@ Anyone can rebuild the app from the tagged source with the same pinned toolchain
 a manual inspection, not a proof:
 
 ```
-git clone --branch v<version> https://github.com/slawa19/AudiobookReader.git
-cd AudiobookReader
+git clone --branch v<version> https://github.com/slawa19/BookAudioReader.git
+cd BookAudioReader
 bash scripts/setup-wsl.sh
 bash scripts/build-apk.sh --debug
 ```
@@ -131,7 +131,7 @@ are exactly those in `pubspec.lock`, and the Gradle distribution is checked agai
   release APK: it is a different Flutter mode (no ahead-of-time compiled `libapp.so`) with a different signature.
 - To compare with the release, build the release variant with a throwaway key of your own: create a keystore with
   `keytool -genkeypair`, put its path and passwords in `.env` following `.env.example`, and run
-  `bash scripts/build-apk.sh`. Then unpack both APKs (`unzip -q -d official AudiobookReader-<version>.apk`, the same for
+  `bash scripts/build-apk.sh`. Then unpack both APKs (`unzip -q -d official BookAudioReader-<version>.apk`, the same for
   `build/app/outputs/flutter-apk/app-real-release.apk`) and compare, for example,
   `diff -rq -x META-INF official rebuilt`. The signature block (`META-INF/`) will always differ, because the key
   differs. Other differences can occur even from the same source; they call for a look, but they are not by themselves
@@ -153,7 +153,7 @@ On a push of a tag `v*.*.*` (or a manual run), `release.yml`:
    release APK with `scripts/build-apk.sh`, and deletes the keystore in an `if: always()` step;
 5. verifies the APK with `apksigner verify --print-certs` and fails if the certificate SHA-256 is not the one in the
    repository variable `SIGNING_CERT_SHA256`;
-6. names the file `AudiobookReader-<version>.apk` and writes `SHA256SUMS`;
+6. names the file `BookAudioReader-<version>.apk` and writes `SHA256SUMS`;
 7. attests the APK with `actions/attest-build-provenance`;
 8. creates the GitHub Release for the tag with both files attached and generated notes.
 
@@ -164,7 +164,7 @@ commit) and change the SHA and the comment together, in `release.yml` and `ci.ym
 ### One-time setup
 
 Four secrets and one variable in the repository settings. None of the commands below puts a value on the command line
-or into the shell history. Run them in the repository folder (or add `--repo slawa19/AudiobookReader`).
+or into the shell history. Run them in the repository folder (or add `--repo slawa19/BookAudioReader`).
 
 1. The keystore, as base64 **without line wraps** (the file holds the key; do not leave it in the repository folder
    and delete it afterwards). In WSL or Linux:

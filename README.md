@@ -6,7 +6,7 @@
 
 Book AudioReader is an Android book reader that reads aloud with Google Gemini TTS voices. One position for reading and
 listening: read with your eyes, start the voice from any paragraph, and return to the text where it stopped. The
-repository and the package keep the working name `AudiobookReader` / `audiobook_reader`.
+Dart package and the Android applicationId keep the working name `audiobook_reader`.
 
 It is a single-user app: no server, no accounts, no sync. The Gemini key is your own and is kept on the phone in
 Android's secure storage.
@@ -90,7 +90,7 @@ headphones, a phone call. What has been done and what is next — [docs/WHERE_WE
 
 ## Install
 
-Signed APKs are published on the [Releases page](https://github.com/slawa19/AudiobookReader/releases): GitHub Actions
+Signed APKs are published on the [Releases page](https://github.com/slawa19/BookAudioReader/releases): GitHub Actions
 builds them from a version tag. Download the APK and open it on the phone (Android asks to allow installs from your
 browser or file manager). How to verify the file before installing it: [docs/RELEASING.md](docs/RELEASING.md). If the
 page shows no release yet, build the app yourself, as below.

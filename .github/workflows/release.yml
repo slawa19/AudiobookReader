@@ -73,7 +73,7 @@ jobs:
 
           echo "release=${release}" >> "${GITHUB_OUTPUT}"
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
-          echo "apk=AudiobookReader-${version}.apk" >> "${GITHUB_OUTPUT}"
+          echo "apk=BookAudioReader-${version}.apk" >> "${GITHUB_OUTPUT}"
           echo "Version ${version}, release=${release}"
 
       # A release is cut only from a commit that is already on main: a version tag on a commit of another branch fails
