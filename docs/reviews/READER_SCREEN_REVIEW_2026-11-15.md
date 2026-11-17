@@ -2,7 +2,7 @@
 
 Requested by the owner after the fourth remark of one kind in a day ("the text on the page is not what I saw"): he doubted
 that the cause had been found. The reviewers — Claude Opus 5.5 (high) and Codex `gpt-6-astra` (high) — worked in
-parallel on `main` at `6e8a62b`, each in its own worktree, from one brief, without knowing about each other; they proved
+parallel on `main` at `cf56b41`, each in its own worktree, from one brief, without knowing about each other; they proved
 the findings with temporary widget tests on the real controller. This file is not a source of truth.
 
 ## Where they agreed

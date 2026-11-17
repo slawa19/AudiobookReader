@@ -119,7 +119,7 @@ Recorded so that it does not come back.
   `lib` 16 892 → 16 755 lines (−137 counting the +17 of stage 1), 872 tests green, reference screenshots unchanged.
   SC-3 was met below the reviewers' expectation (150–200): part of the "dead" code turned out to be alive, and FR-11
   and half of FR-8 were withdrawn.
-- 2026-11-16 — check on the owner's phone (Samsung, fake build from `35a2304`, orchestrator via adb). SC-5: the size
+- 2026-11-16 — check on the owner's phone (Samsung, fake build from `b50dae1`, orchestrator via adb). SC-5: the size
   of a book with narration is the same before and after restarting the app (7 MB, narration 3 MB). The chapter
   caption on the "Continue" card appeared after the book was first opened. The second half of SC-5 ("Listen" from the
   middle of a paragraph does not turn back) was not reproduced separately: the original defect was a review forecast.

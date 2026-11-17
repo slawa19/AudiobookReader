@@ -1,7 +1,7 @@
 # External review of the "transitions and TXT" batch of spec 001 — Fable 5.2, 2026-11-15
 
 The owner's experiment ([EXPERIMENT_CODEX_IMPL.md](EXPERIMENT_CODEX_IMPL.md)): the code was written by Codex agents,
-the external review by a separate Fable 5.2 agent. The review ran on `main` at `df93061`, in a separate worktree; the
+the external review by a separate Fable 5.2 agent. The review ran on `main` at `0ff60a7`, in a separate worktree; the
 batch is the branches `s002-nav` (the stub page, following after commands, "back/forward" by paragraphs, returning to a
 seen page) and `s003-txt` (TXT parsing and file intake). The reviewer proved the findings with temporary tests. This
 file is not a source of truth: the spec and the code remain so.

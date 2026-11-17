@@ -1,6 +1,6 @@
 # Review of spec 001 — Codex, 2026-11-14
 
-Subject: `docs/specs/001-first-version.md`, a draft (commit `0968fbb`), and a re-check of `docs/ARCHITECTURE.md` version 2
+Subject: `docs/specs/001-first-version.md`, a draft (commit `78fe8e9`), and a re-check of `docs/ARCHITECTURE.md` version 2
 after the previous review. Codex 0.167.0-alpha.4.1, model `gpt-6-astra`, `--sandbox read-only`, 134,581 tokens.
 Verdict: **REWORK**.
 

@@ -128,8 +128,9 @@ Pitfalls of this workplace:
 - `$VAR` at the Git Bash → `wsl.exe` boundary collapses to an empty string even in single quotes. In such commands
   only literal paths and no loops.
 - A heredoc in the agent's Bash tool breaks. Multi-line code is written to a file and run from there.
-- Windows git in Git Bash has no author name. A commit goes with `GIT_AUTHOR_NAME="Slawa Gorobets"`, the owner's
-  `GIT_AUTHOR_EMAIL` and the same committer values; do not change `git config`.
+- Windows git in Git Bash has no author name. A commit goes with `GIT_AUTHOR_NAME="Slawa Gorobets"`, `GIT_AUTHOR_EMAIL="11042798+slawa19@users.noreply.github.com"` (the owner's GitHub noreply address; owner decision
+  2026-11-17: no personal email in commits, the history was rewritten that day) and the same committer values; do not
+  change `git config`.
 
 ## Verifying work
 

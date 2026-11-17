@@ -1,7 +1,7 @@
 # Behavior logic review — Codex, 2026-11-14
 
 Subject: the behavior logic of the clickable prototype (screens, the narration controller contract, fake
-implementations, user journey tests) and the consistency of spec 001 with `ARCHITECTURE.md`; commit `2fc63a4`. Codex
+implementations, user journey tests) and the consistency of spec 001 with `ARCHITECTURE.md`; commit `79c11f3`. Codex
 0.167.0-alpha.4.1, model `gpt-6-astra`, `--sandbox read-only`, 268,800 tokens. Verdict: **REWORK**.
 
 This file is a record of the review, not a source of truth; the spec, `ARCHITECTURE.md`, the prototype code and its
@@ -11,15 +11,15 @@ Decisions on the findings: #1–4, 7–10 — the "minimal fix" from the answer;
 are orchestrator decisions; the sentence boundary rules (i) and (ii) are an orchestrator decision; the sections on
 documents, uncovered paths and weak tests were handled by the executor. The executor checked each finding against the
 code before the fix — all ten were confirmed. The tests are `test/logic_review_test.dart` (one for each of the ten
-findings and for dragging): 18 of 20 failed on `2fc63a4` for the stated reason; two control tests (an automatic
+findings and for dragging): 18 of 20 failed on `79c11f3` for the stated reason; two control tests (an automatic
 transition does not turn following on; a drag that changed the page turns following off) passed both before and after —
 they guard against the fix overshooting. A unit test of `speechText` was added afterwards (this function did not exist on
-`2fc63a4`). The result of `scripts/test.sh` after the fixes: the analyzer clean, 225 tests passed. The numbers are the
+`79c11f3`). The result of `scripts/test.sh` after the fixes: the analyzer clean, 225 tests passed. The numbers are the
 order of the rows of the table in Codex's answer.
 
 ## Raised / verdict / what was done
 
-| # | Raised | Verdict | What was done | Failed on 2fc63a4 |
+| # | Raised | Verdict | What was done | Failed on 79c11f3 |
 |---|---|---|---|---|
 | 1 | After a stop, manual paging does not turn following off: a re-layout and "Close" bring back the place of the stop | accepted, confirmed (`_onPageChanged` checked `isActive`) | manual movement turns following off with any open panel of this book, including `stopped`; three tests: error → paging → "Close", error → paging → font, end of the book → paging back → "Close" | yes, all three |
 | 2 | Changing the voice or model after a start from a sentence inside a block reads the paragraph from its beginning | accepted, confirmed (`restartSession` → `_moveKeepingIntent(block)` zeroed `_unitStart`) | restart with the full unit start position (block and offset) | yes |
@@ -73,7 +73,7 @@ removed)
 
 *Translated from the Russian original.*
 
-HEAD `2fc63a4` was checked. The files were not changed; `git status --porcelain` and `git diff --check` showed no
+HEAD `79c11f3` was checked. The files were not changed; `git status --porcelain` and `git diff --check` showed no
 changes. I did not run Flutter, tests, the build or the phone. The stated 196 passed tests are the operator's result.
 Below are conclusions from the code; frequency means an estimate of probable reader behavior, not measured statistics.
 
@@ -211,7 +211,7 @@ TASK. An independent re-check of the BEHAVIOR LOGIC of the screens of the clicka
 
 WHY YET ANOTHER PASS. The prototype has already passed your code review (21 findings, all fixed) and an internal check by user journeys (16 defects, all fixed). Both times defects of one nature were found: two rules, each correct on its own, give a wrong result in a sequence of two to four actions, while the tests checked the rules one at a time. The first such defect was found by the owner by hand: listened to a paragraph → pause → "Close" → "Listen" — reading started from the previous paragraph and the page went back. After that a new start rule and eleven more rules (a–k) were introduced that were not in the documents before. The new rules may also conflict with each other and with the old ones — this is what needs checking.
 
-Range: repository root, HEAD 2fc63a4. Changes since your previous review: `git log --oneline 53c78d3..2fc63a4`, `git diff --stat 53c78d3..2fc63a4` (you have git).
+Range: repository root, HEAD 79c11f3. Changes since your previous review: `git log --oneline 20a9f76..79c11f3`, `git diff --stat 20a9f76..79c11f3` (you have git).
 
 WHAT TO READ IN FULL:
 - lib/playback/ (the contract narration.dart, the fake controller fake_narration.dart, chapter_download.dart, voice_sample.dart)
@@ -224,7 +224,7 @@ WHAT TO READ IN FULL:
 - docs/reviews/CODEX_REVIEW_PROTOTYPE_2026-11-14.md — your previous review
 - docs/prototype/README.md
 
-WHAT THE OPERATOR MEASURED: `scripts/test.sh` in WSL on 2fc63a4 — the analyzer clean, 196 tests passed (the orchestrator's run). Nothing was run on the phone. One effect that the owner saw in the browser (right after "Listen" the "To current spot" button is visible, i.e. following is off) could not be reproduced in tests; the agent's hypothesis — a mouse drag with a 1 px shift is taken for manual paging. If you see in the code a path to this state — that is a valuable finding.
+WHAT THE OPERATOR MEASURED: `scripts/test.sh` in WSL on 79c11f3 — the analyzer clean, 196 tests passed (the orchestrator's run). Nothing was run on the phone. One effect that the owner saw in the browser (right after "Listen" the "To current spot" button is visible, i.e. following is off) could not be reproduced in tests; the agent's hypothesis — a mouse drag with a 1 px shift is taken for manual paging. If you see in the code a path to this state — that is a valuable finding.
 
 WHAT TO LOOK FOR:
 1. Sequences of actions where the result contradicts the reader's expectation or the documents. Walk yourself through the matrix "controller state (idle, preparing, playing, waiting, paused, stopped-error, stopped-end) × action" by the code: "Listen", pause, back/forward (at the start and end of a chapter and of the book), "Read from here", choosing a chapter, the slider, paging by hand, "To current spot", a change of font/theme/language, a change of the book voice and the shared one, a change of model, speed, the sleep timer (all modes, expiry in each state), "Download chapter"/"Stop"/error, "Delete narration", "Clear narration", deleting a book, "Close", the system "Back", exit to the shelf, opening another book. For each discrepancy found give the path step by step.

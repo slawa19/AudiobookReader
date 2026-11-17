@@ -1,6 +1,6 @@
 # Mock-up review — Codex, 2026-11-14
 
-Subject: the interface mock-up in `docs/mockup/` (commit `eb49784`), 25 screens attached to the prompt as images;
+Subject: the interface mock-up in `docs/mockup/` (commit `76c96ab`), 25 screens attached to the prompt as images;
 checked against spec 001 and `ARCHITECTURE.md` version 3. Codex 0.167.0-alpha.4.1, model `gpt-6-astra`,
 `--sandbox read-only`, 118,186 tokens. Verdict: **REWORK**.
 

@@ -77,7 +77,7 @@ owner data for evaluating the approach. It is not a source of truth about the co
 
 ## Architecture and code quality review (2026-11-16)
 
-Two reviewers on `3b71e04`, in parallel, by reading: Opus 5.5 — 11.2 min, 294 thousand tokens; `gpt-6-astra` — 13.5 min,
+Two reviewers on `af138f0`, in parallel, by reading: Opus 5.5 — 11.2 min, 294 thousand tokens; `gpt-6-astra` — 13.5 min,
 290 thousand tokens. The result is [ARCH_REVIEW_2026-11-16.md](ARCH_REVIEW_2026-11-16.md), the work is
 [spec 002](../specs/002-cleanup-after-reviews.md).
 

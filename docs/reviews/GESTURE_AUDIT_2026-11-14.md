@@ -1,6 +1,6 @@
 # Gesture check — 2026-11-14
 
-Subject: the clickable prototype (`lib/`, commit `6315a74`), exercised with **real pointer events**: a finger with
+Subject: the clickable prototype (`lib/`, commit `42346f9`), exercised with **real pointer events**: a finger with
 timestamps (the speed is visible to the recognizers, as on a phone), follow-up taps, angled swipes, drags with a return,
 a second finger, the slider, the system "Back", touch targets hit-tested at the corners of 48 × 48.
 It was checked by an **isolated Claude Fable 5.2 agent, not the author of the code**, in a separate worktree.
@@ -15,7 +15,7 @@ prototype code and its README.
 
 - 9 findings; 45 gesture tests (`test/gesture_page_test.dart`, `gesture_layers_test.dart`, `gesture_slider_test.dart`,
   `gesture_listening_test.dart`, `gesture_screens_test.dart`, `gesture_targets_test.dart`, helpers —
-  `gesture_support.dart`); on `6315a74` 15 failed and 30 passed (re-verified by the executor after the transfer).
+  `gesture_support.dart`); on `42346f9` 15 failed and 30 passed (re-verified by the executor after the transfer).
 - After the fixes, 44 transferred tests and one replaced by decision F (see below) are green. For decisions A–J and the
   paths the checker did not walk — `test/gesture_decisions_test.dart` (22 tests).
 - The causes named by the checker were verified by the executor against the code — all nine were confirmed.

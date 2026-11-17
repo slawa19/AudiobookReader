@@ -2,7 +2,7 @@
 
 By the owner's decision of 2026-11-15 (an experiment, [EXPERIMENT_CODEX_IMPL.md](EXPERIMENT_CODEX_IMPL.md)), the stage 1
 code was written by Codex agents, and the external review of the batch was done by two separate Fable 5.2 agents — not
-Codex, as `AGENTS.md` requires in the usual order. The review ran on `main` at `af08efe`, in a separate worktree; the
+Codex, as `AGENTS.md` requires in the usual order. The review ran on `main` at `c0caaa6`, in a separate worktree; the
 reviewers were allowed to prove findings with temporary tests. This file is not a source of truth: the spec and the code
 remain so.
 

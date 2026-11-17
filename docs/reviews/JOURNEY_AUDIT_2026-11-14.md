@@ -1,9 +1,9 @@
 # User journey check — 2026-11-14
 
-Subject: the clickable prototype (`lib/`, commit `1af7332`), exercised with sequences of two to four reader actions:
+Subject: the clickable prototype (`lib/`, commit `90e4d59`), exercised with sequences of two to four reader actions:
 reading × listening, shelf ↔ book, "Download chapter", key settings. It was checked by an **independent Claude Opus
 agent, not the author of the code**, in a separate worktree; it proved each finding with a failing test and named the
-cause in the code at `1af7332`.
+cause in the code at `90e4d59`.
 
 **This is an internal check, not an independent review by another engine** (`AGENTS.md`, "Specs and acceptance"): the
 model is the same as the author's, so it does not replace the Codex acceptance review.
@@ -13,17 +13,17 @@ prototype code and its README.
 
 ## Summary in numbers
 
-- 16 findings; 25 user journey tests, of which 20 failed on `1af7332`.
+- 16 findings; 25 user journey tests, of which 20 failed on `90e4d59`.
 - The tests were transferred to the main worktree without changing the expectations: `test/journey_listening_test.dart`
   (14), `test/journey_shelf_test.dart` (9), `test/journey_download_test.dart` (2), helpers —
   `test/journey_support.dart` (including a controllable clock). Only the comment of one test about FR-P8 was corrected
   (the expectation is the same).
-- On the code at `8146607` (the owner's start rule A–E already in) 17 failed and 8 passed before the fixes. Finding 6 —
+- On the code at `0b0d110` (the owner's start rule A–E already in) 17 failed and 8 passed before the fixes. Finding 6 —
   all three of its tests — was already closed by the start rule: while the screen follows the voice, the layout is set
   at the voice's place, and while it is being recomputed the screen does not turn pages.
 - After the fixes all 25 are green. For decisions a–k and two unchecked hypotheses — `test/journey_decisions_test.dart`
   (20 tests).
-- Two hypotheses that the checker did not verify were confirmed by a test on `8146607` and fixed: a second tap on the
+- Two hypotheses that the checker did not verify were confirmed by a test on `0b0d110` and fixed: a second tap on the
   third 40 ms after the first was lost (page +1 instead of +2); the speed from the settings was not taken at start (1×
   instead of the saved 1.5×).
 
@@ -36,7 +36,7 @@ prototype code and its README.
 | 3 | Timer → "Close" or shelf → later "Listen": a pause at once, "0 min"; the timer carries over to another book | the timer was not cleared when listening ended | the timer is cleared on "Close", on closing the book, on changing the book and when it fires | `journey_listening_test.dart`: timer 15 min → "Close"… |
 | 4 | The timer expired on pause → "Listen": a pause again | the expired timer waited for the first audio step | a deadline that expired without audio is cleared (on pause — simply cleared; in `preparing`/`waiting` — pause) | `journey_listening_test.dart`: the timer expired while paused |
 | 5 | "Waiting for connection…"/"Preparing the voice…" + paged by hand: no "To current spot" and no chip | the indicator occupied the row | the chip and "To current spot" are always there, the state caption is a separate row | `journey_listening_test.dart`: "Waiting for connection…"; `journey_decisions_test.dart`: k |
-| 6 | Re-layout from the start of the page: pause at the bottom + font, pause + 402, "Read from here" at the bottom | the anchor is the start of the page | closed by the start rule (`8146607`), see above; recorded as decision b | `journey_listening_test.dart`: three tests — passed before the fixes |
+| 6 | Re-layout from the start of the page: pause at the bottom + font, pause + 402, "Read from here" at the bottom | the anchor is the start of the page | closed by the start rule (`0b0d110`), see above; recorded as decision b | `journey_listening_test.dart`: three tests — passed before the fixes |
 | 7 | Pause → "Voice" → tap on the selected row: the paragraph restarts | `restartSession` on any tap | restart only when the active voice changes; the same for the model | `journey_listening_test.dart`: the "Voice" screen; `journey_decisions_test.dart`: j |
 | 8 | A long press before a page turn: the page leaves, "Read from here" disappears | following turned pages under the selected paragraph | while a paragraph is selected the page does not leave after the voice; when cleared, it catches up | `journey_listening_test.dart`: the long press… |
 | 9 | A paragraph selected → the system "Back": the book is closed, the audio cut off | "Back" closed the screen at once | `PopScope`: first the paragraph selection and the panels, then the book; the header button closes at once | `journey_listening_test.dart`: the system "Back"; `journey_decisions_test.dart`: f |

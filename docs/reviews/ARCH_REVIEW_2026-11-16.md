@@ -1,7 +1,7 @@
 # Two independent code reviews: architecture, separation of concerns, duplication, quality — 2026-11-16
 
 Requested by the owner. The reviewers — Claude Opus 5.5 and Codex `gpt-6-astra` (high) — worked in parallel on `main`
-at `3b71e04`, each in its own worktree, from one brief, without knowing about each other. This is a reading review: the
+at `af138f0`, each in its own worktree, from one brief, without knowing about each other. This is a reading review: the
 tests were not run. The brief carried an owner constraint: no edge cases and no overengineering — a proposal is
 acceptable only if it reduces code or removes a named risk. The orchestrator checked every finding against the code
 itself (the "Check" column). This file is not a source of truth; the follow-up work is

@@ -1,6 +1,6 @@
 // Owner remark of 2026-11-14: pause on a paragraph in the middle of the page → “Close” → “Listen” turned the page back
 // and read the previous long paragraph from its start, and following ended up off. Rule A–E — spec 001, FR-P3. (а)
-// failed on code 1af7332 (paragraph 20 played instead of 23). (д) did NOT fail on 1af7332 in the test environment: the
+// failed on code 90e4d59 (paragraph 20 played instead of 23). (д) did NOT fail on 90e4d59 in the test environment: the
 // owner's following-off effect (in the browser) did not reproduce here for any of the 24 combinations of window size,
 // speed-up of the fake voice and frame step; the test guards the outcome and does not prove the cause.
 

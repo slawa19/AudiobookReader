@@ -669,7 +669,7 @@ during implementation:
   chapter; a full replacement of the navigation model was not needed in the scenarios checked. Not checked on the
   phone.
 - 2026-11-16 — the reading screen after the `s004-stable` work was checked on the owner's phone (fake build from
-  `35a2304`, the orchestrator via adb): on "Listen" the text is not re-laid out either for "Preparing the voice…", or
+  `b50dae1`, the orchestrator via adb): on "Listen" the text is not re-laid out either for "Preparing the voice…", or
   when the sound starts, or when the system bars hide; after "next" ×3 and a pause the very first "previous" tap turns,
   the pages are full, the text between adjacent pages is not torn; "resume" returns the same page with the same
   boundaries; "To current spot" is an icon, the panel's height does not change. Not measured: the delay of the first

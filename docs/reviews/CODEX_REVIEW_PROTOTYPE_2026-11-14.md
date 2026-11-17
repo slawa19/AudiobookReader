@@ -1,6 +1,6 @@
 # Prototype review — Codex, 2026-11-14
 
-Subject: the clickable interface prototype in Flutter (`lib/`, `test/`, `scripts/`, `docs/prototype/`, commit `53c78d3`),
+Subject: the clickable interface prototype in Flutter (`lib/`, `test/`, `scripts/`, `docs/prototype/`, commit `20a9f76`),
 35 screenshots attached to the prompt; checked against spec 001 and `ARCHITECTURE.md`. Codex 0.167.0-alpha.4.1, model
 `gpt-6-astra`, `--sandbox read-only`, 318,668 tokens. Verdict: **REWORK**.
 
@@ -10,7 +10,7 @@ README remain so.
 The orchestrator took the decisions on the findings: all 21 were accepted. The executor checked each one against the code
 before the fix — all were confirmed, none was wrong. The tests for the findings are `test/review_fixes_test.dart`,
 `test/review_fixes_more_test.dart`, `test/pagination_test.dart`. The tests for #1, 2, 3, 5, 11, 12 were run on the code
-at `53c78d3` before the fix and failed for the stated reason (#1 — `RangeError`; #2 — `playing` instead of `paused`; #3 —
+at `20a9f76` before the fix and failed for the stated reason (#1 — `RangeError`; #2 — `playing` instead of `paused`; #3 —
 audio from block 39 instead of 46; #5 — the chapter stayed "narrated"; #11 — block 39 instead of 38; #12 — the footnote
 did not open). The finding numbers are the order of the rows of the table in Codex's answer.
 
@@ -55,7 +55,7 @@ in pagination are not checked (there are none in the demo books).
 *Translated from the Russian original.*
 
 `lib/` — 31 files, `test/` — 7 files, `scripts/` — 6 files, the README, the spec, the architecture and AGENTS were read in
-full. Commit `53c78d3` was checked; I made no changes, `git diff --check` is empty. **All 42 PNGs** actually present in
+full. Commit `20a9f76` was checked; I made no changes, `git diff --check` is empty. **All 42 PNGs** actually present in
 the directory were viewed: 34 regular, 6 narrow, one each of 360 and 393 dp.
 
 I did not run Flutter. **76 passed tests and a clean analyzer are the operator's evidence**, not my run. Below "by the
@@ -238,7 +238,7 @@ You are in the same environment as the operator: read files by their paths and c
 
 TASK. An independent review of the clickable interface prototype in Flutter. The app is a book reader for Android with Google Gemini TTS narration, a single user. The prototype is real screen code with fake data: its screens and the pagination module will become part of the app, and the fake implementations (fake_*) will be replaced. Screenshots of the screens are attached to the message (412×915 dp and several 320×640 at font scale 1.3); all 35 are in docs/prototype/screens/.
 
-Range: the repository root, commit 53c78d3 (you have git: `git show --stat 53c78d3`).
+Range: the repository root, commit 20a9f76 (you have git: `git show --stat 20a9f76`).
 
 WHAT TO READ IN FULL:
 - docs/prototype/README.md — what is done, what is simplified, 18 decisions for confirmation, the contradictions found

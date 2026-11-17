@@ -18,17 +18,17 @@ The app's behavior for the reader does not change, except for the fifth interfac
 
 ## 2. Requirements
 
-- **R1.** Ukrainian interface and TTS book language. Done: merged on 2026-11-17 (commit 76d49bb, merge 5ddfeb6). The
+- **R1.** Ukrainian interface and TTS book language. Done: merged on 2026-11-17 (commit 8c0a19d, merge fee3278). The
   golden screenshot sets include `l10n-uk-*` (seven files in `docs/prototype/screens/`: 01-shelf, 07-reading-panels,
   14-player, 18-player-402, 22-settings, n320-14-player, n320-22-settings).
 - **R2.** All documentation is in English: `README.md`, `AGENTS.md`, `CHANGELOG.md`, everything in `docs/`. Anchors in
-  links match the translated headings; the language count in the documents is five. Done 2026-11-17 (merges ea52ece,
-  b094847, 9323d95); a later consistency pass brought the status documents, the index and the links in line with the
+  links match the translated headings; the language count in the documents is five. Done 2026-11-17 (merges 5ca16c8,
+  33dc69d, 8caca5f); a later consistency pass brought the status documents, the index and the links in line with the
   merged work.
 - **R3.** Comments, test names and script and CI messages are in English. Behavior does not change; data that is text
-  in a specific language (the exception in D3) is left as is. Done 2026-11-17 (merges c527c08 tooling and CI, 742b3e0
-  and b0dacd6 tests, 92956d1 `lib/`, `android/`, `web/`). Technical, non-interface messages in production code (the
-  Gemini client, exceptions, Kotlin channel errors) are English too, merge fce6a8f; the Changelog records the rule and
+  in a specific language (the exception in D3) is left as is. Done 2026-11-17 (merges a30ec79 tooling and CI, 037414a
+  and a983d6a tests, d505c82 `lib/`, `android/`, `web/`). Technical, non-interface messages in production code (the
+  Gemini client, exceptions, Kotlin channel errors) are English too, merge 0d4a45e; the Changelog records the rule and
   that it awaits the owner's confirmation.
 - **R4.** Licensing. Done 2026-11-17. The GPL-3.0 `LICENSE` file; third-party notices shown in the app (Flutter's
   license page plus the OFL texts of Merriweather and Roboto, which are in `assets/fonts/`); attribution of the demo
@@ -52,7 +52,7 @@ The app's behavior for the reader does not change, except for the fifth interfac
   - toolchain pinning: the Gradle distribution checksum, `--enforce-lockfile`, GitHub Actions pinned by commit SHA.
 
   Status: the workflow `.github/workflows/release.yml`, `docs/RELEASING.md` (with the published certificate
-  fingerprint) and the pinning are done and merged on 2026-11-17 (merge 50db81c, fingerprint 09659bd). The four signing
+  fingerprint) and the pinning are done and merged on 2026-11-17 (merge e286b61, fingerprint d39037d). The four signing
   secrets and the variable `SIGNING_CERT_SHA256` are set in GitHub. The dry run of 2026-11-17 (run 44035431681)
   passed: tests, build, signing, certificate check, checksums; the attestation and release steps are skipped in a dry run. **No release has been cut:** an attestation needs a public repository, so the first real release
   waits for the visibility switch.
@@ -63,7 +63,7 @@ The app's behavior for the reader does not change, except for the fifth interfac
 ## 3. Acceptance criteria
 
 - **SC-1.** The full `scripts/test.sh` is green in the main worktree after every merge; `git status --porcelain` is
-  empty; CI on GitHub is green. Verified locally at `1f92968` (the merge of R5): analyzer clean, 914 tests passed. CI on
+  empty; CI on GitHub is green. Verified locally at `9210fdc` (the merge of R5): analyzer clean, 914 tests passed. CI on
   GitHub: not verified here; check with `gh run list` after the push.
 - **SC-2.** No Cyrillic remains in documentation, comments, test names and script messages, except text that is data
   (D3). Verified on 2026-11-17 by a scan of all tracked text files: what remains is quoted interface strings, book and
@@ -93,7 +93,7 @@ The app's behavior for the reader does not change, except for the fifth interfac
 - 2026-11-17 — the owner decided to open-source the repository under GPL-3.0, to write all documentation, comments and
   commit messages in English, to add Ukrainian as the fifth interface language, and to publish signed APKs from
   GitHub Actions (D1–D5).
-- 2026-11-17 — R1 done and merged: Ukrainian as the fifth interface language (76d49bb, merge 5ddfeb6).
+- 2026-11-17 — R1 done and merged: Ukrainian as the fifth interface language (8c0a19d, merge fee3278).
 - 2026-11-17 — pre-publication audit (R7): the 179-commit history contains no secrets, keystores or third-party
   copyrighted content; no history rewrite.
 - 2026-11-17 — R4 done: `LICENSE` (GPL-3.0, the unmodified official text), `assets/demo/SOURCES.txt` (Wikisource page

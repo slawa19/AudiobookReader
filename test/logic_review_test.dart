@@ -1,5 +1,5 @@
 // Findings of the Codex behaviour-logic review of 2026-11-14 (docs/reviews/CODEX_REVIEW_LOGIC_2026-11-14.md), Nos.
-// 1–10, and “To current spot” after a small drag. Each test failed on code 2fc63a4 — before the fix.
+// 1–10, and “To current spot” after a small drag. Each test failed on code 79c11f3 — before the fix.
 
 import 'package:audiobook_reader/app/app.dart';
 import 'package:audiobook_reader/audio/audio_store.dart';

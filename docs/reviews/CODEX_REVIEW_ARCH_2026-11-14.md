@@ -1,6 +1,6 @@
 # Architecture review — Codex, 2026-11-14
 
-Subject: `docs/ARCHITECTURE.md` version 1 (commit `caf6f17`), before the spec and the code. Codex 0.167.0-alpha.4.1, model
+Subject: `docs/ARCHITECTURE.md` version 1 (commit `3a02c4f`), before the spec and the code. Codex 0.167.0-alpha.4.1, model
 `gpt-6-astra`, `--sandbox read-only`, 142,889 tokens. Verdict: **REWORK**.
 
 This file is a record of the review, not a source of truth; `ARCHITECTURE.md` and the code remain so.

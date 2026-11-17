@@ -1,7 +1,7 @@
 # External review of stage 2 of spec 001 — Fable 5.2, 2026-11-15
 
 The owner's experiment ([EXPERIMENT_CODEX_IMPL.md](EXPERIMENT_CODEX_IMPL.md)): the code was written by Codex agents, the
-external review by two separate Fable 5.2 agents. The review ran on `main` at `e64283c`, in a separate worktree, before
+external review by two separate Fable 5.2 agents. The review ran on `main` at `9826e1f`, in a separate worktree, before
 the real player was connected and before the app was built on real narration; the reviewers proved the findings with
 temporary tests. This file is not a source of truth: the spec and the code remain so.
 
