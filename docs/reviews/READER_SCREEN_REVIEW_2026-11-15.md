@@ -1,39 +1,39 @@
-# Два независимых ревью экрана чтения во время озвучки — 2026-11-15
+# Two independent reviews of the reader screen during narration — 2026-11-15
 
-Запрошены владельцем после четвёртого за день замечания одного рода («текст на странице не такой, как я его видел»):
-он усомнился, что причина найдена. Ревьюеры — Claude Opus 5.5 (high) и Codex `gpt-6-astra` (high) — работали
-параллельно на `main` в состоянии `6e8a62b`, каждый в своём дереве, по одной постановке, не зная друг о друге;
-находки доказывали временными виджет-тестами на настоящем контроллере. Источником правды этот файл не является.
+Requested by the owner after the fourth remark of one kind in a day ("the text on the page is not what I saw"): he doubted
+that the cause had been found. The reviewers — Claude Opus 5.5 (high) and Codex `gpt-6-astra` (high) — worked in
+parallel on `main` at `6e8a62b`, each in its own worktree, from one brief, without knowing about each other; they proved
+the findings with temporary widget tests on the real controller. This file is not a source of truth.
 
-## В чём сошлись
+## Where they agreed
 
-1. Высота страницы зависела от переменчивого состояния панели плеера (кнопка «К месту чтения» отдельной строкой,
-   строка «Готовлю голос…», нижний системный отступ); любая смена высоты перекладывала текст и отменяла переход.
-2. У перехода между страницами нет одного владельца: около 40 изменяемых полей, семь путей показа страницы, четыре
-   механизма отмены; инварианты держатся на порядке вызовов. Каждая точечная правка закрывала одну
-   последовательность событий.
-3. Тесты последних правок не вакуумны (оба ломали правки — тесты падали), но проверяют частные сценарии. Тесты
-   ждали, пока всё устоится, и смотрели на итог; дефекты живут между кадрами.
+1. The page height depended on the volatile state of the player panel (the "To the reading place" button as a separate
+   row, the "Preparing the voice…" row, the bottom system inset); any change of height re-flowed the text and cancelled
+   the transition.
+2. The transition between pages has no single owner: about 40 mutable fields, seven ways to show a page, four
+   cancellation mechanisms; the invariants hold on the order of calls. Each point fix closed one sequence of events.
+3. The tests of the latest fixes are not vacuous (both broke the fixes — the tests failed), but they check particular
+   scenarios. The tests waited until everything settled and looked at the outcome; the defects live between frames.
 
-## Находки и решения
+## Findings and decisions
 
-| № | Поднято | Кто | Подтверждено | Решение оркестратора |
+| # | Raised | Who | Confirmed | Orchestrator's decision |
 |---|---|---|---|---|
-| 1 | первое касание «назад» теряется: следование выключалось до смены страницы, кнопка меняла высоту, перераскладка стирала запрос | оба | тест | исправлено |
-| 2 | при каждом старте звука текст дважды перескакивает: строка состояния меняет высоту на 24 dp | Opus | тест | исправлено: высота панели постоянна |
-| 3 | касание «назад» при следовании показывает страницу на две строки короче виденной | Opus | тест | исправлено тем же |
-| 4 | голос дошёл до открытой страницы → кнопка исчезла → страница сменила границы | Opus | существующий тест это требовал | исправлено тем же; тест переписан |
-| 5 | «К месту чтения» через 16 мс после начала листания не возвращает; высота при этом постоянна | Astra | тест | исправлено |
-| 6 | «вперёд» во время незавершённого жеста: следование включено, звучащее место не на экране | Astra | тест | исправлено |
-| 7 | пока ждётся близкая цель, касания теряются, смахивания отключены | Opus | чтение | исправлено |
-| 8 | первое «назад» в глубине длинной главы ждёт пересчёта всего начала главы (≈ 0,6 с на компьютере) | Opus | тест | **отложено**: ограниченной правкой не получилось; замер на телефоне |
-| 9 | нижний системный отступ меняет высоту страницы при показе и скрытии панелей | Opus | прогноз | исправлено в панели; на телефоне проверено 2026-11-16: при скрытии системных панелей страница не меняется |
-| 10 | помощник тестов считал «страница сменилась» по смене объекта | Astra | чтение | исправлено: сравнение границ текста |
+| 1 | the first "back" tap is lost: following was turned off before the page changed, the button changed the height, the re-layout erased the request | both | test | fixed |
+| 2 | at every audio start the text jumps twice: the status line changes the height by 24 dp | Opus | test | fixed: the panel height is constant |
+| 3 | a "back" tap during following shows a page two lines shorter than the one seen | Opus | test | fixed by the same change |
+| 4 | the voice reached the open page → the button disappeared → the page changed its boundaries | Opus | an existing test required it | fixed by the same change; the test rewritten |
+| 5 | "To the reading place" 16 ms after paging starts does not return; the height is constant meanwhile | Astra | test | fixed |
+| 6 | "forward" during an unfinished gesture: following is on, the sounding place is not on screen | Astra | test | fixed |
+| 7 | while a near target is awaited, taps are lost, swipes are disabled | Opus | reading | fixed |
+| 8 | the first "back" deep in a long chapter waits for a recomputation of the whole start of the chapter (≈ 0.6 s on the computer) | Opus | test | **deferred**: a bounded fix did not work out; measurement on the phone |
+| 9 | the bottom system inset changes the page height when panels are shown and hidden | Opus | forecast | fixed in the panel; checked on the phone 2026-11-16: when the system bars are hidden the page does not change |
+| 10 | the test helper counted "the page changed" by a change of object | Astra | reading | fixed: comparison of the text boundaries |
 
-## Где разошлись
+## Where they diverged
 
-Astra: точечных правок мало, нужно свести управление переходами к одной операции (3–5 рабочих дней, риск средний).
-Opus: сначала постоянная высота и удаление наросшего вокруг неё кода; замена модели навигации (400–600 строк, риск
-высокий) — только если тест свойств после этого найдёт новые нарушения. Принят порядок Opus. После работы покадровый
-тест свойств (10 зёрен × 40 действий) зелёный; до неё падал на 12 зёрнах по двум инвариантам. Вопрос о замене модели
-остаётся открытым до проверки на телефоне.
+Astra: there are few point fixes available, the transition control should be reduced to a single operation (3–5 working
+days, medium risk). Opus: first a constant height and removal of the code that has grown around it; replacing the
+navigation model (400–600 lines, high risk) only if a property test finds new violations after that. Opus's order was
+accepted. After the work, the frame-by-frame property test (10 seeds × 40 actions) is green; before it, it failed on 12
+seeds on two invariants. The question of replacing the model stays open until checked on the phone.

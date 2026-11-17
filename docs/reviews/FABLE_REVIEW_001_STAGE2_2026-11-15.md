@@ -1,50 +1,52 @@
-# Внешнее ревью этапа 2 спеки 001 — Fable 5.2, 2026-11-15
+# External review of stage 2 of spec 001 — Fable 5.2, 2026-11-15
 
-Эксперимент владельца ([EXPERIMENT_CODEX_IMPL.md](EXPERIMENT_CODEX_IMPL.md)): код писали агенты Codex, внешнее
-ревью — два отдельных агента Fable 5.2. Ревью шло на `main` в состоянии `e64283c`, в отдельном дереве, до
-подключения настоящего плеера и сборки приложения на настоящей озвучке; ревьюеры доказывали находки временными
-тестами. Источником правды этот файл не является: им остаются спека и код.
+The owner's experiment ([EXPERIMENT_CODEX_IMPL.md](EXPERIMENT_CODEX_IMPL.md)): the code was written by Codex agents, the
+external review by two separate Fable 5.2 agents. The review ran on `main` at `e64283c`, in a separate worktree, before
+the real player was connected and before the app was built on real narration; the reviewers proved the findings with
+temporary tests. This file is not a source of truth: the spec and the code remain so.
 
-Оба вердикта — **ДОРАБОТАТЬ**.
+Both verdicts — **REWORK**.
 
-## Ревьюер 1: `tts`, `audio`, расход и ключ, сборка
+## Reviewer 1: `tts`, `audio`, spend and key, build
 
-Деление на отрезки, отпечаток, готовность и учёт расхода проверены на сотнях тысяч случайных входов — дефектов нет.
+Splitting into segments, the fingerprint, readiness and spend accounting were checked on hundreds of thousands of random
+inputs — no defects.
 
-| № | Поднято | Подтверждено | Решение оркестратора |
+| # | Raised | Confirmed | Orchestrator's decision |
 |---|---|---|---|
-| 1 | ключ с переводом строки или невидимым знаком попадает в текст исключения клиента | тест | исправить: любое исключение транспорта — `TtsError` без чужого текста; ключ нормализуется при вводе |
-| 2 | обрыв сети (`SocketException`, сбой TLS) — постоянная ошибка, озвучка останавливается | тест | исправить: временная ошибка, очередь повторяет |
-| 3 | настоящий синтез в приложении не подключён | факт | в работе (`s002-player`) |
-| 4 | «* * *», «…», блок из одних сносок уходят в Gemini платным запросом | тест | исправить; А§3: блок без букв и цифр вслух не читается |
-| 5 | ссылка «Пополнить» берётся из текста Google с прилипшей пунктуацией | тест | исправить: адрес постоянный; GEMINI_TTS.md поправлен |
-| 6 | первая стартовая часть в 3–6 знаков: секунда звука, затем ≈ 8 с тишины | тест | исправить; А§6.1: первая часть не меньше 80 знаков |
-| 7 | отказ по ключу ищется шаблоном по всему телу; 401 не распознан | тест | исправить |
-| 8 | WAV с потоковым заголовком отклоняется после оплаченного ответа | тест | исправить |
-| 9 | таймаут не отменяет запрос: поздний ответ оплачен и не учтён | чтение | **отказ**: принятое ограничение, как в студии |
-| 10 | Kotlin: задержка кодировщика даёт тишину в начале файла; канал кодировщика закрывается с активностью — при живой службе плеера записи будут падать | прогноз | тишина — замер на слух на телефоне (А§11); канал — проверить и исправить вместе с плеером |
-| 11 | синхронный диск в хранилище на главном изоляте; пустой файл считается готовым | чтение | пустой файл — исправить; синхронный диск — **отказ** до замера на телефоне |
-| 12 | `DEVICE_CHECKLIST.md`: часть пунктов невыполнима как написана | чтение | переписать после сборки приложения на настоящей озвучке |
-| 13 | мелочи: неиспользуемые константы; русские тексты ошибок `tts` для en/pl/de; `source .env` | чтение | константы убрать; остальное — **отказ** (внутренние редкие ошибки; `.env` пишет сам владелец) |
+| 1 | a key with a line feed or an invisible character gets into the client's exception text | test | fix: any transport exception becomes a `TtsError` without foreign text; the key is normalized on input |
+| 2 | a network drop (`SocketException`, a TLS failure) is a permanent error, narration stops | test | fix: a transient error, the queue retries |
+| 3 | real synthesis is not connected in the app | fact | in progress (`s002-player`) |
+| 4 | "* * *", "…", a block of only footnotes go to Gemini as a paid request | test | fix; A§3: a block without letters and digits is not read aloud |
+| 5 | the "Top up" link is taken from Google's text with punctuation stuck to it | test | fix: the address is constant; GEMINI_TTS.md corrected |
+| 6 | a first starting part of 3–6 characters: a second of audio, then ≈ 8 s of silence | test | fix; A§6.1: the first part is no less than 80 characters |
+| 7 | a key refusal is looked for with a pattern over the whole body; 401 not recognized | test | fix |
+| 8 | a WAV with a streaming header is rejected after a paid response | test | fix |
+| 9 | a timeout does not cancel the request: the late response is paid for and not accounted | reading | **rejected**: an accepted limitation, as in the studio |
+| 10 | Kotlin: the encoder delay gives silence at the start of the file; the encoder channel closes with the activity — with a live player service the writes will fail | forecast | silence — a by-ear measurement on the phone (A§11); the channel — check and fix together with the player |
+| 11 | synchronous disk access in the storage on the main isolate; an empty file counts as ready | reading | empty file — fix; synchronous disk — **rejected** until measured on the phone |
+| 12 | `DEVICE_CHECKLIST.md`: some items cannot be carried out as written | reading | rewrite after the app is built on real narration |
+| 13 | minor: unused constants; Russian `tts` error texts for en/pl/de; `source .env` | reading | remove the constants; the rest — **rejected** (internal rare errors; `.env` is written by the owner himself) |
 
-## Ревьюер 2: очередь, сеансы, контроллер (`lib/playback`)
+## Reviewer 2: queue, sessions, controller (`lib/playback`)
 
-Случайные прогоны (8 зёрен по 220 команд, затем до конца книги): ни одного дважды оплаченного сочетания текста и
-голоса, не больше двух запросов сразу, конец книги достигнут во всех.
+Random runs (8 seeds of 220 commands each, then to the end of the book): not a single twice-paid combination of text and
+voice, no more than two requests at once, the end of the book reached in all of them.
 
-| № | Поднято | Подтверждено | Решение оркестратора |
+| # | Raised | Confirmed | Orchestrator's decision |
 |---|---|---|---|
-| 1 | пока ближайший отрезок не получается, дальние покупаются до конца книги (481 с при цели 120 с) | тест | исправить; дыра в самой А§6.3 — добавлен предел на весь звук впереди, включая звук за неготовым отрезком |
-| 2 | неудачное удаление книги: ошибка теряется, книга навсегда без озвучки до перезапуска | тест | исправить |
-| 3 | один нечитаемый готовый файл: готовое не играет, место перескакивает через готовый текст | тест | исправить: файл удаляется и запрашивается заново один раз |
-| 4 | часы ушли назад за время задержки повтора — повтор не уходит никогда | тест | исправить |
-| 5 | старт ждёт пробы длительности всего готового звука; в плеер уходит вся готовая книга | тест | исправить: дописывать до цели запаса |
-| 6 | каждая команда синхронно делит на отрезки остаток книги (0,5–0,7 с на миллионе знаков) | тест, замер на компьютере | исправить: по главам, по мере надобности |
-| 7 | позиция пишется и слушатели уведомляются 10 раз в секунду | тест | исправить, как в прототипе |
-| 8 | служебное «Закрыть» затирает позицию, записанную экраном после остановки | тест | исправить |
-| 9 | контроллер опирается на незаписанные свойства подставного плеера; с плеером, ведущим себя как `just_audio`, конец книги не объявляется; нет события ошибки воспроизведения | тест | исправить: контракт порта записан, опора убрана, событие добавлено |
-| 10 | мелочи: необработанная ошибка `flush`; русские строки как «текст Google»; мелькание `waiting` на границе главы; платные запросы при полном диске | тест / прогноз | исправить |
-| 10 | «назад» со стартового отрезка внутри блока ведёт к предыдущему отрезку; гонка таймера за время одной пробы | тест / прогноз | **отказ**: трактовка допустима; гонка руками недостижима |
-| — | А§5 говорит «позиция чтения при прослушивании — начало звучащего отрезка», код и прототип пишут оценку места внутри отрезка | чтение | поправлена А§5: действует поведение кода |
+| 1 | while the nearest segment fails, the distant ones are bought up to the end of the book (481 s against a 120 s target) | test | fix; a hole in A§6.3 itself — a limit on all audio ahead was added, including audio beyond a not-ready segment |
+| 2 | a failed book deletion: the error is lost, the book stays without narration until restart | test | fix |
+| 3 | one unreadable ready file: ready audio does not play, the position skips over the ready text | test | fix: the file is deleted and requested again once |
+| 4 | the clock went back during the retry delay — the retry never happens | test | fix |
+| 5 | the start waits for a duration probe of all ready audio; the whole ready book goes into the player | test | fix: append up to the reserve target |
+| 6 | every command synchronously splits the rest of the book into segments (0.5–0.7 s on a million characters) | test, measurement on the computer | fix: by chapters, as needed |
+| 7 | the position is written and listeners are notified 10 times a second | test | fix, as in the prototype |
+| 8 | the service "Close" overwrites the position written by the screen after the stop | test | fix |
+| 9 | the controller relies on unwritten properties of the fake player; with a player behaving like `just_audio` the end of the book is not announced; there is no playback error event | test | fix: the port contract is written down, the reliance removed, the event added |
+| 10 | minor: an unhandled `flush` error; Russian strings as "Google text"; `waiting` flicker at a chapter boundary; paid requests on a full disk | test / forecast | fix |
+| 10 | "back" from a starting segment inside a block leads to the previous segment; a timer race during one probe | test / forecast | **rejected**: the interpretation is acceptable; the race is unreachable by hand |
+| — | A§5 says "the reading position while listening is the start of the sounding segment", the code and the prototype write an estimate of the place inside the segment | reading | A§5 corrected: the behavior of the code stands |
 
-Что сделано по принятым находкам — в истории git (ветки `s002-ttsfix`, `s002-pbfix`) и в Changelog спеки 001.
+What was done for the accepted findings is in the git history (branches `s002-ttsfix`, `s002-pbfix`) and in the
+Changelog of spec 001.

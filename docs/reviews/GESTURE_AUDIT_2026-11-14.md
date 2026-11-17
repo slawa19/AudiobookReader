@@ -1,101 +1,106 @@
-# Проверка жестов — 2026-11-14
+# Gesture check — 2026-11-14
 
-Предмет: кликабельный прототип (`lib/`, коммит `6315a74`), пройденный **настоящими событиями указателя**: палец с
-метками времени (скорость видна распознавателям, как на телефоне), касания вдогонку, смахивания под углом,
-перетаскивания с возвратом, второй палец, ползунок, системная «Назад», области касания попаданием по углам 48 × 48.
-Проверял **изолированный агент Claude Fable 5.2, не автор кода**, в отдельном дереве.
+Subject: the clickable prototype (`lib/`, commit `6315a74`), exercised with **real pointer events**: a finger with
+timestamps (the speed is visible to the recognizers, as on a phone), follow-up taps, angled swipes, drags with a return,
+a second finger, the slider, the system "Back", touch targets hit-tested at the corners of 48 × 48.
+It was checked by an **isolated Claude Fable 5.2 agent, not the author of the code**, in a separate worktree.
 
-**Это внутренняя проверка, а не независимое ревью другим движком** (`AGENTS.md`, «Спеки и приёмка»): приёмочное
-ревью Codex она не заменяет.
+**This is an internal check, not an independent review by another engine** (`AGENTS.md`, "Specs and acceptance"): it
+does not replace the Codex acceptance review.
 
-Этот файл — запись проверки, а не источник правды; им остаются спека 001, `ARCHITECTURE.md`, код прототипа и его
-README.
+This file is a record of the check, not a source of truth; the sources remain spec 001, `ARCHITECTURE.md`, the
+prototype code and its README.
 
-## Итог в числах
+## Summary in numbers
 
-- 9 находок; 45 тестов жестов (`test/gesture_page_test.dart`, `gesture_layers_test.dart`, `gesture_slider_test.dart`,
-  `gesture_listening_test.dart`, `gesture_screens_test.dart`, `gesture_targets_test.dart`, помощники —
-  `gesture_support.dart`); на `6315a74` падали 15, проходили 30 (перепроверено исполнителем после переноса).
-- После правок зелёные 44 перенесённых и один заменённый по решению F (см. ниже). На решения A–J и пути, которые
-  проверяющий не прошёл, — `test/gesture_decisions_test.dart` (22 теста).
-- Причины, указанные проверяющим, исполнитель сверил по коду — все девять подтвердились.
+- 9 findings; 45 gesture tests (`test/gesture_page_test.dart`, `gesture_layers_test.dart`, `gesture_slider_test.dart`,
+  `gesture_listening_test.dart`, `gesture_screens_test.dart`, `gesture_targets_test.dart`, helpers —
+  `gesture_support.dart`); on `6315a74` 15 failed and 30 passed (re-verified by the executor after the transfer).
+- After the fixes, 44 transferred tests and one replaced by decision F (see below) are green. For decisions A–J and the
+  paths the checker did not walk — `test/gesture_decisions_test.dart` (22 tests).
+- The causes named by the checker were verified by the executor against the code — all nine were confirmed.
 
-## Находка / что сделано
+## Finding / what was done
 
-| № | Находка | Причина (сверена по коду) | Что сделано | Падавшие тесты |
+| # | Finding | Cause (verified against the code) | What was done | Failing tests |
 |---|---|---|---|---|
-| 1 | Двойное касание «Слушать»: второе попадает в то, что встало под палец (скорость, «назад», пауза, «вперёд», таймер); то же «Закрыть», «Стоп», выбор в листе скорости и таймера | нижняя панель в том же кадре заменяется панелью плеера; закрывающийся лист пропускает касания к экрану под ним | одно общее правило — защита от касания вдогонку (решение A): экран чтения 350 мс поглощает касания после смены слоя, лист — первые 350 мс после открытия, экран — после закрытия листа, диалога или экрана поверх | «Слушать» дважды (412 и 320), «Слушать» в любом месте кнопки, «Закрыть» дважды, двойной выбор в листе, «Стоп» дважды |
-| 2 | Выбрал абзац → смахнул: выбор невидим, первое касание проглочено, «Назад» ничего видимого не делает; при прослушивании экран застревает | выбор жил дольше страницы, на которой его сделали; при выборе следование не листает | выбор снимается при любой смене страницы (решение B) | «выбрал абзац, смахнул: следующее касание листает», «…«К месту чтения» возвращает к голосу» |
-| 3 | Страница поехала за голосом, палец вернул её — через долю секунды снова уезжает | жест, вернувшийся на ту же страницу, не выключал следование | палец, лёгший на страницу во время автопереворота, выключает следование, даже если вернул страницу (решение C); определяется в момент касания — к началу перетаскивания переворот уже остановлен | «страница поехала за голосом, палец вернул её» |
-| 4 | Почти вертикальное смахивание (10° от вертикали, 45 dp вбок) листает | горизонтальный распознаватель страниц принимает жест по горизонтальному сдвигу, не глядя на вертикальный | распознаватель «преимущественно вертикального» жеста внутри страницы (глубже листания, первым видит движение): забирает жест, когда вертикальный сдвиг больше порога и больше горизонтального (решение D) | «вертикальное смахивание с уходом вбок» |
-| 5 | Нет ключа → «Слушать» → ключ введён руками → «Назад»: ключ не сохранён | сохранение было только по «Вставить» и действию клавиатуры | непустое значение сохраняется при любом уходе с поля и с экрана (решение E): `PopScope` экрана настроек и потеря фокуса поля | «ключ введён в поле → системная «Назад»» |
-| 6 | Альбомная ориентация: текст и плеер под боковым вырезом | поворот нигде не решён | только портретная: манифест и `lockPortrait()` при запуске (решение F) | «альбомная с вырезом сбоку» — заменён (см. ниже) |
-| 7 | Два знака сносок рядом: касание второго открывает первую | возвращался первый знак, чья область 48 × 48 содержит точку | ближайший к точке касания знак (решение G) | «два знака сносок рядом» |
-| 8 | Тронул бегунок ползунка и отпустил, не сдвинув: следование выключено | `onChangeEnd` выключал следование всегда (комментарий в коде утверждал «даже если страница та же») | отпускание на той же странице ничего не меняет; комментарий убран (решение H) | «тронул бегунок и отпустил, не сдвинув» |
-| 9 | Углы области «Стоп» в строке скачивания срезаны | `Material` со скруглённой формой считает попадание по форме | форма строки только рисуется (`ShapeDecoration`), область «Стоп» — прямоугольник 48 × 48 (решение I) | «панель плеера (412 × 915): … «Стоп» строки скачивания» |
-| — | Угол «Назад» в шапке срезан на ≈ 1 dp (попутное замечание) | крайние кнопки в 4 dp от края, нижний угол области заходил в скругление 24 dp | поля шапки сбоку 8 dp — одна строка | — (в пределах допуска теста) |
+| 1 | Double tap on "Listen": the second lands on whatever came up under the finger (speed, "back", pause, "forward", timer); the same for "Close", "Stop", a choice in the speed and timer sheets | the bottom panel is replaced by the player panel in the same frame; a closing sheet lets taps through to the screen under it | one general rule — protection against a follow-up tap (decision A): the reader screen absorbs taps for 350 ms after a layer change, a sheet — for the first 350 ms after opening, the screen — after a sheet, dialog or screen on top closes | `gesture_listening_test.dart`, `gesture_layers_test.dart`: "Listen" twice (412 and 320), "Listen" anywhere on the button, "Close" twice, a double choice in a sheet, "Stop" twice |
+| 2 | Selected a paragraph → swiped: the selection is invisible, the first tap is swallowed, "Back" does nothing visible; while listening the screen gets stuck | the selection outlived the page it was made on; with a selection, following does not turn pages | the selection is cleared on any page change (decision B) | `gesture_page_test.dart`: selected a paragraph and swiped — the next tap turns the page; "To current spot" returns to the voice |
+| 3 | The page moved after the voice, the finger returned it — a fraction of a second later it moves away again | a gesture that returned to the same page did not turn following off | a finger that lands on the page during an automatic page turn turns following off even if it returned the page (decision C); determined at the moment of the touch — by the start of the drag the turn has already stopped | `gesture_page_test.dart`: the page moved after the voice, the finger returned it |
+| 4 | An almost vertical swipe (10° from vertical, 45 dp sideways) turns the page | the horizontal page recognizer accepts a gesture by its horizontal shift without looking at the vertical one | a recognizer of a "mostly vertical" gesture inside the page (deeper than paging, sees the movement first): it takes the gesture when the vertical shift exceeds the threshold and exceeds the horizontal one (decision D) | `gesture_page_test.dart`: a vertical swipe drifting sideways |
+| 5 | No key → "Listen" → key typed by hand → "Back": the key is not saved | saving happened only on "Paste" and the keyboard action | a non-empty value is saved on any exit from the field and from the screen (decision E): `PopScope` of the settings screen and loss of the field's focus | `gesture_screens_test.dart`: the key typed into the field → the system "Back" |
+| 6 | Landscape orientation: the text and the player sit under the side cutout | rotation is not decided anywhere | portrait only: the manifest and `lockPortrait()` at start (decision F) | landscape with a side cutout — replaced (see below) |
+| 7 | Two footnote marks side by side: a tap on the second opens the first | the first mark whose 48 × 48 area contains the point was returned | the mark nearest to the touch point (decision G) | `gesture_targets_test.dart`: two footnote marks side by side |
+| 8 | Touched the slider thumb and let go without moving: following is off | `onChangeEnd` always turned following off (a comment in the code claimed "even if the page is the same") | releasing on the same page changes nothing; the comment removed (decision H) | `gesture_slider_test.dart`: touched the thumb and let go without moving |
+| 9 | The corners of the "Stop" area in the download strip are cut | a `Material` with a rounded shape hit-tests by the shape | the strip's shape is only drawn (`ShapeDecoration`), the "Stop" area is a 48 × 48 rectangle (decision I) | `gesture_targets_test.dart`: the player panel (412 × 915), "Stop" of the download strip |
+| — | The corner of "Back" in the header is cut by ≈ 1 dp (a side remark) | the outermost buttons are 4 dp from the edge, the lower corner of the area reached into the 24 dp rounding | the header's side margins 8 dp — one line | — (within the test tolerance) |
 
-**Тесты, приведённые к решениям** (ожидание проверяющего расходилось с решением):
+**Tests brought in line with the decisions** (the checker's expectation differed from the decision):
 
-- `gesture_layers_test.dart` «панели + сноска: лист, потом панели, потом книга» → «лист, потом книга»: по решению J
-  при показанных панелях «Назад» закрывает книгу, прятать панели «Назад» больше не должна.
-- `gesture_layers_test.dart` «„Назад“ посреди анимации листа скорости и посреди перелистывания»: после касания
-  трети панели скрыты — по решению J первая «Назад» их показывает, вторая закрывает книгу.
-- `gesture_screens_test.dart` «книга тронута дважды подряд»: та же правка — две «Назад» до полки.
-- `gesture_screens_test.dart` «альбомная ориентация с вырезом сбоку» заменён тестом «альбомная не включается»
-  (решение F): приложение просит у системы только портретную, в манифесте — `screenOrientation="portrait"`.
+- `gesture_layers_test.dart`, the test of the panels + footnote combination (sheet, then panels, then book) → "sheet,
+  then book": by decision J, with panels shown "Back" closes the book, and "Back" must no longer hide the panels.
+- `gesture_layers_test.dart`, the test of "Back" in the middle of the speed sheet animation and in the middle of a page
+  turn: after a tap on the third the panels are hidden — by decision J the first "Back" shows them, the second closes
+  the book.
+- `gesture_screens_test.dart`, the test of the book touched twice in a row: the same change — two "Back" taps to the
+  shelf.
+- `gesture_screens_test.dart`, the landscape orientation with a side cutout test, was replaced by a test that landscape
+  is not enabled (decision F): the app asks the system only for portrait, the manifest has
+  `screenOrientation="portrait"`.
 
-Заодно приведены к решениям свои тесты прежних проверок: правило f проверки путей (`journey_decisions_test.dart`) —
-к решению J; три теста, касавшиеся только что появившейся панели или строки через 400 мс после события
-(`reader_behavior_test.dart` — два, `screens_golden_test.dart` — 19–20 и 21), ждут 600 мс: панель появляется на экране
-кадром позже события, и касание приходилось внутрь 350 мс.
+Also brought in line with the decisions were the tests of earlier checks: rule f of the journey check
+(`journey_decisions_test.dart`) — to decision J; three tests that touched a just-appeared panel or strip 400 ms after an
+event (`reader_behavior_test.dart` — two, `screens_golden_test.dart` — 19–20 and 21) now wait 600 ms: the panel appears
+on screen a frame after the event, and the tap fell inside the 350 ms.
 
-## Решения оркестратора
+## Orchestrator's decisions
 
-Внесены в спеку 001 (Р10–Р12, FR-R2, FR-R3, FR-R5, FR-R7, FR-R8, FR-R9, FR-P4, FR-P7, FR-P9, FR-D2, «Не делаем»),
-`ARCHITECTURE.md` (А§5, А§7, А§8.1) и README прототипа.
+Entered into spec 001 (decisions D10–D12, FR-R2, FR-R3, FR-R5, FR-R7, FR-R8, FR-R9, FR-P4, FR-P7, FR-P9, FR-D2, "Out
+of scope"), `ARCHITECTURE.md` (A§5, A§7, A§8.1) and the prototype README.
 
-- **A.** Защита от касания вдогонку — одно общее правило: после смены слоя под пальцем (панель чтения ↔ панель
-  плеера, закрылся лист или диалог, исчезла панель плеера, исчезла строка скачивания, сменился экран) новые элементы
-  управления и страница 350 мс не принимают касаний; именованная константа `layerSettleTime`; обычный темп
-  (интервал больше 350 мс) работает.
-- **B.** Выбор абзаца снимается при любой смене страницы — жестом, касанием, ползунком, оглавлением, голосом.
-- **C.** Палец, схвативший страницу во время автоматического переворота за голосом, выключает следование, даже если
-  страница вернулась; вне автопереворота жест, вернувшийся на ту же страницу, ничего не меняет.
-- **D.** Листает только жест с горизонтальным сдвигом больше вертикального на момент распознавания (угол к
-  горизонтали меньше 45°); проверено на 10°, 30°, 44° (листает) и 46°, 60°, 80° (не листает).
-- **E.** Ключ: непустое значение сохраняется при любом уходе с поля и с экрана; пустое поле ключ не трогает.
-- **F.** Только портретная ориентация — манифест, код, спека (решения и «Не делаем»).
-- **G.** Сноски: открывается знак, ближайший к точке касания.
-- **H.** Ползунок: касание без сдвига ничего не меняет.
-- **I.** «Стоп» строки скачивания: область 48 × 48 прямоугольная.
-- **J.** Системная «Назад» в чтении: снять выбор абзаца → закрыть лист, диалог, сноску → панели скрыты — показать →
-  панели показаны — закрыть книгу; стрелка в шапке закрывает сразу; при прослушивании так же. Причина — краевой
-  жест Android. Заменяет правило f проверки путей.
-- **K.** Список ручной проверки на телефоне (FR-P9) дополнен жестами; их проверяют уже на этапе 1 при первой
-  установке.
+- **A.** Protection against a follow-up tap is one general rule: after a layer changes under the finger (reading panel ↔
+  player panel, a sheet or dialog closed, the player panel disappeared, the download strip disappeared, the screen
+  changed), the new controls and the page accept no touches for 350 ms; a named constant `layerSettleTime`; a normal
+  pace (an interval over 350 ms) works.
+- **B.** A paragraph selection is cleared on any page change — by gesture, tap, slider, table of contents, voice.
+- **C.** A finger that grabs the page during an automatic turn after the voice turns following off even if the page came
+  back; outside an automatic turn, a gesture that returned to the same page changes nothing.
+- **D.** Only a gesture whose horizontal shift is greater than the vertical one at the moment of recognition turns pages
+  (the angle to the horizontal below 45°); verified at 10°, 30°, 44° (turns) and 46°, 60°, 80° (does not turn).
+- **E.** Key: a non-empty value is saved on any exit from the field and from the screen; an empty field does not touch
+  the key.
+- **F.** Portrait orientation only — manifest, code, spec (decisions and "Out of scope").
+- **G.** Footnotes: the mark nearest to the touch point opens.
+- **H.** Slider: a touch without a shift changes nothing.
+- **I.** "Stop" of the download strip: the 48 × 48 area is a rectangle.
+- **J.** The system "Back" while reading: clear the paragraph selection → close a sheet, dialog, footnote → panels
+  hidden — show them → panels shown — close the book; the arrow in the header closes at once; the same while listening.
+  The reason is the Android edge gesture. Replaces rule f of the journey check.
+- **K.** The manual phone check list (FR-P9) is extended with gestures; they are checked already at stage 1 on the first
+  install.
 
-## Пути, которые проверяющий не прошёл (добавил исполнитель)
+## Paths the checker did not walk (added by the executor)
 
-Второй палец во время смахивания — не больше одной страницы, без исключений; прокрутка оглавления пальцем и касание
-главы — открыта эта глава; диалог удаления книги под системной «Назад» — диалог закрыт, книга на полке; смена языка
-при открытом листе «Вид текста» — лист открыт и уже на новом языке. Все четыре прошли с первого раза.
+A second finger during a swipe — no more than one page, no exceptions; scrolling the table of contents with a finger and
+tapping a chapter — that chapter is open; the book deletion dialog under the system "Back" — the dialog is closed, the
+book stays on the shelf; a language change with the "Text appearance" sheet open — the sheet is open and already in the
+new language. All four passed the first time.
 
-## Прогнозы для телефона и чем их проверить
+## Forecasts for the phone and how to check them
 
-Главный риск, по оценке проверяющего: при жестовой навигации Android смахивание от края экрана — системная «Назад»;
-до решения J она в иммерсивном чтении закрывала книгу и обрывала звук, и читатель, листающий от края, закрывал бы
-книгу. После J первая «Назад» только показывает панели. Подтверждается только на телефоне — пункты FR-P9, уже на
-этапе 1:
+The main risk by the checker's estimate: with Android gesture navigation, a swipe from the screen edge is the system
+"Back"; before decision J it closed the book in immersive reading and cut the audio, and a reader paging from the edge
+would close the book. After J the first "Back" only shows the panels. Confirmed only on the phone — the FR-P9 items, at
+stage 1 already:
 
-- 20 перелистываний смахиванием от самого края в обе стороны — в чтении и при прослушивании, в том числе в чехле:
-  книга не закрывается;
-- медленно потянуть от края и вернуть: книга не закрывается, страница на месте;
-- 20 вертикальных движений большим пальцем: страница не листается (правило D в тестах проверено на прямых линиях;
-  дуга большого пальца на стекле — только на телефоне);
-- текст не под вырезом камеры, нижний ряд панели плеера не в зоне жеста «домой».
+- 20 page turns by a swipe from the very edge in both directions — while reading and while listening, including in a
+  case: the book does not close;
+- slowly pull from the edge and return: the book does not close, the page stays in place;
+- 20 vertical thumb movements: the page does not turn (rule D is verified in tests on straight lines; the arc of a
+  thumb on glass — only on the phone);
+- the text is not under the camera cutout, the bottom row of the player panel is not in the "home" gesture zone.
 
-## Оценка проверяющего (дословно)
+## The checker's assessment (verbatim)
 
-«логика состояний проверена достаточно, а жесты нет… не хватает проверки на телефоне владельца — краевой жест
-„назад“ и вертикальное смахивание решаются только там».
+"the state logic is checked sufficiently, the gestures are not... what is missing is a check on the owner's phone — the
+edge "back" gesture and the vertical swipe are decided only there".
