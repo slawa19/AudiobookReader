@@ -764,12 +764,6 @@ abstract class AppLocalizations {
   /// **'Озвученное второй раз не оплачивается. После очистки его придётся озвучить и оплатить заново.'**
   String get storageNote;
 
-  /// Settings row at the bottom: opens the standard Flutter license page (third-party licenses)
-  ///
-  /// In ru, this message translates to:
-  /// **'Лицензии открытого ПО'**
-  String get licenses;
-
   /// No description provided for @clearTitle.
   ///
   /// In ru, this message translates to:

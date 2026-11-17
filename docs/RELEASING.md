@@ -4,7 +4,7 @@ Signed APKs of Book AudioReader are published in [GitHub Releases](https://githu
 That is the only distribution channel (spec
 003, R6). Every APK is built by the repository's own workflow,
 [`.github/workflows/release.yml`](../.github/workflows/release.yml), from a `vX.Y.Z` tag, and is published with a
-`SHA256SUMS` file and a build-provenance attestation.
+`SHA256SUMS` file, a `NOTICES.txt` file and a build-provenance attestation.
 
 - [For users](#for-users): download, verify, install.
 - [For the maintainer](#for-the-maintainer): one-time setup, cutting a release, dry run, recovery.
@@ -13,10 +13,13 @@ That is the only distribution channel (spec
 
 ### Download
 
-Open the [latest release](https://github.com/slawa19/BookAudioReader/releases/latest) and download two files:
+Open the [latest release](https://github.com/slawa19/BookAudioReader/releases/latest). It has three files:
 
 - `BookAudioReader-<version>.apk` — the app;
-- `SHA256SUMS` — its SHA-256 checksum.
+- `SHA256SUMS` — the SHA-256 checksums of the APK and of `NOTICES.txt`;
+- `NOTICES.txt` — the third-party notices (see [Notices](#notices)); optional, you need it only to read them.
+
+Download the APK and `SHA256SUMS`; the notices file if you want it. (`v0.1.0` has only the first two files.)
 
 The APK works on Android 12 or newer (minSdk 31). All ABIs are in one file.
 
@@ -30,7 +33,8 @@ Do at least step (b) or (c); step (a) only detects a damaged download.
 sha256sum -c SHA256SUMS
 ```
 
-It must print `BookAudioReader-<version>.apk: OK`. On Windows (PowerShell) print the hash and compare it with the line
+It must print `BookAudioReader-<version>.apk: OK` and `NOTICES.txt: OK` (if you did not download the notices file,
+add `--ignore-missing`; `v0.1.0` lists the APK only). On Windows (PowerShell) print the hash and compare it with the line
 in `SHA256SUMS` (the case does not matter):
 
 ```
@@ -95,6 +99,21 @@ deletes the books and positions.
 The app does not narrate by itself: it needs your own Google Gemini API key, entered on the settings screen and kept in
 Android's secure storage. Narration is billed by Google to that key. See [GEMINI_TTS.md](GEMINI_TTS.md) for the costs.
 
+### Notices
+
+The app has no licenses page: the interface keeps only what a reader needs (owner decision, 2026-11-17; spec 003,
+D7). The third-party notices are in two places:
+
+- **Next to the APK**: `NOTICES.txt` in the release. It is not written by hand: the workflow extracts it from the
+  very APK it publishes (`assets/flutter_assets/NOTICES.Z`, gzip), so it is the complete list that is shipped: the
+  app itself with the GPL-3.0-or-later text, the Merriweather and Roboto font licenses, the demo-text sources with the
+  CC BY-SA attribution, every Dart package the app uses, and the Flutter engine.
+- **Inside the APK**: the same data, as `assets/flutter_assets/NOTICES.Z`. To read it from a downloaded APK:
+  `unzip -p BookAudioReader-<version>.apk assets/flutter_assets/NOTICES.Z | gunzip > NOTICES.txt`.
+
+The attestation and the signature (steps b and c) cover the APK. `NOTICES.txt` is derived from it, and the checksum in
+`SHA256SUMS` covers it too; to be sure it matches the APK you hold, extract it with the command above and compare.
+
 ### What the checks prove
 
 - **The attestation (b)**, with the flags above, proves that this APK file was produced by `release.yml` of
@@ -153,9 +172,11 @@ On a push of a tag `v*.*.*` (or a manual run), `release.yml`:
    release APK with `scripts/build-apk.sh`, and deletes the keystore in an `if: always()` step;
 5. verifies the APK with `apksigner verify --print-certs` and fails if the certificate SHA-256 is not the one in the
    repository variable `SIGNING_CERT_SHA256`;
-6. names the file `BookAudioReader-<version>.apk` and writes `SHA256SUMS`;
+6. names the file `BookAudioReader-<version>.apk`, extracts `NOTICES.txt` from it (it fails if the result is empty
+   or does not name the app) and writes `SHA256SUMS` for both files;
 7. attests the APK with `actions/attest-build-provenance`;
-8. creates the GitHub Release for the tag with both files attached and generated notes.
+8. creates the GitHub Release for the tag with the three files attached (the APK, `NOTICES.txt`, `SHA256SUMS`) and
+   generated notes.
 
 Third-party actions are pinned by full commit SHA (version in a trailing comment). To update one, look up the new
 commit (`gh api repos/<owner>/<action>/git/ref/tags/<tag>`; if the object type is `tag`, resolve it once more to the
@@ -235,15 +256,15 @@ GitHub.
 
 5. Watch the run: `gh run watch` (or the Actions tab). It does the same work as a CI run (toolchain install,
    analyzer, tests, build), so expect a similar time.
-6. On success, open the release page, check that it has the APK and `SHA256SUMS`, and run the verification from
-   [For users](#for-users) on the downloaded file once.
+6. On success, open the release page, check that it has the APK, `NOTICES.txt` and
+   `SHA256SUMS`, and run the verification from [For users](#for-users) on the downloaded file once.
 
 ### Dry run
 
 Actions → Release → Run workflow, keep `dry_run` ticked (or
 `gh workflow run release.yml -f dry_run=true --ref <branch>`).
-The workflow runs everything up to and including the signature check and uploads the APK and `SHA256SUMS` as a workflow
-artifact (kept 7 days). It creates no release and no attestation, and it does not require the tag to exist or the
+The workflow runs everything up to and including the signature check and uploads the APK, `NOTICES.txt` and `SHA256SUMS` as a
+workflow artifact (kept 7 days). It creates no release and no attestation, and it does not require the tag to exist or the
 commit to be on `main`; if the chosen ref is a tag, the tag-versus-`pubspec.yaml` check still applies. Use it after any change to `release.yml`, the
 build scripts or the secrets, and before any release.
 

@@ -1,7 +1,8 @@
 name: Release
 
 # A push of a vX.Y.Z tag builds the release APK, signs it with the permanent key from GitHub Secrets, verifies the
-# signature, and publishes the APK with SHA256SUMS and a build-provenance attestation in GitHub Releases.
+# signature, and publishes the APK, NOTICES.txt (extracted from the APK) and SHA256SUMS, with a build-provenance
+# attestation of the APK, in GitHub Releases.
 # Manual run (workflow_dispatch) with dry_run=true builds and uploads the APK as a workflow artifact only: no release,
 # no attestation. How to set up and cut a release: docs/RELEASING.md.
 on:
@@ -161,13 +162,21 @@ jobs:
           fi
           echo "Signing certificate matches: ${actual[0]}"
 
-      - name: Name the asset and write SHA256SUMS
+      # NOTICES.txt is the notices file the Flutter tool bundled into the APK (the app, the fonts, the demo texts, every
+      # pub package and the engine), extracted from the very APK that is published, so the attached file is the
+      # complete list actually shipped. It is listed in SHA256SUMS like the APK.
+      - name: Name the assets and write SHA256SUMS
         env:
           APK_NAME: ${{ steps.meta.outputs.apk }}
         run: |
           mkdir dist
           cp build/app/outputs/flutter-apk/app-real-release.apk "dist/${APK_NAME}"
-          (cd dist && sha256sum "${APK_NAME}" > SHA256SUMS && cat SHA256SUMS)
+          unzip -p "dist/${APK_NAME}" assets/flutter_assets/NOTICES.Z | gunzip > dist/NOTICES.txt
+          if [[ ! -s dist/NOTICES.txt ]] || ! grep -q 'Book AudioReader' dist/NOTICES.txt; then
+            echo "::error::NOTICES.txt extracted from the APK is empty or does not name the app."
+            exit 1
+          fi
+          (cd dist && sha256sum "${APK_NAME}" NOTICES.txt > SHA256SUMS && cat SHA256SUMS)
 
       - name: Upload the APK (dry run)
         if: steps.meta.outputs.release != 'true'
@@ -191,5 +200,5 @@ jobs:
           TAG: ${{ github.ref_name }}
           APK_NAME: ${{ steps.meta.outputs.apk }}
         run: |
-          gh release create "${TAG}" "dist/${APK_NAME}" dist/SHA256SUMS \
+          gh release create "${TAG}" "dist/${APK_NAME}" dist/NOTICES.txt dist/SHA256SUMS \
             --title "${TAG}" --generate-notes --verify-tag

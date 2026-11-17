@@ -8,6 +8,23 @@ in the git history.
 
 Nothing yet.
 
+## 0.1.1 — 2026-11-17
+
+Published in [GitHub Releases](https://github.com/slawa19/BookAudioReader/releases/tag/v0.1.1) as
+`BookAudioReader-0.1.1.apk` with `SHA256SUMS`, `NOTICES.txt` and a build-provenance attestation. The build number is 3.
+
+### Changed
+
+- The settings no longer have the last row "Open-source licenses" and the license page behind it: the interface keeps
+  only what a reader needs (owner decision, [spec 003](docs/specs/003-open-source.md), D7). The third-party notices
+  (the project license, the libraries and the Flutter engine, the two fonts, the demo-text sources) are still inside
+  the APK.
+
+### Added
+
+- Each release carries `NOTICES.txt`: the complete notices file extracted from the published APK, listed in
+  `SHA256SUMS`. How to read the notices is in [docs/RELEASING.md](docs/RELEASING.md).
+
 ## 0.1.0 — 2026-11-17
 
 The first release, published in [GitHub Releases](https://github.com/slawa19/BookAudioReader/releases/tag/v0.1.0) as

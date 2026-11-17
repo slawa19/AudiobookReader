@@ -18,6 +18,7 @@ The app's behavior for the reader does not change, except for the fifth interfac
 | D4 | Ukrainian (`uk`) is the **fifth** interface language (ru, en, pl, de, uk); it is also a known book language for the TTS reading style and the voice-probe phrase (`lib/tts/book_language.dart`); unknown book languages still fall back to English | the owner, 2026-11-17 |
 | D5 | Public APKs are built by GitHub Actions from a `vX.Y.Z` tag, signed with the owner's permanent key from GitHub Secrets, and published in Releases with SHA-256 checksums and a build-provenance attestation | the owner, 2026-11-17 |
 | D6 | The public name of the app is **Book AudioReader**; the repository and the release file are named `BookAudioReader` (renamed 2026-11-17); the Dart package and the applicationId keep `audiobook_reader` | the owner, 2026-11-17 |
+| D7 | The app has **no in-app licenses page**: the "Open-source licenses" row is removed from the settings (the interface keeps only what a reader needs). The third-party notices ship in the APK (`assets/flutter_assets/NOTICES.Z`) and next to it in GitHub Releases as `NOTICES.txt`, extracted from the published APK | the owner, 2026-11-17 |
 
 ## 2. Requirements
 
@@ -33,17 +34,18 @@ The app's behavior for the reader does not change, except for the fifth interfac
   and a983d6a tests, d505c82 `lib/`, `android/`, `web/`). Technical, non-interface messages in production code (the
   Gemini client, exceptions, Kotlin channel errors) are English too, merge 0d4a45e; the Changelog records the rule and
   that it awaits the owner's confirmation.
-- **R4.** Licensing. Done 2026-11-17. The GPL-3.0 `LICENSE` file; third-party notices shown in the app (Flutter's
-  license page plus the OFL texts of Merriweather and Roboto, which are in `assets/fonts/`); attribution of the demo
+- **R4.** Licensing. Done 2026-11-17. The GPL-3.0 `LICENSE` file; third-party notices that ship with the app
+  (the notices the flutter tool bundles into the APK: the packages, the engine, and the OFL texts of Merriweather and
+  Roboto, which are in `assets/fonts/`; since 0.1.1 also as `NOTICES.txt` in the release, D7); attribution of the demo
   texts, which are public-domain works from Wikisource (`assets/demo/SOURCES.txt`). The app's own entries are in the
   `NOTICES` file at the repository root, in the flutter tool's NOTICES format: "Book AudioReader" (the copyright,
   GPL-3.0-or-later, the repository link and the text of `LICENSE`), the two OFL texts and "Demo texts" with
   `assets/demo/SOURCES.txt` (the Wikisource sources and the CC BY-SA attribution of three editorial notes). The flutter
   tool reads a package's `NOTICES` in place of its `LICENSE`, so the root package is no longer listed a second time
   under its Dart name `audiobook_reader` (2026-11-17; before that the entries were registered with `LicenseRegistry`
-  at startup and the tool added `LICENSE` under the Dart name). The app has one last row in the settings,
-  "Open-source licenses", that opens `showLicensePage`. The version on that page is
-  the constant `appVersion`, which `test/licenses_test.dart` keeps equal to `version:` in `pubspec.yaml`.
+  at startup and the tool added `LICENSE` under the Dart name). Until 0.1.0 the app had a last settings row, "Open-source licenses", that opened `showLicensePage`; the owner
+  removed it on 2026-11-17 (D7), so there is no in-app page and no `appVersion` constant. The notices are in the APK and
+  in the release as `NOTICES.txt` (R6).
 - **R5.** English screenshots of the main screens in `README.md`. Done 2026-11-17. The existing `l10n-en-*` goldens
   were not enough: the interface was English, but the shelf and the book text were Russian. So the test
   `test/readme_screenshots_test.dart` takes eight goldens into `docs/screenshots/` (shelf, reading, reading with
@@ -53,7 +55,8 @@ The app's behavior for the reader does not change, except for the fifth interfac
   that content through the optional `DemoContent` argument of `Prototype.create`; without it nothing changes.
 - **R6.** The release workflow:
   - a tag-triggered CI build (`vX.Y.Z`) that produces the signed release APK;
-  - the signed APK is published in GitHub Releases, with SHA-256 checksums;
+  - the signed APK is published in GitHub Releases, with SHA-256 checksums and (from 0.1.1, D7) `NOTICES.txt`, the
+    notices file extracted from the APK;
   - a build-provenance attestation for the published APK;
   - `docs/RELEASING.md` with verification instructions for users: `gh attestation verify`,
     `apksigner verify --print-certs` against the published certificate fingerprint, and the checksum;
@@ -102,14 +105,17 @@ The app's behavior for the reader does not change, except for the fifth interfac
   `docs/RELEASING.md`. **Not verified:** the rejecting side of the guard "The tagged commit is on main" has never been
   exercised on GitHub (only the passing side ran, on this release); the same holds for the tag-versus-`pubspec.yaml`
   check. The APK on the owner's phone is a local build of the same commit, not the published file.
-- **SC-5.** The `LICENSE` file is present, the README names the license, and the in-app licenses page lists Flutter's
-  packages, the two font licenses and the demo-text attribution. The file and the README are verified;
+- **SC-5.** The `LICENSE` file is present, the README names the license, and the notices bundled into the APK list Flutter's
+  packages, the two font licenses and the demo-text attribution (no in-app page since 0.1.1, D7). The file and the
+  README are verified;
   `test/licenses_test.dart` checks the root `NOTICES` file against `LICENSE`, the two OFL texts and
   `assets/demo/SOURCES.txt`, checks the NOTICES that the flutter tool builds for the test bundle (the app listed once,
-  as "Book AudioReader", never as `audiobook_reader`), and the settings row that opens the page. The NOTICES inside the
+  as "Book AudioReader", never as `audiobook_reader`), and a source scan that no code opens a license page. The NOTICES inside the
   fake debug APK built on 2026-11-17 has the app once and no `audiobook_reader`. Seen on the phone (Samsung SM-S948B),
   2026-11-17, by an agent over adb, in both the fake and the real app: the license page lists the app once as "Book
   AudioReader", with "Demo texts", "Merriweather" and "Roboto", and has no `audiobook_reader` entry.
+  That was the page of 0.1.0; the page is removed in 0.1.1 (D7). The release workflow extracts `NOTICES.txt` from
+  the APK, which only the release run on GitHub verifies.
 
 ## 4. Out of scope
 
@@ -121,6 +127,8 @@ The app's behavior for the reader does not change, except for the fifth interfac
   replaced only the author and committer e-mail. A second rewrite to remove the keystore path with the Windows user
   account from two old `AGENTS.md` revisions was declined by the owner on 2026-11-17 (R7).
 - Keeping Russian copies of the documents next to the English ones.
+- An in-app licenses page or any "About" screen. The owner removed the settings row on 2026-11-17 (D7); the notices
+  are in the APK and in the release as `NOTICES.txt`.
 
 ## 5. Changelog
 
@@ -189,3 +197,13 @@ The app's behavior for the reader does not change, except for the fifth interfac
   "Roboto"), with no `audiobook_reader` entry, in both the fake and the real app. **Not checked on the phone:** the
   lock-screen card; the permission dialog in the real app (the owner will see it on the next "Listen"); a large system
   font; the Polish and German interface.
+- 2026-11-17 — D7, the owner's decision: the "Open-source licenses" row and the `showLicensePage` call are removed from
+  the settings, together with `lib/screens/licenses.dart`, the ARB key `licenses` in the five languages, the `appVersion`
+  constant and its sync test, the widget tests of the row and the per-language 320 dp label tests. Reason: minimal
+  interface, only what a reader needs. The notices stay available in two places: inside the APK (the NOTICES the
+  flutter tool bundles from the root `NOTICES` file and the packages) and in GitHub Releases as `NOTICES.txt`, which
+  `release.yml` extracts from the published APK and lists in `SHA256SUMS` (the complete list that ships, not only the
+  project's own file). `test/licenses_test.dart` keeps the root `NOTICES` file, the bundled-notices guard and a source
+  scan that no code opens a license page. The settings goldens and the README screenshot were re-shot (row gone).
+  Goes into 0.1.1 (build 3). Verifiable only by the release run: that the workflow extracts `NOTICES.txt` and
+  attaches it.
