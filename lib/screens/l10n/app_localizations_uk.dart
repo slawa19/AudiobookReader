@@ -479,6 +479,9 @@ class AppLocalizationsUk extends AppLocalizations {
       'Озвучене вдруге не оплачується. Після очищення його доведеться озвучити й оплатити заново.';
 
   @override
+  String get licenses => 'Ліцензії відкритого ПЗ';
+
+  @override
   String get clearTitle => 'Очистити озвучення?';
 
   @override

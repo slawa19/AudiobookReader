@@ -138,7 +138,7 @@ class EmptyBookException implements Exception {
   const EmptyBookException();
 
   @override
-  String toString() => 'EmptyBookException: в книге нет ни одного блока';
+  String toString() => 'EmptyBookException: the book has no blocks';
 }
 
 class Book {

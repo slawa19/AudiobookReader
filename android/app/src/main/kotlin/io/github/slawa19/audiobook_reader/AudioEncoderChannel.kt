@@ -21,7 +21,7 @@ class AudioEncoderChannel(messenger: BinaryMessenger) {
                 val output = call.argument<String>("outputPath")
                 val sampleRate = call.argument<Int>("sampleRate")
                 if (input == null || output == null || sampleRate == null) {
-                    result.error("invalid_arguments", "Нужны пути PCM, выхода и частота", null)
+                    result.error("invalid_arguments", "PCM path, output path and sample rate are required", null)
                 } else {
                     worker.execute {
                         val encoded = runCatching { AacAudioEncoder.encode(input, output, sampleRate) }

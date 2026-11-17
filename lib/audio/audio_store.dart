@@ -118,5 +118,5 @@ class AudioWriteCancelled implements Exception {
   const AudioWriteCancelled();
 
   @override
-  String toString() => 'Запись звука отменена удалением';
+  String toString() => 'Audio write cancelled by deletion';
 }

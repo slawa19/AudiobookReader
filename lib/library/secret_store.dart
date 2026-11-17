@@ -9,5 +9,5 @@ class SecretStoreException implements Exception {
   const SecretStoreException();
 
   @override
-  String toString() => 'Не удалось обратиться к защищённому хранилищу ключа';
+  String toString() => 'Could not access the secure key storage';
 }

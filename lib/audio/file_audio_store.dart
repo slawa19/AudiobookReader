@@ -85,7 +85,7 @@ class FileAudioStore extends AudioStore {
         throw const AudioWriteCancelled();
       }
       if (!output.existsSync() || output.lengthSync() == 0) {
-        throw const FileSystemException('Кодировщик не создал звук');
+        throw const FileSystemException('The encoder produced no audio');
       }
       // For a book — audio/ only, never create a missing books/<id>/.
       _audio(bookId).createSync();

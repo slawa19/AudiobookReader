@@ -110,6 +110,7 @@
   "storage": "Narration on this phone",
   "clear": "Clear",
   "storageNote": "Narrated audio is not paid for twice. After clearing, it has to be narrated and paid for again.",
+  "licenses": "Open-source licenses",
   "clearTitle": "Clear narration?",
   "clearBody": "{size} of audio for all books and voice samples will be deleted. To listen again, it has to be narrated and paid for again.",
   "megabytes": "{size} MB",

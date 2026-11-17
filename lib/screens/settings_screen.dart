@@ -5,6 +5,7 @@ import '../playback/tariffs.dart';
 import '../tts/voices.dart';
 import 'common.dart';
 import 'l10n/app_localizations.dart';
+import 'licenses.dart';
 import 'services.dart';
 import 'voice_screen.dart';
 
@@ -280,6 +281,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                     child: Text(l10n.storageNote, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
                   ),
+                  const SizedBox(height: 20),
+                  _Group(children: [
+                    ListTile(
+                      key: const Key('settings-licenses'),
+                      leading: const Icon(Icons.description_outlined),
+                      title: Text(l10n.licenses),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => openLicenses(context),
+                    ),
+                  ]),
                 ]),
               ),
             ]);

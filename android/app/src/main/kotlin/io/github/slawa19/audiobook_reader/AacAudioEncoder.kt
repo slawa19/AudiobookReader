@@ -21,14 +21,14 @@ object AacAudioEncoder {
     fun encode(pcmPath: String, outputPath: String, sampleRate: Int) {
         val input = File(pcmPath)
         val output = File(outputPath)
-        require(input.canonicalPath != output.canonicalPath) { "Вход и выход совпадают" }
+        require(input.canonicalPath != output.canonicalPath) { "Input and output are the same file" }
         var codec: MediaCodec? = null
         var muxer: MediaMuxer? = null
         var complete = false
         try {
             val bytes = input.length()
             require(input.isFile && bytes > 0 && bytes % 2 == 0L && sampleRate > 0) {
-                "Ожидается непустой PCM 16 бит моно с положительной частотой"
+                "Non-empty mono 16-bit PCM with a positive sample rate is expected"
             }
             val format = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, sampleRate, 1).apply {
                 setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC)
@@ -53,7 +53,7 @@ object AacAudioEncoder {
             input.inputStream().use { source ->
                 while (!outputEnded) {
                     if (SystemClock.elapsedRealtime() - lastProgress > STALL_MS) {
-                        throw IOException("Кодировщик AAC не отвечает")
+                        throw IOException("The AAC encoder is not responding")
                     }
                     if (!inputEnded) {
                         val index = encoder.dequeueInputBuffer(WAIT_US)
@@ -61,11 +61,11 @@ object AacAudioEncoder {
                             val buffer = checkNotNull(encoder.getInputBuffer(index))
                             buffer.clear()
                             val count = minOf(chunk.size.toLong(), bytes - submitted, buffer.remaining().toLong()).toInt()
-                            require(count % 2 == 0) { "Нечётный размер буфера PCM" }
+                            require(count % 2 == 0) { "Odd PCM buffer size" }
                             var read = 0
                             while (read < count) {
                                 val n = source.read(chunk, read, count - read)
-                                if (n < 0) throw IOException("PCM закончился раньше ожидаемого")
+                                if (n < 0) throw IOException("PCM ended earlier than expected")
                                 read += n
                             }
                             buffer.put(chunk, 0, count)
@@ -79,7 +79,7 @@ object AacAudioEncoder {
                     }
                     when (val index = encoder.dequeueOutputBuffer(info, WAIT_US)) {
                         MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
-                            check(track == -1) { "Повторная смена формата AAC" }
+                            check(track == -1) { "The AAC format changed twice" }
                             val encodedFormat = encoder.outputFormat
                             track = writer.addTrack(encodedFormat)
                             writer.start()
@@ -90,7 +90,7 @@ object AacAudioEncoder {
                             try {
                                 val config = info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0
                                 if (!config && info.size > 0) {
-                                    check(track >= 0) { "AAC пришёл до формата" }
+                                    check(track >= 0) { "AAC output arrived before the format" }
                                     val buffer = checkNotNull(encoder.getOutputBuffer(index))
                                     buffer.position(info.offset)
                                     buffer.limit(info.offset + info.size)
@@ -110,7 +110,7 @@ object AacAudioEncoder {
                     }
                 }
             }
-            check(track >= 0 && frames > 0) { "Пустой выход AAC" }
+            check(track >= 0 && frames > 0) { "Empty AAC output" }
             writer.stop()
             writer.release()
             muxer = null

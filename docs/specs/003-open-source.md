@@ -24,9 +24,12 @@ The app's behavior for the reader does not change, except for the fifth interfac
   links match the translated headings; the language count in the documents is five.
 - **R3.** Comments, test names and script and CI messages are in English. Behavior does not change; data that is text
   in a specific language (the exception in D3) is left as is.
-- **R4.** Licensing. The GPL-3.0 `LICENSE` file; third-party notices shown in the app (Flutter's license page plus the
-  OFL texts of Merriweather and Roboto, which are in `assets/fonts/`); attribution of the demo texts, which are
-  public-domain works from Wikisource.
+- **R4.** Licensing. Done 2026-11-17. The GPL-3.0 `LICENSE` file; third-party notices shown in the app (Flutter's
+  license page plus the OFL texts of Merriweather and Roboto, which are in `assets/fonts/`); attribution of the demo
+  texts, which are public-domain works from Wikisource (`assets/demo/SOURCES.txt`). The app registers the project's own
+  entry and the two OFL texts with `LicenseRegistry` (`lib/screens/licenses.dart`; the texts are bundled as assets) and
+  has one last row in the settings, "Open-source licenses", that opens `showLicensePage`. The version on that page is
+  the constant `appVersion`, which `test/licenses_test.dart` keeps equal to `version:` in `pubspec.yaml`.
 - **R5.** English screenshots of the main screens in `README.md` (the English-interface goldens replace the Russian
   ones in the screenshots section).
 - **R6.** The release workflow:
@@ -69,4 +72,11 @@ The app's behavior for the reader does not change, except for the fifth interfac
 - 2026-11-17 — R1 done and merged: Ukrainian as the fifth interface language (76d49bb, merge 5ddfeb6).
 - 2026-11-17 — pre-publication audit (R7): the 179-commit history contains no secrets, keystores or third-party
   copyrighted content; no history rewrite.
+- 2026-11-17 — R4 done: `LICENSE` (GPL-3.0, the unmodified official text), `assets/demo/SOURCES.txt` (Wikisource page
+  names and revision ids; the three editorial notes of the Pushkin text are CC BY-SA 4.0), the in-app license page with
+  the font and project entries, the settings row.
+- 2026-11-17 — rule for technical text (the orchestrator's decision for the open-source release, awaiting the owner's
+  confirmation): diagnostic text that is not part of a designed interface state is written in English, like Google's
+  own error text that the app already shows as is. The hard-coded Russian messages of `lib/tts/gemini.dart`, the
+  exceptions in `lib/` and the Kotlin channel errors were translated; the interface strings stay in the ARB files.
 - 2026-11-17 — spec written; documentation translated to English (R2) by a separate agent working in its own worktree.

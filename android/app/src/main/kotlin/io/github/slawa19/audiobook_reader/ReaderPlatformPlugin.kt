@@ -34,7 +34,7 @@ class ReaderPlatformPlugin : FlutterPlugin, ActivityAware {
             if (call.method != "setEnabled") result.notImplemented()
             else {
                 val enabled = call.argument<Boolean>("enabled")
-                if (enabled == null) result.error("invalid_arguments", "Нужен флаг enabled", null)
+                if (enabled == null) result.error("invalid_arguments", "The enabled flag is required", null)
                 else {
                     keepScreenOn = enabled
                     applyScreenAwake()
@@ -49,7 +49,7 @@ class ReaderPlatformPlugin : FlutterPlugin, ActivityAware {
             } else {
                 val uri = call.argument<String>("url")?.let(Uri::parse)
                 if (uri == null || uri.scheme != "https" || uri.host.isNullOrEmpty()) {
-                    result.error("invalid_url", "Ожидается адрес HTTPS", null)
+                    result.error("invalid_url", "An HTTPS URL is expected", null)
                 } else {
                     try {
                         context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

@@ -110,6 +110,7 @@
   "storage": "Vertonung auf dem Telefon",
   "clear": "Leeren",
   "storageNote": "Vertonter Ton wird nicht zweimal bezahlt. Nach dem Leeren muss er neu vertont und bezahlt werden.",
+  "licenses": "Open-Source-Lizenzen",
   "clearTitle": "Vertonung leeren?",
   "clearBody": "{size} Ton aller Bücher und Hörproben werden gelöscht. Zum erneuten Anhören muss er neu vertont und bezahlt werden.",
   "megabytes": "{size} MB",
