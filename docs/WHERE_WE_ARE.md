@@ -28,7 +28,10 @@ language; documentation, code comments, test names and technical messages in Eng
 workflow with the pinned toolchain ([RELEASING.md](RELEASING.md)). The four signing secrets and the variable
 `SIGNING_CERT_SHA256` are set in GitHub. The dry run of the release workflow passed on 2026-11-17 (run 44035431681);
 its attestation and release steps are skipped in a dry run and have never run. No release has been cut and the repository is still private; build attestations work only in a public
-repository, so the first real release is possible only after the owner switches it to public.
+repository, so the first real release is possible only after the owner switches it to public. The independent Codex
+review of spec 003 (REWORK, nine findings) has been landed
+([reviews/CODEX_REVIEW_003_2026-11-17.md](reviews/CODEX_REVIEW_003_2026-11-17.md)); one finding, the keystore path with
+the Windows user account in two old commits, stays in the history by the owner's decision (spec 003, R7).
 
 The public name of the app is **Book AudioReader** (owner decision of 2026-11-17): the Android label, the license page,
 the web prototype and the README use it. The repository, the Dart package, the applicationId and the release file name
@@ -90,7 +93,8 @@ Documents (the full index is [README.md](README.md)):
 - [RELEASING.md](RELEASING.md) — signed releases from GitHub Actions: how users verify the APK, how the maintainer cuts
   a release.
 - [reviews/](reviews/) — review records: of documents and the prototype (Codex, 2026-11-14), of code by stages, of the
-  reading screen and of the architecture (2026-11-15 and 2026-11-16), the experiment log.
+  reading screen and of the architecture (2026-11-15 and 2026-11-16), of the open-source preparation (2026-11-17), the
+  experiment log.
 - [prototype/README.md](prototype/README.md) — the prototype: running, gestures, palette, languages, screenshots.
 - [screenshots/](screenshots/) — the English README screenshots (`test/readme_screenshots_test.dart`).
 - [GEMINI_TTS.md](GEMINI_TTS.md) — the request shape, voices and rates verified in AudiobookStudio.

@@ -17,12 +17,16 @@ const projectLicenseAsset = 'LICENSE';
 const merriweatherLicenseAsset = 'assets/fonts/Merriweather-OFL.txt';
 const robotoLicenseAsset = 'assets/fonts/Roboto-OFL.txt';
 
-/// Adds the notices that Flutter does not collect itself to [LicenseRegistry]: the project, and the two bundled fonts.
-/// Flutter's own NOTICES already cover the pub packages and the engine. Call once at startup. The files are read
-/// lazily, when the license page is opened.
+/// The sources and the attribution of the bundled demo books (public-domain texts, Wikisource notes under CC BY-SA).
+const demoSourcesAsset = 'assets/demo/SOURCES.txt';
+const demoTextsPackage = 'Demo texts';
+
+/// Adds the notices that Flutter does not collect itself to [LicenseRegistry]: the project, the two bundled fonts and
+/// the bundled demo texts. Flutter's own NOTICES already cover the pub packages and the engine. Call once at startup.
+/// The files are read lazily, when the license page is opened.
 void registerLicenses() => LicenseRegistry.addLicense(collectOwnLicenses);
 
-/// The license entries of the project itself and of the bundled fonts. [bundle] is for tests.
+/// The license entries of the project itself, of the bundled fonts and of the demo texts. [bundle] is for tests.
 Stream<LicenseEntry> collectOwnLicenses([AssetBundle? bundle]) async* {
   final assets = bundle ?? rootBundle;
   final project = await assets.loadString(projectLicenseAsset);
@@ -36,6 +40,7 @@ Stream<LicenseEntry> collectOwnLicenses([AssetBundle? bundle]) async* {
   );
   yield LicenseEntryWithLineBreaks(['Merriweather'], await assets.loadString(merriweatherLicenseAsset));
   yield LicenseEntryWithLineBreaks(['Roboto'], await assets.loadString(robotoLicenseAsset));
+  yield LicenseEntryWithLineBreaks([demoTextsPackage], await assets.loadString(demoSourcesAsset));
 }
 
 /// The standard Flutter license page with the app name and version.

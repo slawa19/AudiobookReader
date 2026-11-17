@@ -75,7 +75,7 @@
   "sleepOff": "Вимкнути",
   "sleepActive": "Пауза через {count} хв",
   "sleepActiveChapter": "Пауза в кінці розділу",
-  "voiced": "озвучена",
+  "voiced": "озвучено",
   "notVoicedEstimate": "Не озвучено: ≈ {minutes} хв звуку, ≈ {price}",
   "downloadChapter": "Завантажити розділ",
   "downloadAgain": "Завантажити знову",

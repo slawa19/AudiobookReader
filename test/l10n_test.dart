@@ -20,6 +20,8 @@ Set<String> placeholders(String s) => RegExp(r'\{(\w+)[,}]').allMatches(s).map((
 void main() {
   group('ARB', () {
     final ru = arb('ru');
+    // The whole Cyrillic block: Russian and Ukrainian letters alike (І, Ї, Є, Ґ lie outside А–я).
+    final cyrillic = RegExp('[\u0400-\u04FF]');
     for (final lang in ['en', 'pl', 'de', 'uk']) {
       test('$lang: all keys are present, no extra ones, same placeholders', () {
         final other = arb(lang);
@@ -34,11 +36,22 @@ void main() {
         test('$lang: no Cyrillic (except the language names «Русский» and «Українська»)', () {
           final other = arb(lang);
           for (final k in keys(other).where((k) => k != 'langRu' && k != 'langUk')) {
-            expect(RegExp('[А-яЁё]').hasMatch(other[k]! as String), isFalse, reason: '$lang: $k');
+            expect(cyrillic.hasMatch(other[k]! as String), isFalse, reason: '$lang: $k');
           }
         });
       }
     }
+
+    test('the Cyrillic check is not vacuous: Russian and Ukrainian-only letters are caught, Latin ones are not', () {
+      expect(cyrillic.hasMatch(ru['emptyBody']! as String), isTrue);
+      for (final letter in ['ї', 'Ї', 'і', 'І', 'є', 'Є', 'ґ', 'Ґ']) {
+        expect(cyrillic.hasMatch('Bücher $letter'), isTrue, reason: letter);
+      }
+      expect(cyrillic.hasMatch(arb('uk')['langUk']! as String), isTrue);
+      // The other side: Latin text with diacritics (Polish, German) passes.
+      expect(cyrillic.hasMatch('Zażółć gęślą jaźń, Größe, Bücher'), isFalse);
+      expect(cyrillic.hasMatch(arb('en')['listen']! as String), isFalse);
+    });
 
     test('uk: no letters that the Ukrainian alphabet lacks (ы, э, ъ, ё) — not Russian text disguised as Ukrainian', () {
       final uk = arb('uk');
@@ -79,6 +92,14 @@ void main() {
       expect(en.sleepMinutes(1), '1 minute');
       expect(en.sleepMinutes(15), '15 minutes');
       expect(de.sleepMinutes(30), '30 Minuten');
+    });
+
+    test('the chapter mark agrees with the word for a chapter: «глава» is feminine, «розділ» is not', () async {
+      final ru = await AppLocalizations.delegate.load(const Locale('ru'));
+      final uk = await AppLocalizations.delegate.load(const Locale('uk'));
+      expect(ru.voiced, 'озвучена');
+      expect(uk.voiced, 'озвучено');
+      expect(uk.endOfChapterShort, 'розділ');
     });
 
     test('money, percentages and speed follow the locale', () async {

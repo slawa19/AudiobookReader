@@ -44,14 +44,21 @@ on the release page could replace `SHA256SUMS` as well. Steps (b) and (c) answer
 GitHub account), then run:
 
 ```
-gh attestation verify AudiobookReader-<version>.apk --repo slawa19/AudiobookReader
+gh attestation verify AudiobookReader-<version>.apk --repo slawa19/AudiobookReader --signer-workflow slawa19/AudiobookReader/.github/workflows/release.yml --source-ref refs/tags/v<version> --deny-self-hosted-runners
 ```
 
-A successful result (`Verification succeeded!`) means that GitHub holds a signed attestation, issued through
-Sigstore, for exactly this file (matched by its SHA-256 digest), and that the attestation says the file was produced by
-a workflow run in the repository `slawa19/AudiobookReader`. The printed details name the workflow
-(`.github/workflows/release.yml`), the tag it ran on and the commit that was built. To pin the check to the release
-workflow, add `--signer-workflow slawa19/AudiobookReader/.github/workflows/release.yml`.
+Replace `<version>` in both places (for example `0.1.0`). A successful result (`Verification succeeded!`) means that
+GitHub holds a signed attestation, issued through Sigstore, for exactly this file (matched by its SHA-256 digest), and
+that the command enforced each of these about the run that produced it:
+
+- `--repo`: the run belonged to the repository `slawa19/AudiobookReader`;
+- `--signer-workflow`: the attestation was signed by the workflow `.github/workflows/release.yml` of that repository,
+  not by any other workflow;
+- `--source-ref`: the run was started from the tag `v<version>`;
+- `--deny-self-hosted-runners`: the run was on a GitHub-hosted runner.
+
+The printed details also name the commit that was built. The command does not check that commit against anything you
+choose; to do so, add `--source-digest <commit hash>`.
 
 What this proves and what it does not is described in [What the checks prove](#what-the-checks-prove).
 
@@ -81,8 +88,8 @@ means the APK is not from the same publisher.
 3. Confirm the installation.
 
 The signing key is the same for every release, so a new version installs over the previous one and keeps your books
-and reading positions. An update does not install if its build number (the part after `+` in `version:`) is not
-higher than the installed one. Installing an APK signed by a different key requires uninstalling the app first, which
+and reading positions. Android refuses an update whose build number (the part after `+` in `version:`) is lower than
+the installed one; every release raises it. Installing an APK signed by a different key requires uninstalling the app first, which
 deletes the books and positions.
 
 The app does not narrate by itself: it needs your own Google Gemini API key, entered on the settings screen and kept in
@@ -90,8 +97,9 @@ Android's secure storage. Narration is billed by Google to that key. See [GEMINI
 
 ### What the checks prove
 
-- **The attestation (b)** proves that this APK file was produced by `release.yml` of `slawa19/AudiobookReader`, at the
-  tagged commit, on a GitHub-hosted runner. It identifies where the file came from. It does not prove that the source at
+- **The attestation (b)**, with the flags above, proves that this APK file was produced by `release.yml` of
+  `slawa19/AudiobookReader`, in a run started from the tag `v<version>`, on a GitHub-hosted runner. The workflow
+  refuses to release a commit that is not on `main`. It identifies where the file came from. It does not prove that the source at
   that commit is free of bugs or malicious code; the source is public and can be read.
 - **The signing certificate (c)** proves that the file is signed by the same key as earlier releases, that is, by the
   same publisher. The key is held in GitHub Secrets and on the owner's machine.
@@ -113,7 +121,9 @@ bash scripts/build-apk.sh --debug
 ```
 
 `setup-wsl.sh` installs Flutter, the JDK and the Android SDK at the versions and checksums pinned in
-`scripts/env.sh` (Linux x86_64; on Windows use WSL). `flutter pub get` runs with `--enforce-lockfile`, so the packages
+`scripts/env.sh` (Linux x86_64; on Windows use WSL). The build-tools, NDK and CMake are exact versions, but the platform
+package (`platforms;android-36`) is installed by name: `sdkmanager` cannot pin its revision, so a later revision may
+be installed than the one a release was built with. `flutter pub get` runs with `--enforce-lockfile`, so the packages
 are exactly those in `pubspec.lock`, and the Gradle distribution is checked against the checksum in
 `android/gradle/wrapper/gradle-wrapper.properties`.
 
@@ -133,7 +143,9 @@ are exactly those in `pubspec.lock`, and the Gradle distribution is checked agai
 
 On a push of a tag `v*.*.*` (or a manual run), `release.yml`:
 
-1. checks that the tag without `v` equals the version name in `pubspec.yaml` (the part before `+`);
+1. checks that the tag without `v` equals the version name in `pubspec.yaml` (the part before `+`), and, for a
+   release (not a dry run), that the tagged commit is on `main` (an ancestor of `origin/main`); both checks run before
+   any secret is read;
 2. frees disk space on the runner, installs the pinned toolchain with `scripts/setup-wsl.sh`;
 3. runs `scripts/test.sh` (analyzer and tests) — a release is never cut from a red tree; no signing secrets exist in
    the environment of this step;
@@ -196,8 +208,9 @@ The keystore is the permanent key. Its loss or a password loss means that every 
 books and positions) to install a build signed with a new key. Keep a backup outside GitHub; GitHub Secrets cannot be
 read back.
 
-Secrets are repository-wide: anyone with write access can push a tag and run the workflow with them. Keep the list of
-collaborators short.
+Secrets are repository-wide: anyone with write access can push a tag and run the workflow with them. A release is
+refused unless the tagged commit is on `main`, but a dry run on any branch also builds with the signing key, so the
+scripts of that branch run with the key. Keep the list of collaborators short.
 
 Artifact attestations work only in public repositories (or on GitHub Enterprise). In a private repository the
 attestation step fails and no release is created, so the first real release has to wait until the repository is public;
@@ -206,10 +219,11 @@ the dry run works at any time.
 ### Cut a release
 
 1. Bump `version:` in `pubspec.yaml`. The part before `+` is the version name and must equal the tag; the number after
-   `+` is the Android build number and must be higher than in the previous release, or phones will refuse the update.
+   `+` is the Android build number and must be higher than in the previous release (Android itself refuses only a
+   lower one, but an equal number would leave two different builds with the same number).
 2. Update `CHANGELOG.md`.
 3. Commit, merge to `main`, and make sure CI on `main` is green (`gh run list`).
-4. Tag the commit and push the tag:
+4. Tag a commit of `main` (the workflow refuses a tagged commit that is not on `main`) and push the tag:
 
    ```
    git tag v0.1.0
@@ -226,8 +240,8 @@ the dry run works at any time.
 Actions → Release → Run workflow, keep `dry_run` ticked (or
 `gh workflow run release.yml -f dry_run=true --ref <branch>`).
 The workflow runs everything up to and including the signature check and uploads the APK and `SHA256SUMS` as a workflow
-artifact (kept 7 days). It creates no release and no attestation, and it does not require the tag to exist; if the
-chosen ref is a tag, the tag-versus-`pubspec.yaml` check still applies. Use it after any change to `release.yml`, the
+artifact (kept 7 days). It creates no release and no attestation, and it does not require the tag to exist or the
+commit to be on `main`; if the chosen ref is a tag, the tag-versus-`pubspec.yaml` check still applies. Use it after any change to `release.yml`, the
 build scripts or the secrets, and before the first release.
 
 Running the workflow manually with `dry_run` off works only on a tag ref (`--ref v0.1.0`); it does the same as the tag
@@ -244,10 +258,12 @@ First read the failed step.
 
   ```
   git push origin :refs/tags/v0.1.0
-  git tag -f v0.1.0 <fixed-commit>
+  git tag -f v0.1.0 <fixed-commit-on-main>
   git push origin v0.1.0
   ```
 
+- **"The tagged commit ... is not on main"**: the tag points to a commit of another branch. Merge the work into
+  `main` and move the tag to a commit of `main` in the same way.
 - **A wrong tag or version** ("The tag ... does not match the version name"): fix `pubspec.yaml` or the tag in the same
   way.
 - **"A release for the tag already exists"**: a release was already created. If it is correct, nothing to do. If it

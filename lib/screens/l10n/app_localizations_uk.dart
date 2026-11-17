@@ -294,7 +294,7 @@ class AppLocalizationsUk extends AppLocalizations {
   String get sleepActiveChapter => 'Пауза в кінці розділу';
 
   @override
-  String get voiced => 'озвучена';
+  String get voiced => 'озвучено';
 
   @override
   String notVoicedEstimate(int minutes, double price) {

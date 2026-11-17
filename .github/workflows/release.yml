@@ -33,6 +33,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0    # the full history and origin/main, for the check that the tagged commit is on main
 
       # Decides between a real release and a dry run, and checks the tag against pubspec.yaml before any build time
       # is spent. Values from the event reach the script only through env, never through ${{ }} inside the script.
@@ -74,6 +75,22 @@ jobs:
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
           echo "apk=AudiobookReader-${version}.apk" >> "${GITHUB_OUTPUT}"
           echo "Version ${version}, release=${release}"
+
+      # A release is cut only from a commit that is already on main: a version tag on a commit of another branch fails
+      # here, before any secret is read. A dry run may run on any branch (docs/RELEASING.md, "Dry run").
+      - name: The tagged commit is on main
+        if: steps.meta.outputs.release == 'true'
+        run: |
+          if ! git rev-parse --verify --quiet refs/remotes/origin/main > /dev/null; then
+            echo "::error::origin/main is missing from the checkout, so the tagged commit cannot be checked."
+            exit 1
+          fi
+          commit="$(git rev-parse HEAD)"
+          if ! git merge-base --is-ancestor "${commit}" refs/remotes/origin/main; then
+            echo "::error::The tagged commit ${commit} is not on main. Merge it into main and tag a commit of main."
+            exit 1
+          fi
+          echo "The tagged commit ${commit} is on main."
 
       # The runner arrives almost full: the SDK and NDK need space (found 2026-11-15, see ci.yml).
       - name: Free disk space

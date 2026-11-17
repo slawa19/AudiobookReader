@@ -178,7 +178,8 @@ All source files in this repository are under this license unless stated otherwi
   from Project Gutenberg without its markers and license text), is a test fixture and is not part of the app; see its
   `SOURCES.txt`.
 
-The app shows these notices, and those of the libraries it uses, in Settings, "Open-source licenses".
+The app shows the notices of what it bundles (the project license, the two font licenses, the demo-text sources with
+the CC BY-SA attribution) and those of the libraries it uses in Settings, "Open-source licenses".
 
 The author's related projects: DocxAICorrector (translating and preparing books) and AudiobookStudio (narrating a book
 to mp3 by chapters).

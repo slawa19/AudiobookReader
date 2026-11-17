@@ -56,6 +56,7 @@ Records of what was found and what was done about it. They are not a source of t
 | [FABLE_REVIEW_001_NAV_TXT_2026-11-15.md](reviews/FABLE_REVIEW_001_NAV_TXT_2026-11-15.md) | jumps by paragraph, page return, TXT |
 | [READER_SCREEN_REVIEW_2026-11-15.md](reviews/READER_SCREEN_REVIEW_2026-11-15.md) | the reading screen during narration: two independent reviews (Opus 5.5 and gpt-6-astra) |
 | [ARCH_REVIEW_2026-11-16.md](reviews/ARCH_REVIEW_2026-11-16.md) | the architecture, separation of responsibility, repetitions, the quality of Codex's code: two independent reviews |
+| [CODEX_REVIEW_003_2026-11-17.md](reviews/CODEX_REVIEW_003_2026-11-17.md) | the open-source preparation (spec 003): release workflow, licensing, Ukrainian, demo content, publication hygiene |
 | [EXPERIMENT_CODEX_IMPL.md](reviews/EXPERIMENT_CODEX_IMPL.md) | the experiment log: Codex agents write the code, the orchestrator accepts |
 
 ## Naming rules

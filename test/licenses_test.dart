@@ -26,9 +26,9 @@ void main() {
     });
     tearDown(LicenseRegistry.reset);
 
-    test('yields the project, Merriweather and Roboto, and claims nothing else', () async {
+    test('yields the project, Merriweather, Roboto and the demo texts, and claims nothing else', () async {
       final packages = await collect();
-      expect(packages.keys.toSet(), {appName, 'Merriweather', 'Roboto'});
+      expect(packages.keys.toSet(), {appName, 'Merriweather', 'Roboto', demoTextsPackage});
       // The other side: a package name that is not ours is not claimed.
       expect(packages.containsKey('flutter'), isFalse);
       expect(packages.containsKey('Open Sans'), isFalse);
@@ -52,14 +52,30 @@ void main() {
       expect(packages['Merriweather'], contains('Merriweather'));
       expect(packages['Roboto'], contains('Roboto'));
     });
+
+    test('the demo-texts entry carries the Wikisource attribution and the CC BY-SA notice', () async {
+      final packages = await collect();
+      final text = packages[demoTextsPackage]!;
+      expect(text, contains('Wikisource contributors, licensed under CC BY-SA 4.0'));
+      expect(text, contains('https://creativecommons.org/licenses/by-sa/4.0/'));
+      expect(text, contains('public-domain works'));
+      // The other side: the attribution belongs to the demo texts alone, not to the project or the fonts.
+      for (final other in [appName, 'Merriweather', 'Roboto']) {
+        expect(packages[other], isNot(contains('CC BY-SA')), reason: other);
+      }
+    });
   });
 
-  test('the registered files are in pubspec.yaml assets', () {
+  test('the registered files are bundled by pubspec.yaml assets', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
     for (final asset in [projectLicenseAsset, merriweatherLicenseAsset, robotoLicenseAsset]) {
       expect(pubspec, contains('- $asset\n'), reason: asset);
       expect(File(asset).existsSync(), isTrue, reason: asset);
     }
+    // SOURCES.txt is bundled through its directory entry, which takes the files directly in that directory.
+    expect(pubspec, contains('- assets/demo/\n'));
+    expect(demoSourcesAsset, 'assets/demo/SOURCES.txt');
+    expect(File(demoSourcesAsset).existsSync(), isTrue);
   });
 
   test('appVersion equals the version in pubspec.yaml (without the build number)', () {
@@ -94,6 +110,7 @@ void main() {
     }
     expect(find.text('Merriweather'), findsOneWidget);
     expect(find.text('Roboto'), findsOneWidget);
+    expect(find.text(demoTextsPackage), findsOneWidget);
   });
 
   group('the row at 320 dp with the text scale 1.3', () {
