@@ -17,7 +17,7 @@ Future<void> openBook(AppHarness h) async {
 }
 
 void main() {
-  testWidgets('загрузка главы использует общую очередь, прекращает новые запросы в фоне и снимает удержание экрана', (
+  testWidgets('chapter loading uses the shared queue, stops new requests in background and releases the screen hold', (
     tester,
   ) async {
     final h = AppHarness(tester);
@@ -52,7 +52,7 @@ void main() {
     }
     await h.until(() => h.app.queue.inFlight == 0);
   });
-  testWidgets('обычная сборка без ключа: Слушать открывает настройки, синтеза нет', (tester) async {
+  testWidgets('regular build without a key: Listen opens settings, no synthesis', (tester) async {
     final h = AppHarness(tester);
     await h.start();
     await openBook(h);
@@ -64,7 +64,8 @@ void main() {
   });
 
   for (final fake in [false, true]) {
-    testWidgets('${fake ? 'подставная без ключа' : 'обычная с ключом'}: настоящий контроллер и файлы', (tester) async {
+    testWidgets('${fake ? 'fake build without a key' : 'regular build with a key'}: real controller and '
+        'files', (tester) async {
       final h = AppHarness(tester);
       await h.start(fakeTts: fake);
       if (!fake) h.app.settings.apiKey = 'test-key';

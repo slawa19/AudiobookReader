@@ -23,7 +23,7 @@ void main() {
   };
   const genericTypes = {'application/zip', 'application/x-zip-compressed', 'application/xml', 'text/xml'};
 
-  test('Android: точные разрешения воспроизведения; незашифрованный HTTP запрещён', () {
+  test('Android: exact playback permissions; cleartext HTTP is forbidden', () {
     final permissions = RegExp(r'<uses-permission(?:-sdk-\d+)?\b[^>]*>')
         .allMatches(manifest)
         .map((match) => values(match.group(0)!, 'name').single)
@@ -39,7 +39,7 @@ void main() {
     );
     final application = RegExp(r'<application\b[^>]*>').firstMatch(manifest)!.group(0)!;
     expect(values(application, 'usesCleartextTraffic'), {'false'});
-    // Без отдельного networkSecurityConfig нет исключений, разрешающих HTTP по доменам.
+    // Without a separate networkSecurityConfig there are no per-domain exceptions that allow HTTP.
     expect(values(application, 'networkSecurityConfig'), isEmpty);
     final services = RegExp(r'<service\b[^>]*>').allMatches(manifest).toList();
     expect(services, hasLength(1));
@@ -48,7 +48,7 @@ void main() {
     expect(manifest, contains('android.intent.action.MEDIA_BUTTON'));
   });
 
-  test('Android: непрозрачный URI MediaStore с octet-stream принимается, архивы и XML требуют суффикс', () {
+  test('Android: an opaque MediaStore URI with octet-stream is accepted, archives and XML require a suffix', () {
     final opaque = Uri.parse('content://media/external/file/20334');
     bool accepts(Uri uri, String type) => filters.any((filter) {
       if (!filter.contains('android.intent.action.VIEW')) return false;
@@ -71,12 +71,12 @@ void main() {
     expect(accepts(Uri.parse('file:///book.fb2'), 'application/octet-stream'), isFalse);
   });
 
-  test('Android: резервное копирование выключено', () {
+  test('Android: backup is disabled', () {
     expect(manifest, contains('android:allowBackup="false"'));
     expect(manifest, contains('android:dataExtractionRules="@xml/data_extraction_rules"'));
   });
 
-  test('Android: облако и перенос исключают все хранилища', () {
+  test('Android: cloud backup and device transfer exclude all storages', () {
     final rules = File('android/app/src/main/res/xml/data_extraction_rules.xml').readAsStringSync();
     for (final section in ['cloud-backup', 'device-transfer']) {
       final content = RegExp('<$section>([\\s\\S]*?)</$section>').firstMatch(rules)?.group(1);
@@ -98,11 +98,11 @@ void main() {
     }
   });
 
-  test('Android: только портретная ориентация', () {
+  test('Android: portrait orientation only', () {
     expect(manifest, contains('android:screenOrientation="portrait"'));
   });
 
-  test('Android: VIEW принимает книжный MIME без ограничения пути content-URI', () {
+  test('Android: VIEW accepts a book MIME without restricting the content-URI path', () {
     final view = filters.where((filter) => filter.contains('android.intent.action.VIEW'));
     expect(view, hasLength(2));
     final typed = view.singleWhere((filter) => !filter.contains('android:pathSuffix'));
@@ -112,7 +112,7 @@ void main() {
     expect(typed, isNot(contains('android:host')));
   });
 
-  test('Android: общие MIME в VIEW ограничены расширениями FB2/EPUB, TXT имеет свой MIME', () {
+  test('Android: generic MIME types in VIEW are limited to FB2/EPUB extensions, TXT has its own MIME', () {
     final generic = filters.singleWhere((filter) => filter.contains('android:pathSuffix'));
     expect(generic, contains('android.intent.action.VIEW'));
     expect(values(generic, 'name'), contains('android.intent.category.DEFAULT'));
@@ -125,7 +125,7 @@ void main() {
     }
   });
 
-  test('Android: SEND принимает книжные MIME и octet-stream, но не любые архивы и XML', () {
+  test('Android: SEND accepts book MIME types and octet-stream, but not arbitrary archives and XML', () {
     final send = filters.singleWhere((filter) => filter.contains('android.intent.action.SEND'));
     expect(values(send, 'name'), contains('android.intent.category.DEFAULT'));
     expect(values(send, 'mimeType'), {...bookTypes, 'application/octet-stream'});
@@ -134,7 +134,7 @@ void main() {
     expect(send, isNot(contains('android:path')));
   });
 
-  test('Android: выбор файла включает TXT и octet-stream; SEND не читает EXTRA_TEXT', () {
+  test('Android: the file picker includes TXT and octet-stream; SEND does not read EXTRA_TEXT', () {
     final channel = File(
       'android/app/src/main/kotlin/io/github/slawa19/audiobook_reader/IncomingFilesChannel.kt',
     ).readAsStringSync();
@@ -153,7 +153,7 @@ void main() {
     expect(channel, contains('if (uri == null || uri.scheme != "content")'));
   });
 
-  test('Android: входящие URI не становятся маршрутами Flutter; разрешений памяти нет', () {
+  test('Android: incoming URIs do not become Flutter routes; no storage permissions', () {
     expect(manifest, contains('android:launchMode="singleTask"'));
     expect(manifest, isNot(contains('android:taskAffinity=""')));
     expect(manifest, contains('android:name="flutter_deeplinking_enabled" android:value="false"'));
@@ -162,7 +162,7 @@ void main() {
     }
   });
 
-  test('Android: SEND без файла и VIEW без data молча завершаются до copy и emit', () {
+  test('Android: SEND without a file and VIEW without data finish silently before copy and emit', () {
     final channel = File(
       'android/app/src/main/kotlin/io/github/slawa19/audiobook_reader/IncomingFilesChannel.kt',
     ).readAsStringSync();
@@ -170,7 +170,7 @@ void main() {
     expect(accept, contains('Intent.ACTION_VIEW -> intent.data'));
     expect(accept, contains('Intent.ACTION_SEND -> streamUri(intent)'));
     expect(accept, contains('intent.clipData'));
-    // Обе ветви проходят общую проверку: пустой URI не попадает в рабочую очередь.
+    // Both branches go through the shared check: an empty URI does not reach the work queue.
     expect(accept, matches(RegExp(r'else -> return\s*\}\s*\?: return\s*copy\(uri, ::emit\)')));
     expect(accept, isNot(contains('Result.failure')));
     expect(accept, isNot(contains('sink')));

@@ -62,7 +62,7 @@ void main() {
   });
 
   for (final withAudio in [false, true]) {
-    test('FR-1: размер книги после перезапуска, озвучка=$withAudio', () async {
+    test('FR-1: book size after a restart, narration=$withAudio', () async {
       final id = await add();
       final before = library.shelf.single.bookBytes;
       expect(before, greaterThan(0));
@@ -78,7 +78,7 @@ void main() {
   }
 
   for (final damaged in ['missing-meta', 'missing-state', 'empty', 'broken', 'empty-state', 'broken-state', 'empty-dir']) {
-    test('повреждённая книга $damaged не мешает здоровой и сохраняет исходник', () async {
+    test('a damaged book $damaged does not affect a healthy one and keeps the source', () async {
       final good = await add();
       final bad = await add(sample('fb2_plain.xml'));
       final dir = Directory('${root.path}/books/$bad');
@@ -104,7 +104,7 @@ void main() {
   }
 
   for (final config in ['', '{broken', '{}', '{"theme":"dark"}', '[]', 'null', '{"theme":"unknown","fontStep":"bad","speed":false,"voice":7}']) {
-    test('настройки с неполным или битым JSON: $config', () async {
+    test('settings with incomplete or broken JSON: $config', () async {
       library.dispose();
       await File('${root.path}/settings.json').writeAsString(config);
       await start();
@@ -116,7 +116,7 @@ void main() {
     });
   }
 
-  test('удаление сначала переносит в tmp: сбой переноса сохраняет живую книгу', () async {
+  test('deletion first moves to tmp: a move failure keeps the live book', () async {
     final id = await add();
     final tmp = Directory('${root.path}/tmp');
     await tmp.delete(recursive: true);
@@ -134,7 +134,7 @@ void main() {
     expect(await Directory('${root.path}/books/$id').exists(), isFalse);
   });
 
-  test('ошибка записи отдаётся один раз, позиция и настройки дописываются без нового изменения', () async {
+  test('a write error is reported once, the position and settings are written later without a new change', () async {
     final id = await add();
     await library.loadBook(id);
     await library.flush();
@@ -155,7 +155,7 @@ void main() {
     await library.flush();
   });
 
-  test('FR-L1,L6: запуск чистит tmp, но сохраняет готовую книгу', () async {
+  test('FR-L1,L6: startup cleans tmp but keeps the finished book', () async {
     final id = await add();
     final abandoned = File('${root.path}/tmp/abandoned/source');
     await abandoned.create(recursive: true);
@@ -168,7 +168,7 @@ void main() {
   });
 
   test(
-    'SC-1: прерывание добавления до переименования не оставляет книги',
+    'SC-1: interrupting an add before the rename leaves no book',
     () async {
       library.dispose();
       final entered = Completer<void>();
@@ -198,14 +198,14 @@ void main() {
       parsed.complete(parseBook(sample()));
       expect(await adding, isNull);
       expect(library.shelf, isEmpty);
-      // Контроль: завершённое добавление после перезапуска видно и переживает ещё один запуск.
+      // Control: a finished add is visible after a restart and survives one more launch.
       final id = await add();
       await restart();
       expect(library.shelf.single.id, id);
     },
   );
 
-  test('FR-L2,L3: строка до конца разбора, два одновременных добавления — один разбор', () async {
+  test('FR-L2,L3: a row until the parse finishes, two concurrent adds — one parse', () async {
     library.dispose();
     final entered = Completer<void>();
     final release = Completer<ParsedBook>();
@@ -232,7 +232,7 @@ void main() {
     expect(calls, 1);
   });
 
-  test('добавление по пути сохраняет свою копию и не удаляет источник', () async {
+  test('adding by path keeps its own copy and does not delete the source', () async {
     final source = await File('${root.path}/input.fb2').writeAsBytes(sample());
     final id = (await library.addFile(source.path, 'copy.fb2'))!.id;
     expect(
@@ -244,7 +244,7 @@ void main() {
     expect((await library.loadBook(id)).blocks, isNotEmpty);
   });
 
-  test('слишком большой файл отклоняется до разбора; обычная книга принимается', () async {
+  test('a file that is too large is rejected before parsing; an ordinary book is accepted', () async {
     var calls = 0;
     library.dispose();
     await start(parser: (path) async {
@@ -270,7 +270,7 @@ void main() {
     (AddFailure.unreadable, sample('fb2_bad_attribute.xml')),
   ]) {
     test(
-      'FR-B2,B6: отказ ${reason.name} и техническая строка как у разборщика',
+      'FR-B2,B6: failure ${reason.name} and a technical string as from the parser',
       () async {
         late BookParseException expected;
         try {
@@ -294,7 +294,7 @@ void main() {
   }
 
   test(
-    'FR-L3,L5: удаление всей папки и повторное добавление новой книгой',
+    'FR-L3,L5: deleting the whole folder and re-adding as a new book',
     () async {
       final id = await add();
       await library.loadBook(id);
@@ -317,7 +317,7 @@ void main() {
     },
   );
 
-  test('FR-L4: карточка последней открытой, новые не забирают её; порядок переживает запуск', () async {
+  test('FR-L4: the card shows the last opened book, new ones do not take it; the order survives a launch', () async {
     final first = await add();
     time.advance(const Duration(seconds: 1));
     final second = await add(sample('fb2_metadata.xml'));
@@ -329,7 +329,7 @@ void main() {
     time.advance(const Duration(seconds: 1));
     final fresh = await add(sample('fb2_plain.xml'));
     expect(library.shelf.first.id, second);
-    // Интерфейс берёт открытые для карточки, неоткрытые — первыми под ней.
+    // The UI takes opened books for the card, unopened ones go first under it.
     expect(library.shelf.where((e) => !e.opened).single.id, fresh);
     expect(library.shelf.where((e) => e.opened).map((e) => e.id), [
       second,
@@ -340,7 +340,7 @@ void main() {
   });
 
   test(
-    'FR-L4: доля, глава и явный факт дочитывания независимы от двух позиций',
+    'FR-L4: the fraction, chapter and the explicit finished fact are independent of the two positions',
     () async {
       final id = await add();
       final book = await library.loadBook(id);
@@ -373,7 +373,7 @@ void main() {
     },
   );
 
-  test('FR-L1,R7: flush сохраняет последнее из частых изменений, оба места и голос', () async {
+  test('FR-L1,R7: flush keeps the last of frequent changes, both positions and the voice', () async {
     final id = await add();
     final book = await library.loadBook(id);
     library.markOpened(id);
@@ -387,7 +387,7 @@ void main() {
     expect(
       read(stateFile(id))['position'],
       isNull,
-      reason: 'до flush запись отложена',
+      reason: 'before the flush the write is deferred',
     );
     await library.flush();
     expect(time.activeTimers, 0);
@@ -403,7 +403,7 @@ void main() {
     expect(library.positionOf(id), ReadingPosition(19 % book.blocks.length, 1));
     expect(library.listeningPositionOf(id), const ReadingPosition(1, 2));
     expect(library.bookVoice(id), 'voice-19');
-    // Обратная сторона: запись только места прослушивания сохраняет прежнюю позицию чтения.
+    // The other side: writing only the listening position keeps the previous reading position.
     await library.loadBook(id);
     library.saveListeningPosition(id, const ReadingPosition(0, 0));
     await restart();
@@ -411,7 +411,7 @@ void main() {
     expect(library.listeningPositionOf(id), const ReadingPosition(0, 0));
   });
 
-  test('писатель ограничивает частоту и сам дописывает хвост через подставную секунду', () async {
+  test('the writer limits the frequency and writes the tail itself after a fake second', () async {
     final id = await add();
     await library.loadBook(id);
     library.savePosition(id, const ReadingPosition(0, 1));
@@ -421,13 +421,13 @@ void main() {
     expect((read(stateFile(id))['position']! as Map)['block'], 0);
     library.savePosition(id, const ReadingPosition(2, 1));
     time.advance(const Duration(milliseconds: 1));
-    // Дожидаемся файловой записи, не вызывая flush и не двигая часы ещё на секунду.
+    // Wait for the file write without calling flush and without advancing the clock by another second.
     await _until(() => (read(stateFile(id))['position']! as Map)['block'] == 2);
     expect(time.activeTimers, 0);
     expect((read(stateFile(id))['position']! as Map)['block'], 2);
   });
 
-  test('полка и обложка читаются из meta/state без book.json; книга декодируется при открытии', () async {
+  test('the shelf and cover are read from meta/state without book.json; the book is decoded on opening', () async {
     final id = await add(epub());
     expect(library.entry(id).cover, isA<FileImage>());
     expect(await File('${root.path}/books/$id/cover.jpg').readAsBytes(), [
@@ -447,7 +447,7 @@ void main() {
   });
 
   test(
-    'настройки переживают запуск, ключ в settings.json не попадает',
+    'settings survive a launch, the key does not reach settings.json',
     () async {
       library.settings
         ..theme = ThemeChoice.sepia
@@ -477,7 +477,7 @@ void main() {
     },
   );
 
-  test('картинки и обложка — файлы, размеры доступны после запуска без загрузки книги', () async {
+  test('images and cover are files, sizes are available after a launch without loading the book', () async {
     final recorder = ui.PictureRecorder();
     ui.Canvas(recorder).drawColor(const ui.Color(0xff000000), ui.BlendMode.src);
     final picture = recorder.endRecording();
@@ -506,7 +506,8 @@ void main() {
   for (final interrupted in [false, true]) {
     for (final anchorFound in [true, false]) {
       test(
-        'FR-R7: переразбор${interrupted ? ' прерван после book.json' : ''}, якорь ${anchorFound ? 'найден, ближайший' : 'не найден, charsBefore'}',
+        'FR-R7: re-parse${interrupted ? ' interrupted after book.json' : ''}, anchor '
+            '${anchorFound ? 'found, nearest' : 'not found, charsBefore'}',
         () async {
           final id = await add(
             anchorFound
@@ -579,11 +580,11 @@ void main() {
     }
   }
 
-  test('актуальная версия не запускает повторный разбор', () async {
+  test('the current version does not start a re-parse', () async {
     final id = await add();
     library.dispose();
     await start(
-      parser: (_) => throw StateError('Повторного разбора быть не должно'),
+      parser: (_) => throw StateError('No re-parse is expected'),
     );
     final book = await library.loadBook(id);
     expect(book.parserVersion, currentParserVersion);
@@ -591,7 +592,7 @@ void main() {
   });
 
   test(
-    'позиция хранит ровно первые 64 кодовые единицы, короткий блок целиком',
+    'the position stores exactly the first 64 code units, a short block in full',
     () async {
       final text = List.filled(20, 'Текст😀').join();
       final id = await add(
@@ -614,7 +615,7 @@ void main() {
   );
 
   test(
-    'одинаковые показания часов сохраняют порядок добавлений и открытий',
+    'identical clock readings keep the order of adds and opens',
     () async {
       final first = await add();
       final second = await add(sample('fb2_plain.xml'));
@@ -628,10 +629,10 @@ void main() {
   );
 
   test(
-    'FB2.ZIP: настоящий разбор и декодирование сохранённой модели',
+    'FB2.ZIP: real parsing and decoding of the saved model',
     () async {
-      // Настоящий путь без подставного parser: модель проходит границу изолята и хранится на диске.
-      // Повторное создание ZIP получает новую временную метку; сравниваем с точным входом.
+      // The real path without a fake parser: the model crosses the isolate boundary and is stored on disk.
+      // Recreating the ZIP gets a new timestamp; we compare with the exact input.
       final input = zip({'nested/book.fb2': sample()});
       final id = await add(input);
       expect(
@@ -648,11 +649,11 @@ void main() {
   );
 }
 
-/// Даём реальной файловой системе завершить операцию; это не часы ограничения записи.
+/// We let the real file system finish the operation; this is not the write-throttle clock.
 Future<void> _until(bool Function() predicate) async {
   final end = DateTime.now().add(const Duration(seconds: 5));
   while (!predicate()) {
-    if (DateTime.now().isAfter(end)) fail('Запись на диск не завершилась');
+    if (DateTime.now().isAfter(end)) fail('The disk write did not finish');
     await Future<void>.delayed(const Duration(milliseconds: 1));
   }
 }

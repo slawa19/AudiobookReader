@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  test('обёртка читает текущий ключ для каждого запроса; ошибки очищены', () async {
+  test('the wrapper reads the current key for each request; errors are scrubbed', () async {
     final settings = AppSettings(voice: 'Aoede', modelId: TtsModel.flash.id, apiKey: 'first-test-key');
     addTearDown(settings.dispose);
     final keys = <String?>[];
@@ -24,7 +24,7 @@ void main() {
       settings.apiKey = key;
       await expectLater(
         engine.synthesize('Sample.', profile),
-        throwsA(isA<TtsError>().having((e) => e.message, 'секрет вычищен', isNot(contains(key)))),
+        throwsA(isA<TtsError>().having((e) => e.message, 'secret scrubbed', isNot(contains(key)))),
       );
     }
     expect(keys, ['first-test-key', 'replacement-test-key']);

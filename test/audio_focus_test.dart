@@ -82,7 +82,7 @@ Future<void> settle() => Future<void>.delayed(Duration.zero);
 void main() {
   for (final state in [NarrationState.preparing, NarrationState.waiting, NarrationState.playing]) {
     for (final noisy in [false, true]) {
-      test('${state.name}: ${noisy ? 'наушники' : 'прерывание'} ставят паузу, конец не продолжает', () async {
+      test('${state.name}: ${noisy ? 'headphones' : 'interruption'} pause, the end does not resume', () async {
         final controller = FocusController()..state = NarrationState.idle;
         final sample = Sample();
         final session = Session();
@@ -103,7 +103,7 @@ void main() {
         );
         controller.change(state);
         await settle();
-        expect(session.calls, isEmpty, reason: 'фокус ждёт подтверждённой службы');
+        expect(session.calls, isEmpty, reason: 'focus waits for a confirmed service');
         gate.started.complete();
         await settle();
         expect(session.calls, [true]);
@@ -129,7 +129,7 @@ void main() {
     }
   }
 
-  test('поздний ответ фокуса до паузы не отменяет новое продолжение', () async {
+  test('a late focus reply before the pause does not cancel a new resume', () async {
     final controller = FocusController()..state = NarrationState.idle;
     final sample = Sample();
     final session = Session();

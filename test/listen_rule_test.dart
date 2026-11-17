@@ -1,5 +1,5 @@
-// Правило старта «Слушать» A–E (замечание владельца 2026-11-14; спека 001, FR-P3; А§5).
-// (а) и (д) — в listen_owner_scenario_test.dart.
+// The start rule of “Listen” A–E (owner remark of 2026-11-14; spec 001, FR-P3; А§5).
+// (а) and (д) are in listen_owner_scenario_test.dart.
 
 import 'package:audiobook_reader/audio/audio_store.dart';
 import 'package:audiobook_reader/book/model.dart';
@@ -19,7 +19,7 @@ import 'support/flows.dart';
 import 'support/harness.dart';
 import 'support/sentence_oracle.dart';
 
-/// Контроллер на подставной библиотеке, без экрана.
+/// A controller on a fake library, without a screen.
 FakeNarrationController controller(FakeLibrary library) {
   final settings = AppSettings(voice: 'Aoede', modelId: 'gemini-3.8-flash-tts');
   final tariffs = Tariffs(today: () => DateTime(2026, 11, 14));
@@ -43,22 +43,22 @@ Book bookOf(List<String> paragraphs) => Book(
     );
 
 void main() {
-  group('границы предложений (А§6.1, правило 2)', () {
-    test('знак конца и пробел; закрывающие кавычки и скобки не мешают', () {
-      // «пять» после многоточия — со строчной: продолжение предложения (правило (ii)).
+  group('sentence boundaries (А§6.1, rule 2)', () {
+    test('an end mark and a space; closing quotes and brackets do not interfere', () {
+      // “пять” after an ellipsis is lowercase: a continuation of the sentence (rule (ii)).
       const t = 'Раз. Два! «Три?» Четыре… пять (шесть.) Семь';
       expect(sentenceStarts(t), [0, 5, 10, 17, 39]);
       expect(sentenceStartAt(t, 12), 10);
       expect(sentenceStartAt(t, 0), 0);
     });
 
-    test('без пробела после знака — не граница (числа, сокращения слитно)', () {
+    test('no space after the mark — not a boundary (numbers, abbreviations written together)', () {
       expect(sentenceStarts('Версия 3.8 вышла.'), [0]);
       expect(sentenceStarts('Ответ:да,нет'), [0]);
     });
 
-    // Правило (i): точка после слова из одной буквы — не конец предложения. Пары «молчит / срабатывает».
-    test('(i) молчит: «г. Москве», инициалы «А. С. Пушкин», «т. е.»', () {
+    // Rule (i): a period after a one-letter word is not the end of a sentence. Pairs "silent / fires".
+    test('(i) silent: «г. Москве», initials «А. С. Пушкин», «т. е.»', () {
       const a = 'Он жил в г. Москве. Потом уехал.';
       expect(sentenceStarts(a), [0, a.indexOf('Потом')]);
       const b = 'А. С. Пушкин вошёл. Все встали.';
@@ -67,19 +67,19 @@ void main() {
       expect(sentenceStarts(c), [0, c.indexOf('Дальше')]);
     });
 
-    test('(i) срабатывает: точка после слова из двух и более букв', () {
+    test('(i) fires: a period after a word of two or more letters', () {
       const t = 'Он жил в Москве. Потом уехал.';
       expect(sentenceStarts(t), [0, t.indexOf('Потом')]);
     });
 
-    // Правило (ii): после знака конца новое предложение начинается с прописной, цифры или открывающей кавычки.
-    test('(ii) молчит: строчная после многоточия; авторская ремарка после «!» и тире', () {
+    // Rule (ii): after an end mark a new sentence starts with a capital letter, a digit or an opening quote.
+    test('(ii) silent: lowercase after an ellipsis; a remark by the author after “!” and a dash', () {
       expect(sentenceStarts('Он молчал... потом заговорил.'), [0]);
       const t = '— Стой! — крикнул он. — Подожди.';
       expect(sentenceStarts(t), [0, t.lastIndexOf('—')]);
     });
 
-    test('(ii) срабатывает: прописная, цифра, кавычка, реплика с тире и прописной', () {
+    test('(ii) fires: a capital letter, a digit, a quote, a dialogue line with a dash and a capital', () {
       const a = 'Он молчал... Потом заговорил.';
       expect(sentenceStarts(a), [0, a.indexOf('Потом')]);
       const b = 'Итог таков. 1920 год был трудным.';
@@ -90,33 +90,34 @@ void main() {
       expect(sentenceStarts(d), [0, d.indexOf('—')]);
     });
 
-    test('(ii) не применяется к письменностям без регистра', () {
+    test('(ii) does not apply to scripts without letter case', () {
       const t = 'שלום. עולם.';
       expect(sentenceStarts(t), [0, t.indexOf('עולם')]);
     });
 
-    test('принятое ограничение: сокращение длиннее одной буквы считается концом', () {
+    test('accepted limitation: an abbreviation longer than one letter counts as an end', () {
       const t = 'См. рис. 3 ниже.';
-      // «рис.» и «3» — граница по форме; старт возможен чуть позже, текст не теряется.
+      // “рис.” and “3” form a boundary by shape; the start may come slightly later, no text is lost.
       expect(sentenceStarts(t), [0, t.indexOf('3')]);
     });
   });
 
-  group('контроллер выбирает место (B)', () {
+  group('the controller chooses the position (B)', () {
     late FakeLibrary library;
     setUp(() => library = FakeLibrary());
 
-    test('(в) страница начинается хвостом предложения — хвост не читается, старт со следующего предложения', () {
+    test('(в) the page starts with the tail of a sentence — the tail is not read, the start is from the next '
+        'sentence', () {
       final book = bookOf(['Первое предложение. Второе предложение. Третье.', 'Новый абзац.']);
       final c = controller(library);
-      // Страница начинается внутри первого предложения (смещение 6) и идёт до конца книги.
+      // The page starts inside the first sentence (offset 6) and runs to the end of the book.
       c.listen(book, const PageRange(ReadingPosition(0, 6), ReadingPosition(1, 12)));
       expect(library.listeningPositionOf('synthetic'), const ReadingPosition(0, 20));
       expect(c.unitStart, const ReadingPosition(0, 20));
       c.close();
     });
 
-    test('страница начинается ровно с начала предложения — с него (правило не перескакивает)', () {
+    test('the page starts exactly at a sentence start — the start is from it (the rule does not skip)', () {
       final book = bookOf(['Первое предложение. Второе предложение.']);
       final c = controller(library);
       c.listen(book, const PageRange(ReadingPosition(0, 20), ReadingPosition(0, 39)));
@@ -124,7 +125,8 @@ void main() {
       c.close();
     });
 
-    test('(г) страница целиком внутри одного предложения — с его начала, хотя оно на прошлой странице', () {
+    test('(г) the page is entirely inside one sentence — start from its beginning, although it is on the previous '
+        'page', () {
       final long = 'Очень длинное предложение ${List.filled(200, 'и ещё слова').join(', ')} кончается здесь.';
       final book = bookOf(['Короткое.', long]);
       final c = controller(library);
@@ -133,7 +135,7 @@ void main() {
       c.close();
     });
 
-    test('B1: место прослушивания на странице — продолжает с него, а не с первого предложения', () {
+    test('B1: the listening position is on the page — continue from it, not from the first sentence', () {
       final book = bookOf(['Первое. Второе. Третье.', 'Четвёртое.']);
       final c = controller(library);
       library.saveListeningPosition('synthetic', const ReadingPosition(1, 0));
@@ -143,7 +145,7 @@ void main() {
       c.close();
     });
 
-    test('B1 молчит, если место прослушивания не на странице', () {
+    test('B1 stays silent if the listening position is not on the page', () {
       final book = bookOf(['Первое. Второе.', 'Третье. Четвёртое.']);
       final c = controller(library);
       library.saveListeningPosition('synthetic', const ReadingPosition(1, 8));
@@ -152,7 +154,7 @@ void main() {
       c.close();
     });
 
-    test('A: «Закрыть» не забывает место прослушивания; позиция чтения уходит экрану', () {
+    test('A: “Close” does not forget the listening position; the reading position goes to the screen', () {
       final book = bookOf(['Первое. Второе.', 'Третье.']);
       final c = controller(library);
       c.readFrom(book, 1);
@@ -163,7 +165,7 @@ void main() {
       expect(library.positionOf('synthetic'), const ReadingPosition(0, 0));
     });
 
-    test('D: «Читать отсюда» — с начала абзаца, даже если место прослушивания в нём дальше', () {
+    test('D: “Read from here” starts at the paragraph start, even if the listening position is further inside it', () {
       final book = bookOf(['Первое. Второе. Третье.']);
       final c = controller(library);
       library.saveListeningPosition('synthetic', const ReadingPosition(0, 8));
@@ -173,7 +175,8 @@ void main() {
     });
   });
 
-  testWidgets('(б) место прослушивания не на экране — старт с первого предложения страницы, страница та же',
+  testWidgets('(б) the listening position is not on screen — start from the first sentence of the page, the page is '
+      'the same',
       (tester) async {
     final p = await pumpPrototype(tester, demoAcceleration: 1);
     await openDama(tester, p, at: const ReadingPosition(23, 0));
@@ -183,7 +186,7 @@ void main() {
     await advance(tester, const Duration(milliseconds: 500));
     await tester.tap(find.byKey(const Key('player-close')));
     await advance(tester, const Duration(milliseconds: 800));
-    // Перелистал дальше сам.
+    // Turned further pages myself.
     await tapRightThird(tester);
     await tester.pumpAndSettle();
     await tapRightThird(tester);
@@ -191,18 +194,19 @@ void main() {
     final st = reader(tester);
     final page = st.layout.pages[st.page];
     final book = st.widget.book;
-    expect(page.contains(23, 0), isFalse, reason: 'место прослушивания не на экране');
-    // Ожидание — независимой проверкой по тексту правил, а не той же `sentenceStarts` (ревью логики 2026-11-14).
+    expect(page.contains(23, 0), isFalse, reason: 'the listening position is not on screen');
+    // The expectation is an independent check against the rule text, not the same `sentenceStarts` (logic review of
+    // 2026-11-14).
     final expected = firstSentenceStartOnPage(book, page);
     expect(expected, isNotNull);
     await tapCenter(tester);
     await advance(tester, const Duration(milliseconds: 400));
     await tester.tap(find.byKey(const Key('listen')));
-    // Сразу после старта (до того, как подставной голос дочитает короткий абзац).
+    // Right after the start (before the fake voice finishes the short paragraph).
     await advance(tester, const Duration(milliseconds: 600));
     expect(p.library.listeningPositionOf('dama'), expected);
     final now = st.layout.pages[st.page];
-    expect(now.contains(expected!.block, expected.offset), isTrue, reason: 'страница не сменилась');
+    expect(now.contains(expected!.block, expected.offset), isTrue, reason: 'the page did not change');
     expect(st.following, isTrue);
     expect(find.byKey(const Key('to-reading-place')), findsNothing);
   });

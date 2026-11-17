@@ -45,7 +45,7 @@ void main() {
     ('Книга.txt.bak', 'Книга.txt.bak'),
     ('.txt', ''),
   ]) {
-    test('название TXT: «$name» → «$title»', () async {
+    test('TXT title: «$name» → «$title»', () async {
       final source = await File('${root.path}/source').writeAsString('Текст.');
       final entry = (await library.addFile(source.path, name))!;
       expect(entry.title, title);
@@ -60,7 +60,7 @@ void main() {
     });
   }
 
-  test('FR-B5/L2: TXT добавляется, открывается, делится для речи и сохраняет позицию', () async {
+  test('FR-B5/L2: TXT is added, opened, split for speech and keeps the position', () async {
     final bytes = utf8.encode('Первый\nабзац.\n\nВторой абзац.\n\n***');
     final source = await File('${root.path}/provider-copy.tmp')
         .writeAsBytes(bytes);
@@ -120,7 +120,7 @@ void main() {
     expect(library.shelf, hasLength(1));
     expect(library.shelf.single.title, 'Моя.книга');
 
-    // Переразбор читает original.txt, но название должно остаться именем от провайдера.
+    // A re-parse reads original.txt, but the title must stay the name from the provider.
     final modelFile = File('${root.path}/books/${entry.id}/book.json');
     final model =
         jsonDecode(await modelFile.readAsString()) as Map<String, Object?>;
@@ -132,7 +132,7 @@ void main() {
     expect(library.shelf.single.title, 'Моя.книга');
   });
 
-  test('FR-B2/L2: имя .txt не разрешает двоичные данные; текст с другим именем принимается', () async {
+  test('FR-B2/L2: a .txt name does not allow binary data; text with another name is accepted', () async {
     final source = File('${root.path}/input.txt');
     for (var byte = 0; byte <= 8; byte++) {
       await source.writeAsBytes([...utf8.encode('Текст'), byte]);
@@ -154,7 +154,7 @@ void main() {
   });
 
   test(
-    'FR-B6: пустой TXT даёт обычный отказ unreadable и не попадает на полку',
+    'FR-B6: an empty TXT gives the ordinary unreadable failure and does not reach the shelf',
     () async {
       final source = await File('${root.path}/empty.txt')
           .writeAsBytes(utf8.encode(' \n\r\n\t'));
@@ -169,7 +169,7 @@ void main() {
   );
 
   test(
-    'название FB2 по-прежнему берётся из метаданных, а не из имени файла',
+    'the FB2 title is still taken from metadata, not from the file name',
     () async {
       final source = await File('${root.path}/input.txt').writeAsBytes(
         utf8.encode(

@@ -14,14 +14,14 @@ Map<String, Object?> arb(String lang) =>
 
 Set<String> keys(Map<String, Object?> a) => a.keys.where((k) => !k.startsWith('@')).toSet();
 
-/// Имена заполнителей в строке ICU: {name}, {count, plural, …}.
+/// Placeholder names in an ICU string: {name}, {count, plural, …}.
 Set<String> placeholders(String s) => RegExp(r'\{(\w+)[,}]').allMatches(s).map((m) => m.group(1)!).toSet();
 
 void main() {
   group('ARB', () {
     final ru = arb('ru');
     for (final lang in ['en', 'pl', 'de', 'uk']) {
-      test('$lang: все ключи есть, лишних нет, заполнители те же', () {
+      test('$lang: all keys are present, no extra ones, same placeholders', () {
         final other = arb(lang);
         expect(keys(other), keys(ru));
         for (final k in keys(ru)) {
@@ -31,7 +31,7 @@ void main() {
       });
 
       if (lang != 'uk') {
-        test('$lang: кириллицы нет (кроме названий языков «Русский» и «Українська»)', () {
+        test('$lang: no Cyrillic (except the language names «Русский» and «Українська»)', () {
           final other = arb(lang);
           for (final k in keys(other).where((k) => k != 'langRu' && k != 'langUk')) {
             expect(RegExp('[А-яЁё]').hasMatch(other[k]! as String), isFalse, reason: '$lang: $k');
@@ -40,23 +40,23 @@ void main() {
       }
     }
 
-    test('uk: нет букв, которых в украинском алфавите нет (ы, э, ъ, ё), — не русский текст под видом украинского', () {
+    test('uk: no letters that the Ukrainian alphabet lacks (ы, э, ъ, ё) — not Russian text disguised as Ukrainian', () {
       final uk = arb('uk');
       for (final k in keys(uk).where((k) => k != 'langRu')) {
         expect(RegExp('[ыэъёЫЭЪЁ]').hasMatch(uk[k]! as String), isFalse, reason: 'uk: $k');
       }
-      // Обратная сторона: русский текст эту проверку не проходит.
+      // The other side: Russian text does not pass this check.
       expect(RegExp('[ыэъёЫЭЪЁ]').hasMatch(ru['emptyBody']! as String), isTrue);
     });
 
-    test('проверка полноты не вакуумна: пропавший ключ обнаружился бы', () {
+    test('the completeness check is not vacuous: a missing key would be detected', () {
       final cut = Map.of(arb('en'))..remove('listen');
       expect(keys(cut), isNot(keys(arb('ru'))));
     });
   });
 
-  group('множественные формы и числа', () {
-    test('русский, украинский и польский — по три-четыре формы, английский и немецкий — по две', () async {
+  group('plural forms and numbers', () {
+    test('Russian, Ukrainian and Polish have three to four forms, English and German have two', () async {
       final uk = await AppLocalizations.delegate.load(const Locale('uk'));
       final ru = await AppLocalizations.delegate.load(const Locale('ru'));
       final pl = await AppLocalizations.delegate.load(const Locale('pl'));
@@ -81,7 +81,7 @@ void main() {
       expect(de.sleepMinutes(30), '30 Minuten');
     });
 
-    test('деньги, проценты и скорость — по локали', () async {
+    test('money, percentages and speed follow the locale', () async {
       final ru = await AppLocalizations.delegate.load(const Locale('ru'));
       final en = await AppLocalizations.delegate.load(const Locale('en'));
       final uk = await AppLocalizations.delegate.load(const Locale('uk'));
@@ -98,13 +98,13 @@ void main() {
     });
   });
 
-  group('язык интерфейса', () {
-    testWidgets('по умолчанию — язык телефона; не из пяти — английский', (tester) async {
+  group('interface language', () {
+    testWidgets('by default the phone language; if it is not one of the five, English', (tester) async {
       await pumpPrototype(tester, locale: 'de');
       expect(find.text('Bücher'), findsOneWidget);
     });
 
-    testWidgets('украинский телефон — украинский интерфейс, подписи Material тоже', (tester) async {
+    testWidgets('a Ukrainian phone gets the Ukrainian interface, Material labels too', (tester) async {
       await pumpPrototype(tester, locale: 'uk');
       expect(find.byTooltip('Налаштування'), findsWidgets);
       final context = tester.element(find.byTooltip('Налаштування').first);
@@ -112,12 +112,12 @@ void main() {
       expect(find.text('Settings'), findsNothing);
     });
 
-    testWidgets('язык телефона не из пяти — английский', (tester) async {
+    testWidgets('a phone language outside the five gives English', (tester) async {
       await pumpPrototype(tester, locale: 'fr');
       expect(find.text('Books'), findsOneWidget);
     });
 
-    testWidgets('выбор языка в настройках применяется сразу, системные подписи Material тоже', (tester) async {
+    testWidgets('a language chosen in settings applies at once, system Material labels too', (tester) async {
       final p = await pumpPrototype(tester);
       await tester.tap(find.byTooltip('Настройки'));
       await tester.pumpAndSettle();
@@ -128,7 +128,7 @@ void main() {
       expect(p.settings.language, 'pl');
       expect(find.text('Ustawienia'), findsWidgets);
       expect(find.text('Język'), findsOneWidget);
-      // Кнопка «назад» Material подписана по-польски: делегаты material_ui подключены.
+      // The Material back button is labelled in Polish: the material_ui delegates are wired in.
       final context = tester.element(find.text('Język'));
       expect(MaterialLocalizations.of(context).backButtonTooltip, 'Wstecz');
       await tester.tap(find.byKey(const Key('settings-language')));
@@ -139,7 +139,7 @@ void main() {
       expect(find.text('Настройки'), findsWidgets);
     });
 
-    test('разрешение языка: из списка — он, иначе английский', () {
+    test('language resolution: a language from the list is used, otherwise English', () {
       expect(resolveLocale([const Locale('pl', 'PL')], supportedLocales), const Locale('pl'));
       expect(resolveLocale([const Locale('fr'), const Locale('de')], supportedLocales), const Locale('de'));
       expect(resolveLocale([const Locale('uk', 'UA')], supportedLocales), const Locale('uk'));
@@ -147,8 +147,8 @@ void main() {
     });
   });
 
-  group('фраза пробы и стиль — по языку книги', () {
-    test('пять языков и английский для остальных', () {
+  group('the probe phrase and style follow the book language', () {
+    test('five languages and English for the rest', () {
       for (final lang in ['ru', 'en', 'pl', 'de', 'uk']) {
         expect(samplePhraseFor(lang), samplePhrases[lang]);
         expect(readingStyleFor(lang), readingStyles[lang]);
@@ -159,7 +159,7 @@ void main() {
       expect(samplePhraseFor('pl-PL'), samplePhrases['pl']);
     });
 
-    test('стиль не называет пол чтеца', () {
+    test('the style does not name the reader gender', () {
       for (final w in ['рассказчица', 'рассказчик', 'чтица', 'narratorka', 'Erzählerin', 'Erzähler', 'оповідач', 'оповідачка', 'читачка']) {
         for (final s in readingStyles.values) {
           expect(s.contains(w), isFalse, reason: w);

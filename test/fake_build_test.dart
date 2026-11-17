@@ -10,11 +10,11 @@ import 'support/harness.dart';
 import 'support/app_harness.dart';
 
 void main() {
-  test('признак сборки выключен по умолчанию, включается FAKE_TTS=true', () {
+  test('the build flag is off by default, enabled by FAKE_TTS=true', () {
     expect(useFakeTts, const String.fromEnvironment('FAKE_TTS') == 'true');
   });
 
-  testWidgets('корень Android передаёт признак сборки в настройки', (tester) async {
+  testWidgets('the Android root passes the build flag to settings', (tester) async {
     final h = AppHarness(tester);
     await h.start();
     expect(h.app.services.fakeTts, useFakeTts);
@@ -31,7 +31,7 @@ void main() {
       ('de', 'Teststimme'),
       ('uk', 'Тестовий голос'),
     ]) {
-      testWidgets('$locale: строка подставного голоса только при fakeTts=$fakeTts', (tester) async {
+      testWidgets('$locale: the fake voice row only when fakeTts=$fakeTts', (tester) async {
         final prototype = await pumpPrototype(tester, size: phone320, textScale: 2, locale: locale);
         final original = prototype.services;
         final services = AppServices(

@@ -5,7 +5,7 @@ import 'package:audiobook_reader/app/theme.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// Разрешённые прямые импорты между модулями — ARCHITECTURE.md, раздел 2 (FR-E5).
+/// Allowed direct imports between modules: ARCHITECTURE.md, section 2 (FR-E5).
 const allowed = <String, Set<String>>{
   'app': {'screens', 'reader', 'playback', 'library', 'tts', 'audio', 'book', 'platform'},
   'screens': {'reader', 'playback', 'library', 'audio', 'tts', 'book'},
@@ -20,7 +20,7 @@ const allowed = <String, Set<String>>{
 
 final _import = RegExp(r"""^(?:import|export)\s+'([^']+)'""", multiLine: true);
 
-/// Модули, которые импортирует файл [file] модуля [module].
+/// Modules imported by the file [file] of module [module].
 Set<String> importedModules(File file, String module) {
   final out = <String>{};
   for (final m in _import.allMatches(file.readAsStringSync())) {
@@ -38,7 +38,7 @@ Set<String> importedModules(File file, String module) {
   return out;
 }
 
-/// Относительная яркость по WCAG 2.x.
+/// Relative luminance per WCAG 2.x.
 double _luminance(Color c) {
   double ch(double v) => v <= 0.03928 ? v / 12.92 : math.pow((v + 0.055) / 1.055, 2.4).toDouble();
   return 0.2126 * ch(c.r) + 0.7152 * ch(c.g) + 0.0722 * ch(c.b);
@@ -53,7 +53,7 @@ double contrast(Color a, Color b) {
 }
 
 void main() {
-  test('importedModules видит import и export с хвостом и пропускает текст', () {
+  test('importedModules sees import and export with a trailing clause and skips plain text', () {
     final temp = Directory.systemTemp.createTempSync('architecture-');
     addTearDown(() => temp.deleteSync(recursive: true));
     final cases = <String, Set<String>>{
@@ -74,12 +74,12 @@ void main() {
     }
   });
 
-  test('модули импортируют только разрешённое (А§2)', () {
+  test('modules import only what is allowed (А§2)', () {
     final violations = <String>[];
     var files = 0;
     for (final dir in Directory('lib').listSync().whereType<Directory>()) {
       final module = dir.uri.pathSegments.where((s) => s.isNotEmpty).last;
-      expect(allowed.containsKey(module), isTrue, reason: 'каталог lib/$module не описан в А§2');
+      expect(allowed.containsKey(module), isTrue, reason: 'directory lib/$module is not described in А§2');
       for (final f in dir.listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'))) {
         files++;
         for (final target in importedModules(f, module)) {
@@ -91,7 +91,7 @@ void main() {
     expect(violations, isEmpty);
   });
 
-  test('проверка импортов не вакуумна: запрещённый импорт находится', () {
+  test('the import check is not vacuous: a forbidden import is found', () {
     final tmp = Directory.systemTemp.createTempSync('imports');
     addTearDown(() => tmp.deleteSync(recursive: true));
     final f = File('${tmp.path}/x.dart')..writeAsStringSync("import 'package:audiobook_reader/screens/strings.dart';\n");
@@ -99,7 +99,7 @@ void main() {
     expect(allowed['reader']!.contains('screens'), isFalse);
   });
 
-  test('модули book и tts — чистый Dart, без Flutter (А§2)', () {
+  test('modules book and tts are pure Dart, without Flutter (А§2)', () {
     for (final module in ['book', 'tts']) {
       for (final f in Directory('lib/$module').listSync(recursive: true).whereType<File>()) {
         expect(f.readAsStringSync().contains('package:flutter'), isFalse, reason: f.path);
@@ -108,23 +108,23 @@ void main() {
     }
   });
 
-  group('контраст текста в палитрах ≥ 4,5 (WCAG AA)', () {
+  group('text contrast in palettes ≥ 4.5 (WCAG AA)', () {
     for (final p in [lightPalette, sepiaPalette, darkPalette]) {
       test(p.name, () {
         final s = schemeFor(p);
         final pairs = <String, (Color, Color)>{
-          'текст на фоне': (s.onSurface, s.surface),
-          'второстепенный на фоне': (s.onSurfaceVariant, s.surface),
-          'акцент на фоне': (s.primary, s.surface),
-          'текст на кнопке': (s.onPrimary, s.primary),
-          'текст на подсветке': (s.onPrimaryContainer, s.primaryContainer),
-          // «второстепенный на подсветке» (ink2 на hl) в сепии — 4,20, ниже порога. Палитра закреплена владельцем,
-          // поэтому эта пара в интерфейсе не используется: подпись выбранной строки рисуется цветом ink.
-          'текст на панели': (s.onSurface, s.surfaceContainer),
-          'второстепенный на панели': (s.onSurfaceVariant, s.surfaceContainer),
-          'акцент на панели': (s.primary, s.surfaceContainer),
-          'текст на тональной кнопке': (s.onSecondaryContainer, s.secondaryContainer),
-          'текст на выделенном фоне': (s.onSurface, s.surfaceContainerHighest),
+          'text on background': (s.onSurface, s.surface),
+          'secondary on background': (s.onSurfaceVariant, s.surface),
+          'accent on background': (s.primary, s.surface),
+          'text on button': (s.onPrimary, s.primary),
+          'text on highlight': (s.onPrimaryContainer, s.primaryContainer),
+          // "secondary on highlight" (ink2 on hl) in sepia is 4.20, below the threshold. The palette is fixed by the
+          // owner, so this pair is not used in the UI: the label of the selected row is drawn in the ink colour.
+          'text on panel': (s.onSurface, s.surfaceContainer),
+          'secondary on panel': (s.onSurfaceVariant, s.surfaceContainer),
+          'accent on panel': (s.primary, s.surfaceContainer),
+          'text on tonal button': (s.onSecondaryContainer, s.secondaryContainer),
+          'text on selected background': (s.onSurface, s.surfaceContainerHighest),
         };
         for (final e in pairs.entries) {
           final c = contrast(e.value.$1, e.value.$2);
@@ -133,7 +133,7 @@ void main() {
       });
     }
 
-    test('формула контраста верна на известных парах', () {
+    test('the contrast formula is correct on known pairs', () {
       expect(contrast(const Color(0xFF000000), const Color(0xFFFFFFFF)), moreOrLessEquals(21, epsilon: 0.05));
       expect(contrast(const Color(0xFF777777), const Color(0xFFFFFFFF)), moreOrLessEquals(4.48, epsilon: 0.05));
     });

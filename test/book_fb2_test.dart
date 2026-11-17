@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/book_samples.dart';
 
 void main() {
-  test('FR-B3: несколько авторов и nickname, отсутствующие метаданные не выдумываются', () {
+  test('FR-B3: several authors and a nickname, missing metadata is not invented', () {
     final result = checked(utf8.encode(fixture('fb2_metadata.xml')));
     final b = result.book;
     expect(
@@ -25,7 +25,7 @@ void main() {
     expect(absent.cover, isNull);
   });
   test(
-    'FR-B3: метаданные, линейные вложенные главы, все блоки, обложка и binary',
+    'FR-B3: metadata, linear nested chapters, all blocks, cover and binary',
     () {
       final result = checked(utf8.encode(fixture('fb2_structure.xml')));
       final b = result.book;
@@ -85,7 +85,7 @@ void main() {
       expect(b.blocks[11].imageId, 'pic');
     },
   );
-  test('FR-B3: без структуры нет заголовков, стихов, цитат и разделителей', () {
+  test('FR-B3: without structure there are no headings, verses, quotes and separators', () {
     final b = checked(utf8.encode(fixture('fb2_plain.xml'))).book;
     expect(b.blocks.map((b) => (b.kind, b.text)), [
       (BlockKind.paragraph, 'Заголовок'),
@@ -97,7 +97,7 @@ void main() {
     expect(b.notes, isEmpty);
   });
   test(
-    'FR-B3: пустой родитель не даёт главы, соседние секции сохраняют названия',
+    'FR-B3: an empty parent gives no chapter, adjacent sections keep their titles',
     () {
       final b = checked(utf8.encode(fixture('fb2_sections.xml'))).book;
       expect(b.blocks.map((b) => b.text), ['А', 'Один.', 'Б', 'Два.']);
@@ -106,7 +106,7 @@ void main() {
     },
   );
   test(
-    'FR-B3/B6: диапазоны начертаний, сноска и два похожих обычных якоря',
+    'FR-B3/B6: style ranges, a note and two similar ordinary anchors',
     () {
       final b = checked(utf8.encode(fixture('fb2_inline.xml'))).book;
       expect(b.blocks.single.text, '😀 тихо громко x2 H2O[1][2][3][4].');
@@ -130,7 +130,7 @@ void main() {
       );
     },
   );
-  test('FR-B3: body без имени notes остаётся основным текстом', () {
+  test('FR-B3: a body without the name notes stays main text', () {
     final b = checked(utf8.encode(fixture('fb2_other_body.xml'))).book;
     expect(b.blocks.map((b) => b.text), ['Не сноска.']);
     expect(b.notes, isEmpty);

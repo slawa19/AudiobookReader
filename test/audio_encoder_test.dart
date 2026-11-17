@@ -11,7 +11,7 @@ void main() {
 
   for (final rate in [16000, 24000, 44100]) {
     test(
-      'WAV читается обратно: PCM16 mono, частота $rate, число отсчётов и значения',
+      'WAV reads back: PCM16 mono, rate $rate, sample count and values',
       () async {
         final pcm = Uint8List(rate * 2 + 6);
         final values = ByteData.sublistView(pcm);
@@ -49,7 +49,7 @@ void main() {
   }
 
   test(
-    'нечётный PCM и неверная частота не оставляют выход, вход не меняется',
+    'odd-length PCM and a wrong rate leave no output, the input is unchanged',
     () async {
       final input = File('${root.path}/input.pcm');
       final output = File('${root.path}/output.wav');

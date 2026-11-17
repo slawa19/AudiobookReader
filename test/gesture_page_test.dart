@@ -1,4 +1,4 @@
-// Жесты страницы настоящими событиями указателя (раздел A проверки жестов 2026-11-14).
+// Page gestures with real pointer events (section A of the gesture review of 2026-11-14).
 
 import 'package:audiobook_reader/book/model.dart';
 import 'package:audiobook_reader/library/library.dart';
@@ -32,10 +32,11 @@ Book twoNotesBook() {
 }
 
 void main() {
-  group('касание третей (FR-R2)', () {
+  group('tap on thirds (FR-R2)', () {
     for (final (size, scale, label) in const [(phone412, 1.0, '412 × 915'), (phone320, 1.3, '320 × 640 ×1,3')]) {
-      testWidgets('границы третей ($label): на 2 dp левее 1/3 — назад, правее — панели; левее 2/3 — панели, правее — '
-          'вперёд', (tester) async {
+      testWidgets('boundaries of the thirds ($label): 2 dp left of 1/3 — back, right of it — panels; left of 2/3 — '
+          'panels, right of it — '
+          'forward', (tester) async {
       final p = await pumpPrototype(tester, size: size, textScale: scale);
       await openKapitanskaya(tester, p);
       final start = await gotoPlainPage(tester);
@@ -70,8 +71,9 @@ void main() {
     }
   });
 
-  group('смахивание (FR-R2)', () {
-    testWidgets('медленное: не дотянул до половины — страница та же; перетянул за половину — следующая', (tester) async {
+  group('swipe (FR-R2)', () {
+    testWidgets('slow: stopped short of half — the page is the same; dragged past half — the next '
+        'page', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       final start = await gotoPlainPage(tester);
@@ -81,7 +83,7 @@ void main() {
       await f.hold(300);
       await f.up();
       await tester.pumpAndSettle();
-      expect(reader(tester).page, start, reason: '36 % ширины и палец остановился — страница возвращается');
+      expect(reader(tester).page, start, reason: '36 % of the width and the finger stopped — the page returns');
       expect(p.library.positionOf('kapitanskaya'),
           ReadingPosition(currentPage(tester).firstBlock, currentPage(tester).firstOffset));
 
@@ -90,11 +92,11 @@ void main() {
       await f.hold(300);
       await f.up();
       await tester.pumpAndSettle();
-      expect(reader(tester).page, start + 1, reason: '65 % ширины — следующая страница');
+      expect(reader(tester).page, start + 1, reason: '65 % of the width — the next page');
     });
 
-    testWidgets('вертикальное смахивание с небольшим уходом вбок страницу не листает', (tester) async {
-      // Читатель с привычкой к ленте проводит большим пальцем вверх; палец идёт дугой: 260 dp вверх, 45 dp влево.
+    testWidgets('a vertical swipe with a slight sideways drift does not turn the page', (tester) async {
+      // A reader used to feeds swipes the thumb up; the thumb moves in an arc: 260 dp up, 45 dp left.
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       final start = await gotoPlainPage(tester);
@@ -103,16 +105,17 @@ void main() {
         await swipe(tester, at(tester, 0.6, 0.75), Offset(dx, -260), ms: 160);
         await tester.pumpAndSettle();
         if (reader(tester).page != start) {
-          flipped.add('вверх на 260 dp с уходом вбок на ${dx.round()} dp: страница ${reader(tester).page - start > 0 ? '+1' : '−1'}');
+          flipped.add('up 260 dp with a sideways drift of ${dx.round()} dp: page '
+              '${reader(tester).page - start > 0 ? '+1' : '−1'}');
           await jumpTo(tester, start);
         }
       }
       expect(flipped, isEmpty,
-          reason: 'жест вертикальный (5–10° от вертикали): FR-R2 листает только смахивание влево и вправо');
+          reason: 'the gesture is vertical (5–10° from the vertical): FR-R2 turns pages only on a swipe left or right');
       expect(reader(tester).panelsVisible, isFalse);
     });
 
-    testWidgets('смахивание и сразу касание правой трети — две страницы вперёд', (tester) async {
+    testWidgets('a swipe followed at once by a tap on the right third — two pages forward', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       final start = await gotoPlainPage(tester);
@@ -121,10 +124,10 @@ void main() {
       await quickTap(tester, at(tester, 0.9, 0.5));
       await tester.pumpAndSettle();
       expect(reader(tester).page, start + 2,
-          reason: 'второй жест во время доводки первого не теряется (FR-R2 — то же, что для двух касаний)');
+          reason: 'a second gesture during the settling of the first is not lost (FR-R2 — same as for two taps)');
     });
 
-    testWidgets('два быстрых смахивания подряд — две страницы вперёд', (tester) async {
+    testWidgets('two fast swipes in a row — two pages forward', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       final start = await gotoPlainPage(tester);
@@ -135,7 +138,7 @@ void main() {
       expect(reader(tester).page, start + 2);
     });
 
-    testWidgets('первая страница — назад, последняя — вперёд: страница та же, позиция цела', (tester) async {
+    testWidgets('first page — back, last page — forward: the page is the same, the position is intact', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p, at: const ReadingPosition(0, 0));
       await swipe(tester, at(tester, 0.2, 0.5), const Offset(220, 0), ms: 110);
@@ -154,12 +157,12 @@ void main() {
       expect(reader(tester).page, last);
       await swipe(tester, at(tester, 0.2, 0.3), const Offset(220, 0), ms: 110);
       await tester.pumpAndSettle();
-      expect(reader(tester).page, last - 1, reason: 'после упора в конец обычное листание назад работает');
+      expect(reader(tester).page, last - 1, reason: 'after hitting the end, ordinary flipping back works');
     });
   });
 
-  group('долгое нажатие', () {
-    testWidgets('долгое нажатие и сдвиг пальца: выбран абзац, страница не листается', (tester) async {
+  group('long press', () {
+    testWidgets('a long press and a finger shift: a paragraph is selected, the page does not turn', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       final start = await gotoPlainPage(tester);
@@ -174,11 +177,12 @@ void main() {
       expect(find.byKey(ValueKey('hl-$block-0')), findsOneWidget);
     });
 
-    testWidgets('картинка и подпись не выбираются; знак сноски под долгим нажатием выбирает абзац, а не открывает сноску',
+    testWidgets('an image and a caption are not selectable; a note marker under a long press selects the paragraph and '
+        'does not open the note',
         (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p, at: const ReadingPosition(0, 0));
-      // Знак сноски n1 на первой странице.
+      // The note marker n1 on the first page.
       await tester.longPressAt(noteRefCenter(tester, 'n1'));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('note-sheet')), findsNothing);
@@ -196,7 +200,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('выбрал абзац, передумал и смахнул страницу: следующее касание правой трети листает', (tester) async {
+    testWidgets('picked a paragraph, changed my mind and swiped the page: the next tap on the right third turns the '
+        'page', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       final start = await gotoPlainPage(tester);
@@ -206,35 +211,38 @@ void main() {
 
       await swipe(tester, at(tester, 0.85, 0.5), const Offset(-220, 0), ms: 110);
       await tester.pumpAndSettle();
-      expect(reader(tester).page, start + 1, reason: 'предусловие: смахивание перелистнуло');
-      expect(find.byKey(const Key('read-from-here')), findsNothing, reason: 'предусловие: кнопки на новой странице нет');
+      expect(reader(tester).page, start + 1, reason: 'precondition: the swipe turned the page');
+      expect(find.byKey(const Key('read-from-here')), findsNothing, reason: 'precondition: there is no button on the '
+          'new page');
 
       await tester.tapAt(at(tester, 0.9, 0.5));
       await tester.pumpAndSettle();
       expect(reader(tester).page, start + 2,
-          reason: 'на экране нет ни выбора, ни кнопки — касание правой трети обязано листать (FR-R2)');
+          reason: 'the screen has neither a selection nor a button — a tap on the right third must turn the page '
+              '(FR-R2)');
     });
   });
 
-  group('знак сноски (FR-R3)', () {
-    testWidgets('два знака сносок рядом: касание второго открывает вторую сноску', (tester) async {
+  group('note marker (FR-R3)', () {
+    testWidgets('two note markers next to each other: tapping the second opens the second note', (tester) async {
       final p = await pumpPrototype(tester);
       await openSynthetic(tester, p, twoNotesBook());
       final a = noteRefCenter(tester, 'a');
       final b = noteRefCenter(tester, 'b');
-      expect((b - a).distance, lessThan(24), reason: 'предусловие: области 48 × 48 двух знаков перекрываются');
+      expect((b - a).distance, lessThan(24), reason: 'precondition: the 48 × 48 areas of the two markers overlap');
       await tester.tapAt(b);
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('note-sheet')), findsOneWidget);
-      expect(find.text('Вторая сноска.'), findsOneWidget, reason: 'палец стоит точно на втором знаке');
+      expect(find.text('Вторая сноска.'), findsOneWidget, reason: 'the finger is exactly on the second marker');
     });
 
-    testWidgets('область знака — 48 × 48, не больше: в 20 dp под знаком — сноска, в 30 dp — обычное правило третей; '
-        'касание затемнения закрывает лист и страницу не трогает', (tester) async {
+    testWidgets('the marker area is 48 × 48, no larger: 20 dp below the marker — the note, 30 dp — the ordinary rule '
+        'of thirds; '
+        'a tap on the scrim closes the sheet and does not touch the page', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p, at: const ReadingPosition(0, 0));
       final st = reader(tester);
-      // Страница с одним знаком сноски, не первая и не последняя — чтобы листание было видно.
+      // A page with a single note marker, neither first nor last — so that page turning is visible.
       await gotoPageWhere(tester, (i) => notesOnPage(tester, i).length == 1, from: 1);
       final page = st.page;
       final c = noteRefCenter(tester, notesOnPage(tester).single);

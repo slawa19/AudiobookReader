@@ -1,5 +1,5 @@
-// Помощники проверки жестов (test/gesture_*.dart): палец водится настоящими событиями указателя с метками
-// времени, чтобы распознаватели видели скорость, как на телефоне. Существующие помощники не меняются.
+// Helpers for gesture checks (test/gesture_*.dart): the finger is driven by real pointer events with timestamps
+// so that recognizers see velocity as on a phone. The existing helpers are unchanged.
 
 import 'package:audiobook_reader/app/app.dart';
 import 'package:audiobook_reader/book/model.dart';
@@ -15,7 +15,7 @@ const pageAreaKey = Key('page-area');
 
 Rect pageRect(WidgetTester tester) => tester.getRect(find.byKey(pageAreaKey));
 
-/// Палец с часами: каждое событие несёт своё время — иначе скорость жеста для распознавателя равна нулю.
+/// A finger with a clock: each event carries its own time — otherwise the gesture velocity is zero for the recognizer.
 class Finger {
   Finger._(this.tester, this.gesture);
 
@@ -28,7 +28,7 @@ class Finger {
     return Finger._(tester, g);
   }
 
-  /// Сдвиг на [delta] за [ms] миллисекунд шагами по ~16 мс; кадры идут вместе с пальцем.
+  /// Move by [delta] over [ms] milliseconds in steps of ~16 ms; frames run together with the finger.
   Future<void> move(Offset delta, {int ms = 160}) async {
     final steps = (ms / 16).ceil().clamp(1, 1000);
     for (var i = 0; i < steps; i++) {
@@ -38,7 +38,7 @@ class Finger {
     }
   }
 
-  /// Палец стоит на месте [ms] миллисекунд.
+  /// The finger stays in place for [ms] milliseconds.
   Future<void> hold(int ms) async {
     _t += Duration(milliseconds: ms);
     var left = ms;
@@ -60,14 +60,14 @@ class Finger {
   }
 }
 
-/// Смахивание: вниз в [from], сдвиг на [delta] за [ms] мс, вверх. Кадры не «усаживаются» — это делает тест.
+/// Swipe: down at [from], move by [delta] over [ms] ms, up. The frames are not "settled" — the test does that.
 Future<void> swipe(WidgetTester tester, Offset from, Offset delta, {int ms = 160}) async {
   final f = await Finger.down(tester, from);
   await f.move(delta, ms: ms);
   await f.up();
 }
 
-/// Быстрое касание без ожидания: вниз, 40 мс, вверх, один кадр.
+/// A quick tap without waiting: down, 40 ms, up, one frame.
 Future<void> quickTap(WidgetTester tester, Offset at) async {
   final g = await tester.startGesture(at);
   await tester.pump(const Duration(milliseconds: 40));
@@ -75,7 +75,7 @@ Future<void> quickTap(WidgetTester tester, Offset at) async {
   await tester.pump();
 }
 
-/// Время идёт кадрами по 16 мс — анимации и таймеры отрабатывают, как на экране.
+/// Time advances in 16 ms frames — animations and timers run as on a screen.
 Future<void> frames(WidgetTester tester, int ms) async {
   var left = ms;
   while (left > 0) {
@@ -89,7 +89,7 @@ BookPageLayout currentPage(WidgetTester tester) {
   return st.layout.pages[st.page];
 }
 
-/// Знаки сносок на странице [page] (по умолчанию — текущей), по порядку.
+/// Note markers on the page [page] (the current one by default), in order.
 List<String> notesOnPage(WidgetTester tester, [int? page]) {
   final st = reader(tester);
   final book = st.widget.book;
@@ -103,15 +103,15 @@ List<String> notesOnPage(WidgetTester tester, [int? page]) {
 
 bool pageHasNotes(WidgetTester tester, [int? page]) => notesOnPage(tester, page).isNotEmpty;
 
-/// Подготовка (не жест): встать на страницу [page]. Переход на соседнюю страницу анимирован, поэтому его
-/// завершения ждут кадрами, а не `await`.
+/// Setup (not a gesture): go to the page [page]. A move to a neighbouring page is animated, so its
+/// completion is awaited with frames, not with `await`.
 Future<void> jumpTo(WidgetTester tester, int page) async {
   final done = reader(tester).goToPage(page);
   await tester.pumpAndSettle();
   await done;
 }
 
-/// Подготовка (не жест): встать на первую страницу не раньше [from], для которой верно [test].
+/// Setup (not a gesture): go to the first page at or after [from] for which [test] holds.
 Future<int> gotoPageWhere(WidgetTester tester, bool Function(int page) test, {int from = 0}) async {
   final st = reader(tester);
   for (var i = from; i < st.layout.pages.length; i++) {
@@ -120,10 +120,10 @@ Future<int> gotoPageWhere(WidgetTester tester, bool Function(int page) test, {in
       return i;
     }
   }
-  throw StateError('подходящей страницы нет');
+  throw StateError('no suitable page');
 }
 
-/// Страница из одних целых абзацев в середине главы, без сносок и картинок, не первая и не последняя.
+/// A page made only of whole paragraphs in the middle of a chapter, without notes and images, neither first nor last.
 Future<int> gotoPlainPage(WidgetTester tester, {int from = 3}) {
   final st = reader(tester);
   final book = st.widget.book;
@@ -141,13 +141,13 @@ Future<int> gotoPlainPage(WidgetTester tester, {int from = 3}) {
   return gotoPageWhere(tester, plain, from: from);
 }
 
-/// Точка экрана по долям области страницы.
+/// A screen point by fractions of the page area.
 Offset at(WidgetTester tester, double fx, double fy) {
   final r = pageRect(tester);
   return Offset(r.left + r.width * fx, r.top + r.height * fy);
 }
 
-/// «Слушать» из нижней панели одним касанием и время на «Готовлю голос…».
+/// “Listen” from the bottom panel with one tap and the time for “Preparing the voice…”.
 Future<void> startListening(WidgetTester tester) async {
   await tapCenter(tester);
   await tester.pumpAndSettle();
@@ -155,7 +155,7 @@ Future<void> startListening(WidgetTester tester) async {
   await advance(tester, const Duration(seconds: 2));
 }
 
-/// Открывает экран чтения для произвольной (синтетической) книги поверх полки.
+/// Opens the reading screen for an arbitrary (synthetic) book over the shelf.
 Future<void> openSynthetic(WidgetTester tester, Prototype p, Book book) async {
   final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
   nav.push(MaterialPageRoute<void>(builder: (_) => ReaderScreen(services: p.services, book: book)));

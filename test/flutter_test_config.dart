@@ -4,8 +4,8 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Перед каждым файлом тестов загружает все шрифты из FontManifest (Merriweather, Roboto, значки Material):
-/// иначе в снимках экранов текст рисуется прямоугольниками тестового шрифта.
+/// Before each test file, loads all fonts from FontManifest (Merriweather, Roboto, Material icons):
+/// otherwise the text in screenshots is drawn as rectangles of the test font.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   TestWidgetsFlutterBinding.ensureInitialized();
   final manifest = jsonDecode(await rootBundle.loadString('FontManifest.json')) as List<Object?>;

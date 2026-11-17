@@ -10,7 +10,8 @@ import 'queued_player_test.dart' show TestEngine;
 import 'support/app_harness.dart';
 
 void main() {
-  testWidgets('failed основного адаптера удаляет файл и запускает повтор через настоящий контроллер', (tester) async {
+  testWidgets('failed of the main adapter deletes the file and starts a retry through the real '
+      'controller', (tester) async {
     final h = AppHarness(tester);
     final engines = <TestEngine>[];
     final player = QueuedPlayer(
@@ -37,12 +38,13 @@ void main() {
     expect(events.where((e) => e.kind == PlayerEventKind.failed).single.item, same(oldItem));
     expect(player.current, isNot(same(oldItem)));
     expect(events.last.generation, greaterThan(oldGeneration));
-    expect(oldItem.file.existsSync(), isTrue, reason: 'файл снова опубликован после повторного синтеза');
+    expect(oldItem.file.existsSync(), isTrue, reason: 'the file is published again after the repeated synthesis');
     expect(h.app.services.narration.state, NarrationState.playing);
     h.app.services.narration.pause();
   });
 
-  testWidgets('failed отдельного адаптера пробы передаётся FileVoiceSampler без текста платформы', (tester) async {
+  testWidgets('failed of the separate probe adapter is passed to FileVoiceSampler without platform '
+      'text', (tester) async {
     final h = AppHarness(tester);
     final engine = TestEngine();
     final player = QueuedPlayer(

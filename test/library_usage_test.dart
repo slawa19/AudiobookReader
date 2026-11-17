@@ -53,7 +53,7 @@ void main() {
   });
 
   test(
-    'FR-M2: суммы независимы по месяцам и строковым идентификаторам моделей',
+    'FR-M2: the sums are independent per month and per string model identifier',
     () async {
       expect(library.usage, isEmpty);
       await record('flash', 100, 10);
@@ -68,7 +68,7 @@ void main() {
     },
   );
 
-  test('подставные часы: границы месяца и года не смешивают расход', () async {
+  test('fake clock: month and year boundaries do not mix usage', () async {
     time.now = DateTime(2026, 11, 30, 23, 59, 59);
     await record('model', 1, 2);
     time.advance(const Duration(seconds: 1));
@@ -83,7 +83,7 @@ void main() {
   });
 
   test(
-    'месяц UTC-момента определяется после перевода в местное время',
+    'the month of a UTC instant is determined after conversion to local time',
     () async {
       final local = DateTime(2027, 1, 1, 0, 30);
       await record('model', 9, 4, at: local.toUtc());
@@ -92,18 +92,18 @@ void main() {
     },
   );
 
-  test('два одновременных ответа учтены ровно по одному разу', () async {
+  test('two concurrent responses are counted exactly once each', () async {
     await Future.wait([record('model', 20, 2), record('model', 30, 3)]);
     expectTokens(DateTime(2026, 11), 'model', 50, 5);
-    // Повторный вызов — новый ответ: дедупликация принадлежит очереди, не библиотеке.
+    // A repeated call is a new response: deduplication belongs to the queue, not to the library.
     await record('model', 20, 2);
     expectTokens(DateTime(2026, 11), 'model', 70, 7);
   });
 
   test(
-    'Future записи означает готовый usage.json без flush и ожидания секунды',
+    'the write Future means a ready usage.json without flush and without waiting a second',
     () async {
-      // Другие настройки уже заняли писателя в ту же подставную секунду.
+      // Other settings have already occupied the writer in the same fake second.
       library.settings.theme = ThemeChoice.dark;
       await library.flush();
       library.settings.language = 'pl';
@@ -113,20 +113,20 @@ void main() {
       expect(await File('${root.path}/usage.json.new').exists(), isFalse);
       library.dispose();
       library.settings.dispose();
-      // Имитируем потерю процесса: никаких flush перед новой библиотекой.
+      // We simulate process loss: no flush before the new library.
       await start();
       expectTokens(DateTime(2026, 11), 'model', 42, 8);
       expect(
         library.settings.language,
         isNull,
-        reason: 'отложенная запись настроек не была принудительно выполнена',
+        reason: 'the deferred settings write was not forced',
       );
       await record('model', 2, 1);
       expectTokens(DateTime(2026, 11), 'model', 44, 9);
     },
   );
 
-  test('расход, обе позиции и голос сохраняются общим писателем', () async {
+  test('usage, both positions and the voice are saved by the shared writer', () async {
     final entry = await library.addTestBytes(
       utf8.encode(fixture('fb2_sections.xml')),
       'book.fb2',
@@ -160,7 +160,7 @@ void main() {
     '{"2026-11":{"model":{"audioTokens":-1,"inputTokens":2}}}',
     '{"2026-11":{"model":{"audioTokens":1.5,"inputTokens":2}}}',
   ]) {
-    test('битый usage.json не роняет запуск: $broken', () async {
+    test('a broken usage.json does not crash startup: $broken', () async {
       await record('model', 1, 2);
       library.dispose();
       library.settings.dispose();
@@ -172,7 +172,7 @@ void main() {
     });
   }
 
-  test('сбой записи не портит прежний файл и не отравляет очередь', () async {
+  test('a write failure does not corrupt the previous file and does not poison the queue', () async {
     await record('model', 10, 1);
     final file = File('${root.path}/usage.json');
     final before = await file.readAsString();
@@ -189,7 +189,7 @@ void main() {
   });
 
   test(
-    'снимок расхода неизменяемый и не меняется после нового ответа',
+    'the usage snapshot is immutable and does not change after a new response',
     () async {
       await record('model', 10, 1);
       final snapshot = library.usage;
@@ -202,7 +202,7 @@ void main() {
   );
 
   test(
-    'отрицательные токены не записываются, нулевой ответ допустим',
+    'negative tokens are not recorded, a zero response is allowed',
     () async {
       await expectLater(record('model', -1, 1), throwsArgumentError);
       await expectLater(record('model', 1, -1), throwsArgumentError);

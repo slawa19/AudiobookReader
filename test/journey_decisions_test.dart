@@ -1,6 +1,6 @@
-// Правила a–k (приняты владельцем 2026-11-14) по пробелам документов, найденным проверкой путей пользователя
-// 2026-11-14 (docs/reviews/JOURNEY_AUDIT_2026-11-14.md), и две непроверенные проверяющим гипотезы. Находки
-// проверяющего — в journey_listening_test.dart, journey_shelf_test.dart, journey_download_test.dart.
+// Rules a–k (accepted by the owner on 2026-11-14) for the gaps in the documents found by the user-journey review of
+// 2026-11-14 (docs/reviews/JOURNEY_AUDIT_2026-11-14.md), and two hypotheses the reviewer did not verify. The reviewer
+// findings are in journey_listening_test.dart, journey_shelf_test.dart, journey_download_test.dart.
 
 import 'package:audiobook_reader/library/library.dart';
 import 'package:audiobook_reader/playback/narration.dart';
@@ -28,8 +28,8 @@ Future<void> toShelf(WidgetTester tester) async {
 }
 
 void main() {
-  group('листание', () {
-    testWidgets('второе касание правой трети через 40 мс после первого не теряется: +2 страницы', (tester) async {
+  group('page turning', () {
+    testWidgets('a second tap on the right third 40 ms after the first is not lost: +2 pages', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       final start = reader(tester).page;
@@ -42,15 +42,15 @@ void main() {
     });
   });
 
-  group('скорость (FR-P5)', () {
-    testWidgets('сохранённая скорость 1,5× — прослушивание сразу идёт с ней', (tester) async {
+  group('speed (FR-P5)', () {
+    testWidgets('a saved speed of 1.5× — listening starts with it at once', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       p.settings.speed = 1.5;
       await openKapitanskaya(tester, p);
       await listenFromPanel(tester);
       expect(p.narration.speed, 1.5);
       expect(find.text('1,5×'), findsOneWidget);
-      // Не только подпись: голос и движется со скоростью 1,5 (№8 ревью логики).
+      // Not only the label: the voice also moves at speed 1.5 (item 8 of the logic review).
       final block = p.narration.block!;
       final before = p.narration.blockProgress;
       await advance(tester, const Duration(milliseconds: 500));
@@ -61,16 +61,16 @@ void main() {
     });
   });
 
-  group('a. следование включают действия, меняющие место звука', () {
+  group('a. following is turned on by actions that change the audio position', () {
     Future<void> listeningFlipped(WidgetTester tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await listenFromPanel(tester);
       await flingNext(tester);
-      expect(reader(tester).following, isFalse, reason: 'предусловие: листал сам');
+      expect(reader(tester).following, isFalse, reason: 'precondition: turned the pages myself');
     }
 
-    testWidgets('листал сам → «вперёд»: следование включено', (tester) async {
+    testWidgets('turned pages myself → “forward”: following is on', (tester) async {
       await listeningFlipped(tester);
       await tester.tap(find.byKey(const Key('next')));
       await advance(tester, const Duration(milliseconds: 800));
@@ -79,21 +79,21 @@ void main() {
       expect(onScreen(tester, at.block, at.offset), isTrue);
     });
 
-    testWidgets('листал сам → «назад»: следование включено', (tester) async {
+    testWidgets('turned pages myself → “back”: following is on', (tester) async {
       await listeningFlipped(tester);
       await tester.tap(find.byKey(const Key('previous')));
       await advance(tester, const Duration(milliseconds: 800));
       expect(reader(tester).following, isTrue);
     });
 
-    testWidgets('пауза → листал сам → «Слушать» на панели: следование включено', (tester) async {
+    testWidgets('pause → turned pages myself → “Listen” on the panel: following is on', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await listenFromPanel(tester);
       await tester.tap(find.byKey(const Key('play-pause')));
       await advance(tester, const Duration(milliseconds: 300));
       await flingNext(tester);
-      expect(reader(tester).following, isFalse, reason: 'предусловие');
+      expect(reader(tester).following, isFalse, reason: 'precondition');
       await tester.tap(find.byKey(const Key('play-pause')));
       await advance(tester, const Duration(milliseconds: 800));
       expect(p.narration.state, NarrationState.playing);
@@ -101,7 +101,7 @@ void main() {
       expect(find.byKey(const Key('to-reading-place')), findsNothing);
     });
 
-    testWidgets('ошибка → листал сам → «Слушать» в панели ошибки: следование включено', (tester) async {
+    testWidgets('error → turned pages myself → “Listen” in the error panel: following is on', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await listenFromPanel(tester);
@@ -109,17 +109,17 @@ void main() {
       p.narration.demoShow('error402');
       await advance(tester, const Duration(milliseconds: 600));
       await flingNext(tester);
-      // Не вакуумно: листание при открытой панели ошибки следование выключило (№1 ревью логики).
-      expect(reader(tester).following, isFalse, reason: 'предусловие: листал сам после остановки');
+      // Not vacuous: turning pages with the error panel open turned following off (item 1 of the logic review).
+      expect(reader(tester).following, isFalse, reason: 'precondition: turned pages myself after the stop');
       await tester.tap(find.byKey(const Key('error-listen')));
       await advance(tester, const Duration(seconds: 2));
       expect(p.narration.isActive, isTrue);
       expect(reader(tester).following, isTrue);
       final at = reader(tester).soundingPosition!;
-      expect(onScreen(tester, at.block, at.offset), isTrue, reason: 'экран вернулся к голосу');
+      expect(onScreen(tester, at.block, at.offset), isTrue, reason: 'the screen returned to the voice');
     });
 
-    testWidgets('оглавление во время прослушивания: та же глава — голос к её началу', (tester) async {
+    testWidgets('table of contents while listening: the same chapter — the voice goes to its start', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await listenFromPanel(tester);
@@ -128,13 +128,15 @@ void main() {
       await tapCenter(tester);
       await chooseChapter(tester, book.chapters[chapter].title);
       expect(p.narration.block, greaterThanOrEqualTo(book.chapters[chapter].firstBlock));
-      expect(p.narration.block, lessThan(book.chapters[chapter].firstBlock + 3), reason: 'голос у начала главы');
+      expect(p.narration.block, lessThan(book.chapters[chapter].firstBlock + 3), reason: 'the voice is at the start of '
+          'the chapter');
       expect(reader(tester).following, isTrue);
     });
   });
 
-  group('b. перераскладка без следования', () {
-    testWidgets('листал сам во время звука → крупнее шрифт: на экране прежнее начало страницы, не место голоса',
+  group('b. re-layout without following', () {
+    testWidgets('turned pages myself during audio → larger font: the screen keeps the previous page start, not the '
+        'voice position',
         (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
@@ -153,8 +155,9 @@ void main() {
     });
   });
 
-  group('c. таймер сна', () {
-    testWidgets('выход на полку снимает таймер; снова в книгу — «Слушать» без таймера', (tester) async {
+  group('c. sleep timer', () {
+    testWidgets('going back to the shelf clears the timer; back into the book — “Listen” without a '
+        'timer', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await listenFromPanel(tester);
@@ -165,16 +168,17 @@ void main() {
       expect(p.narration.sleepTimer, isNotNull);
       await toShelf(tester);
       expect(p.narration.sleepTimer, isNull);
-      // Снова в книгу и «Слушать»: звук идёт, на панели нет таймера.
+      // Back into the book and “Listen”: audio plays, the panel has no timer.
       await openKapitanskaya(tester, p);
       await listenFromPanel(tester);
       await advance(tester, const Duration(seconds: 1));
       expect(p.narration.state, NarrationState.playing);
       expect(p.narration.sleepTimer, isNull);
-      expect(find.byIcon(Icons.bedtime_rounded), findsNothing, reason: 'значок включённого таймера не горит');
+      expect(find.byIcon(Icons.bedtime_rounded), findsNothing, reason: 'the active-timer icon is not lit');
     });
 
-    testWidgets('«до конца главы» из листа: пауза на первом абзаце следующей главы, таймер снят', (tester) async {
+    testWidgets('“until the end of the chapter” from the sheet: pause on the first paragraph of the next chapter, the '
+        'timer is cleared', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 40);
       await openKapitanskaya(tester, p);
       final book = currentBook(tester);
@@ -190,11 +194,11 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
       expect(p.narration.state, NarrationState.paused);
-      expect(book.chapterOf(p.narration.block!), chapter + 1, reason: 'остановился на начале следующей главы');
+      expect(book.chapterOf(p.narration.block!), chapter + 1, reason: 'stopped at the start of the next chapter');
       expect(p.narration.sleepTimer, isNull);
     });
 
-    testWidgets('срок истёк в «Жду связь…» — пауза, таймер снят', (tester) async {
+    testWidgets('the time ran out in “Waiting for connection…” — pause, the timer is cleared', (tester) async {
       final clock = TestClock();
       final p = await pumpWithClock(tester, clock);
       await openKapitanskaya(tester, p);
@@ -208,7 +212,8 @@ void main() {
       expect(p.narration.sleepTimer, isNull);
     });
 
-    testWidgets('смена места в той же книге («вперёд») таймер не снимает; смена книги — снимает', (tester) async {
+    testWidgets('changing position in the same book (“forward”) does not clear the timer; changing the book '
+        'does', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await listenFromPanel(tester);
@@ -223,7 +228,7 @@ void main() {
       expect(p.narration.sleepTimer, isNull);
     });
 
-    testWidgets('срок истёк в «Готовлю голос…» — пауза, таймер снят', (tester) async {
+    testWidgets('the time ran out in “Preparing the voice…” — pause, the timer is cleared', (tester) async {
       final clock = TestClock();
       final p = await pumpWithClock(tester, clock);
       await openKapitanskaya(tester, p);
@@ -238,13 +243,13 @@ void main() {
     });
   });
 
-  group('d. дочитанная книга', () {
-    testWidgets('дослушал до конца → «Закрыть» → полка: 100 %; назад на две страницы → не 100 %', (tester) async {
+  group('d. a finished book', () {
+    testWidgets('listened to the end → “Close” → shelf: 100 %; back two pages → not 100 %', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 40);
       await openKapitanskaya(tester, p, at: const ReadingPosition(99, 0));
       await listenFromPanel(tester);
       await advance(tester, const Duration(seconds: 10));
-      expect(p.narration.stopReason, StopReason.endOfBook, reason: 'предусловие');
+      expect(p.narration.stopReason, StopReason.endOfBook, reason: 'precondition');
       await tester.tap(find.byKey(const Key('player-close')));
       await advance(tester, const Duration(milliseconds: 600));
       expect(shelfProgress(ru, p.library.entry('kapitanskaya').fraction), shelfProgress(ru, 1));
@@ -258,8 +263,8 @@ void main() {
     });
   });
 
-  group('e. полка', () {
-    testWidgets('ни разу не открытые — первыми под карточкой, новые сверху', (tester) async {
+  group('e. shelf', () {
+    testWidgets('never-opened books come first under the card, newest on top', (tester) async {
       final p = await pumpPrototype(tester);
       await tester.tap(find.byTooltip('Добавить книгу'));
       await tester.pumpAndSettle();
@@ -271,21 +276,22 @@ void main() {
       final dama = tester.getTopLeft(find.text('Дама с собачкой. Рассказы')).dy;
       final card = tester.getTopLeft(find.text('Капитанская дочка')).dy;
       expect(card < belkin && belkin < voyna && voyna < dama, isTrue,
-          reason: 'карточка → новая «Повести Белкина» → неоткрытая «Война и мир» → открывавшиеся');
+          reason: 'the card → the new “Повести Белкина” → the unopened “Война и мир” → the ones opened before');
       expect(p.library.entry('belkin').opened, isFalse);
     });
   });
 
-  group('f. системная «Назад»', () {
-    // Правило f заменено решением J проверки жестов 2026-11-14 (краевой жест Android — это «Назад»): панели скрыты —
-    // «Назад» их показывает; показаны — закрывает книгу. Было: «панели открыты → прячет; второе — закрывает».
-    testWidgets('панели скрыты → «Назад» показывает панели; панели показаны → «Назад» закрывает книгу', (tester) async {
+  group('f. the system Back', () {
+    // Rule f is replaced by decision J of the gesture review of 2026-11-14 (the Android edge gesture is Back): panels
+    // hidden — Back shows them; shown — closes the book. It used to be: "panels open → hides them; the second one
+    // closes".
+    testWidgets('panels hidden → Back shows the panels; panels shown → Back closes the book', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       expect(reader(tester).panelsVisible, isFalse);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(find.byType(ReaderScreen), findsOneWidget, reason: 'случайный краевой жест книгу не закрывает');
+      expect(find.byType(ReaderScreen), findsOneWidget, reason: 'an accidental edge gesture does not close the book');
       expect(reader(tester).panelsVisible, isTrue);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
@@ -293,14 +299,15 @@ void main() {
     });
   });
 
-  group('g. «Скачать главу»', () {
+  group('g. “Download chapter”', () {
     Future<void> openToc(WidgetTester tester) async {
       await tapCenter(tester);
       await tester.tap(find.byTooltip('Оглавление'));
       await tester.pumpAndSettle();
     }
 
-    testWidgets('скачивание главы II идёт, читатель перешёл в главу III: блок хода — у главы II, предложения нет',
+    testWidgets('downloading chapter II is in progress, the reader moved to chapter III: the progress block is at '
+        'chapter II, there is no offer',
         (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
@@ -311,44 +318,47 @@ void main() {
       await tester.pumpAndSettle();
       expect(reader(tester).layout.pages[reader(tester).page].chapter, 2);
       await openToc(tester);
-      expect(find.byKey(const Key('download-stop')), findsOneWidget, reason: 'ход задачи виден');
-      expect(find.byKey(const Key('download-start')), findsNothing, reason: 'пока задача идёт, второй не предлагают');
+      expect(find.byKey(const Key('download-stop')), findsOneWidget, reason: 'the task progress is visible');
+      expect(find.byKey(const Key('download-start')), findsNothing, reason: 'while a task is running, a second one is '
+          'not offered');
       final stop = tester.getTopLeft(find.byKey(const Key('download-stop'))).dy;
       expect(stop, greaterThan(tester.getTopLeft(find.text('Глава II. Вожатый')).dy));
-      expect(stop, lessThan(tester.getTopLeft(find.text('Глава III. Крепость')).dy), reason: 'блок — у главы II');
+      expect(stop, lessThan(tester.getTopLeft(find.text('Глава III. Крепость')).dy), reason: 'the block is at chapter '
+          'II');
     });
 
-    testWidgets('смена голоса книги останавливает задачу; у текущей главы — предложение с новой оценкой',
+    testWidgets('changing the book voice stops the task; the current chapter gets an offer with a new estimate',
         (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       await openToc(tester);
       await tester.tap(find.byKey(const Key('download-start')));
       await advance(tester, const Duration(seconds: 10));
-      expect(p.downloads.task!.fraction, greaterThan(0.1), reason: 'предусловие: часть главы готова');
+      expect(p.downloads.task!.fraction, greaterThan(0.1), reason: 'precondition: part of the chapter is ready');
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       final book = currentBook(tester);
       final chapter = book.chapterOf(39);
       final remainder = p.downloads.estimate(book, chapter, p.downloads.profileFor('kapitanskaya')).seconds;
-      // Панели после оглавления ещё открыты.
+      // The panels are still open after the table of contents.
       await tester.tap(find.byKey(const Key('voice-chip-idle')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('voice-Kore')));
       await tester.pumpAndSettle();
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(p.downloads.task, isNull, reason: 'задача прежнего голоса остановлена');
+      expect(p.downloads.task, isNull, reason: 'the task of the previous voice is stopped');
       final kore = p.downloads.estimate(book, chapter, p.downloads.profileFor('kapitanskaya')).seconds;
-      expect(kore, greaterThan(remainder), reason: 'для нового голоса оценка — вся глава, а не остаток прежнего');
+      expect(kore, greaterThan(remainder), reason: 'for the new voice the estimate is the whole chapter, not the '
+          'remainder of the previous one');
       await tester.tap(find.byTooltip('Оглавление'));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('download-start')), findsOneWidget);
     });
   });
 
-  group('h. неверный ключ', () {
-    testWidgets('отказ по ключу: пояснение, «Изменить ключ» → поле ключа; «Назад» — в книгу', (tester) async {
+  group('h. wrong key', () {
+    testWidgets('a key failure: an explanation, “Change key” → the key field; “Back” — into the book', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       p.narration.demoShow('errorKey', book: currentBook(tester), fromBlock: 39);
@@ -357,7 +367,8 @@ void main() {
       await tester.tap(find.byKey(const Key('change-key')));
       await tester.pumpAndSettle();
       expect(find.byType(SettingsScreen), findsOneWidget);
-      expect(find.byKey(const Key('key-field')), findsOneWidget, reason: 'поле ключа открыто, хотя ключ сохранён');
+      expect(find.byKey(const Key('key-field')), findsOneWidget, reason: 'the key field is open although the key is '
+          'saved');
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(find.byType(ReaderScreen), findsOneWidget);
@@ -365,8 +376,8 @@ void main() {
     });
   });
 
-  group('i. «Книга закончилась»', () {
-    testWidgets('в панели только «Закрыть»', (tester) async {
+  group('i. “End of the book”', () {
+    testWidgets('the panel has only “Close”', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       p.narration.demoShow('end', book: currentBook(tester), fromBlock: 39);
@@ -379,8 +390,8 @@ void main() {
     });
   });
 
-  group('j. касание уже выбранного', () {
-    testWidgets('пауза → настройки → модель → та же модель: место паузы не сбрасывается', (tester) async {
+  group('j. tapping an already selected item', () {
+    testWidgets('pause → settings → model → the same model: the pause position is not reset', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await listenFromPanel(tester);
@@ -389,7 +400,7 @@ void main() {
       await advance(tester, const Duration(milliseconds: 300));
       final block = p.narration.block;
       final progress = p.narration.blockProgress;
-      expect(progress, greaterThan(0.05), reason: 'предусловие');
+      expect(progress, greaterThan(0.05), reason: 'precondition');
       tester.state<NavigatorState>(find.byType(Navigator).first)
           .push(MaterialPageRoute<void>(builder: (_) => SettingsScreen(services: p.services)));
       await tester.pumpAndSettle();
@@ -402,8 +413,9 @@ void main() {
     });
   });
 
-  group('k. «Готовлю голос…»', () {
-    testWidgets('«Готовлю голос…» + листал сам: подпись отдельной строкой, чип голоса и «К месту чтения»',
+  group('k. “Preparing the voice…”', () {
+    testWidgets('“Preparing the voice…” + turned pages myself: the label on its own row, the voice chip and “To '
+        'current spot”',
         (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);

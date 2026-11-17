@@ -26,14 +26,14 @@ Future<String> openLongBook(AppHarness h) async {
   await h.deleted(file);
   final id = h.app.library.shelf.single.id;
   await h.until(() => h.diskState(id)['lastOpened'] != null);
-  // Дожидаемся записи открытия и первой раскладки. Она вправе уже сохранить
-  // начальную позицию; проверяем последующее движение на замороженных часах.
+  // Wait for the open record and the first layout. It may already save
+  // the initial position; we check the subsequent movement on a frozen clock.
   await h.finish(h.app.library.flush());
   return id;
 }
 
 void main() {
-  testWidgets('один уход в фон: одна ошибка записи, книга остаётся открытой', (tester) async {
+  testWidgets('a single move to background: one write error, the book stays open', (tester) async {
     final h = AppHarness(tester);
     await h.start();
     final id = await openLongBook(h);
@@ -57,7 +57,7 @@ void main() {
     expect(h.diskState(id)['position'], isNotNull);
   });
 
-  testWidgets('FR-R7,I1: закрытие немедленно пишет место; новая полка сохраняет шрифт, тему, язык и страницу', (
+  testWidgets('FR-R7,I1: closing writes the position immediately; a new shelf keeps font, theme, language and page', (
     tester,
   ) async {
     final h = AppHarness(tester);
@@ -79,7 +79,7 @@ void main() {
     final at = shown(tester);
     expect(reader(tester).page, greaterThan(0));
     expect(at, isNot(const ReadingPosition(0, 0)));
-    // Часы писателя заморожены: без flush новая позиция остаётся только в памяти.
+    // The writer clock is frozen: without a flush the new position stays in memory only.
     expect(h.diskState(id)['position'], before);
     expect(ReadingPosition.fromJson(before as Map<String, dynamic>), isNot(at));
     expect(h.time.activeTimers, greaterThan(0));
@@ -88,8 +88,8 @@ void main() {
     await tester.pumpAndSettle();
     await h.until(() => ReadingPosition.fromJson(h.diskState(id)['position'] as Map<String, dynamic>) == at);
     expect(ReadingPosition.fromJson(h.diskState(id)['position'] as Map<String, dynamic>), at);
-    // Позиция уже проверена без ручного flush. Теперь завершаем весь flush
-    // закрытия (включая настройки), прежде чем начинать отдельную сцену языка.
+    // The position is already checked without a manual flush. Now we finish the whole flush
+    // of closing (including settings) before starting a separate language scene.
     await h.finish(h.app.flush());
     final config = File('${h.root.path}/settings.json');
     await h.until(config.existsSync);
@@ -122,7 +122,8 @@ void main() {
     expect(Theme.of(tester.element(find.byKey(const Key('page-area')))).brightness, Brightness.dark);
   });
 
-  testWidgets('фон немедленно пишет последнюю позицию, не ожидая секундного таймера', (tester) async {
+  testWidgets('background writes the last position immediately without waiting for the one-second '
+      'timer', (tester) async {
     final h = AppHarness(tester);
     await h.start();
     final id = await openLongBook(h);
@@ -140,7 +141,7 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   });
 
-  testWidgets('FR-L5: удаление через полку удаляет целиком папку книги', (tester) async {
+  testWidgets('FR-L5: deleting via the shelf deletes the whole book folder', (tester) async {
     final h = AppHarness(tester);
     await h.start();
     final file = await h.copy(shortBook());
@@ -177,7 +178,7 @@ void main() {
   });
 
   for (final scale in [1.0, 1.3]) {
-    testWidgets('FR-R8: полка 360 dp × $scale, последняя строка выше панели и +', (tester) async {
+    testWidgets('FR-R8: shelf 360 dp × $scale, the last row is above the panel and +', (tester) async {
       final h = AppHarness(tester);
       await h.start(textScale: scale);
       await tester.runAsync(() async {
@@ -201,7 +202,7 @@ void main() {
       expect(rowRect.bottom, lessThanOrEqualTo(fab.top));
       expect(rowRect.bottom, lessThanOrEqualTo(800 - 48));
       final viewport = tester.getRect(find.byType(CustomScrollView));
-      expect(viewport.bottom, 800 - 48, reason: 'список обрезан до системной панели');
+      expect(viewport.bottom, 800 - 48, reason: 'the list is cropped at the system bar');
       expect(tester.takeException(), isNull);
     });
   }

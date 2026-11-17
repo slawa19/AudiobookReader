@@ -26,7 +26,7 @@ class ControlledEncoder implements AudioEncoder {
     required int sampleRate,
   }) async {
     calls++;
-    // Даже частичный закодированный файл ещё не должен быть доступен читателю.
+    // Even a partially encoded file must not be available to the reader yet.
     await File(outputPath).writeAsBytes([1, 2, 3]);
     if (!started.isCompleted) started.complete();
     await finish.future;
@@ -61,7 +61,7 @@ void main() {
   });
   tearDown(() => root.deleteSync(recursive: true));
 
-  test('пустой готовый файл недоступен и перезаписывается; непустой доступен', () async {
+  test('an empty finished file is unavailable and is overwritten; a non-empty one is available', () async {
     final store = FileAudioStore(root, encoder: const WavAudioEncoder());
     for (final id in [null, 'book-a']) {
       final directory = id == null ? getSamples() : audio(id);
@@ -77,7 +77,7 @@ void main() {
   });
 
   test(
-    'отрезок виден только после завершения кодирования; PCM не меняется',
+    'a segment is visible only after encoding completes; PCM is unchanged',
     () async {
       final encoder = ControlledEncoder();
       final store = FileAudioStore(root, encoder: encoder);
@@ -103,7 +103,7 @@ void main() {
   );
 
   test(
-    'ошибка кодека убирает частичный файл, повтор использует тот же PCM',
+    'a codec error removes the partial file, a retry reuses the same PCM',
     () async {
       final encoder = ControlledEncoder()
         ..error = const FileSystemException('нет места');
@@ -125,7 +125,7 @@ void main() {
   );
 
   test(
-    'ошибка записи PCM возвращается; повтор после устранения причины проходит',
+    'a PCM write error is returned; a retry after the cause is fixed succeeds',
     () async {
       final store = FileAudioStore(root, encoder: const WavAudioEncoder());
       Directory('${root.path}/tmp').createSync();
@@ -143,7 +143,7 @@ void main() {
     },
   );
 
-  test('место книги и всех проб; удаление и очистка сохраняют остальные файлы книги', () async {
+  test('space of the book and all probes; deletion and clearing keep the other files of the book', () async {
     final store = FileAudioStore(root, encoder: const WavAudioEncoder());
     final original = File('${book('book-a').path}/book.json')
       ..writeAsStringSync('{}');
@@ -166,7 +166,7 @@ void main() {
     expect(audio('book-b').existsSync(), isFalse);
     expect(getSamples().existsSync(), isFalse);
     expect(original.readAsStringSync(), '{}');
-    // После очистки новый запрос снова может занять место (FR-D3).
+    // After clearing, a new request can take space again (FR-D3).
     await store.put('same', pcm, 24000, bookId: 'book-a');
     await store.put('same', pcm, 24000);
     expect(store.totalBytes, 104);
@@ -175,7 +175,7 @@ void main() {
   });
 
   test(
-    'перезапуск считает реальные файлы, замена отпечатка не удваивает место',
+    'a restart counts the real files, replacing a fingerprint does not double the space',
     () async {
       var store = FileAudioStore(root, encoder: const WavAudioEncoder());
       await store.put('hash', pcm, 24000, bookId: 'book-a');
@@ -193,7 +193,7 @@ void main() {
     for (final sample in [false, true]) {
       if (!clear && sample) continue;
       test(
-        'поздняя запись: clear=$clear, sample=$sample — папки не воскресают',
+        'late write: clear=$clear, sample=$sample — folders are not resurrected',
         () async {
           final encoder = ControlledEncoder();
           final store = FileAudioStore(root, encoder: encoder);
@@ -208,10 +208,10 @@ void main() {
             store.clearAll();
           } else {
             store.removeBook('book-a');
-            // Настоящее удаление самой книги принадлежит Library.
+            // The real deletion of the book itself belongs to Library.
             book('book-a').deleteSync(recursive: true);
           }
-          // Метод вернулся, хотя кодировщик всё ещё ждёт разрешения теста.
+          // The method returned although the encoder is still waiting for the test to release it.
           expect(encoder.finish.isCompleted, isFalse);
           encoder.finish.complete();
           await cancelled;
@@ -226,7 +226,7 @@ void main() {
     }
   }
 
-  test('удаление одной книги не отменяет запись другой и пробы', () async {
+  test('deleting one book does not cancel the write of another one and of probes', () async {
     final encoder = ControlledEncoder();
     final store = FileAudioStore(root, encoder: encoder);
     final other = store.put('other', pcm, 24000, bookId: 'book-b');
@@ -240,7 +240,7 @@ void main() {
     expect(store.totalBytes, 104);
   });
 
-  test('новая запись после удаления выигрывает у запоздалой старой с тем же отпечатком', () async {
+  test('a new write after deletion wins over a late old one with the same fingerprint', () async {
     final encoder = ControlledEncoder();
     final store = FileAudioStore(root, encoder: encoder);
     final old = store.put('same', pcm, 24000, bookId: 'book-a');
@@ -255,7 +255,7 @@ void main() {
   });
 
   test(
-    'внешнее удаление папки книги тоже не позволяет её воссоздать',
+    'external deletion of the book folder does not allow recreating it either',
     () async {
       final encoder = ControlledEncoder();
       final store = FileAudioStore(root, encoder: encoder);
@@ -277,7 +277,7 @@ void main() {
     },
   );
 
-  test('при запуске удаляется недописанный звук; готовые файлы и чужие tmp не трогаются', () async {
+  test('on startup unfinished audio is deleted; finished files and foreign tmp files are untouched', () async {
     final store = FileAudioStore(root, encoder: const WavAudioEncoder());
     await store.put('ready', pcm, 24000, bookId: 'book-a');
     final unfinished = File('${root.path}/tmp/audio/write-killed/encoded.wav');
@@ -293,7 +293,7 @@ void main() {
     expect(restarted.totalBytes, 52);
   });
 
-  test('неправильные компоненты пути и PCM отклоняются без записи', () async {
+  test('invalid path components and PCM are rejected without writing', () async {
     final store = FileAudioStore(root, encoder: const WavAudioEncoder());
     for (final bad in ['../escape', '/absolute', '', 'a/b', 'a\\b', '..']) {
       expect(() => store.has(bad), throwsArgumentError);
@@ -310,7 +310,7 @@ void main() {
     expect(store.totalBytes, 0);
   });
 
-  test('FakeAudioStore сохраняет старые операции и новые отпечатки', () async {
+  test('FakeAudioStore keeps the old operations and the new fingerprints', () async {
     final store = FakeAudioStore({'book-a': 100}, samplesBytes: 20);
     store.addBook('book-a', 10);
     store.addSamples(5);
