@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'pagination_test.dart' show styleFor, colors;
 import 'support/book_samples.dart';
 
-/// Эффективный стиль каждого кодового элемента, включая вложенные диапазоны.
+/// The effective style of each code unit, including nested ranges.
 List<TextStyle> styles(InlineSpan span, [TextStyle parent = const TextStyle()]) {
   final out = <TextStyle>[];
   if (span is TextSpan) {
@@ -25,7 +25,7 @@ List<TextStyle> styles(InlineSpan span, [TextStyle parent = const TextStyle()]) 
 void main() {
   final style = styleFor(2, 1);
   for (final kind in ['h1', 'figcaption', 'p']) {
-    test('диапазоны настоящего EPUB применяются в $kind и обрезаются на границах куска', () {
+    test('ranges of a real EPUB are applied in $kind and clipped at fragment boundaries', () {
       final inline = fixture('epub_structures.xhtml');
       final paragraph = RegExp(r'<p>Текст.*?</p>').firstMatch(inline)!.group(0)!;
       final text = paragraph.replaceFirst('<p>', '').replaceFirst('</p>', '');
@@ -57,14 +57,14 @@ void main() {
           }
           if (active.contains(SpanStyle.noteRef)) expect(actual.color, colors.accent);
         }
-        // Обычный текст рядом с диапазонами не получает надстрочного начертания и акцента.
+        // Plain text next to the ranges gets neither superscript nor emphasis.
         expect(painted.last.color, isNot(colors.accent));
         expect(painted.last.fontFeatures ?? [], isEmpty);
       }
     });
   }
 
-  test('сноска, пересекающая границу страниц: обе видимые части доступны', () {
+  test('a footnote crossing a page boundary: both visible parts are available', () {
     final b = checked(utf8.encode(fixture('fb2_inline.xml'))).book;
     final source = b.blocks.single;
     final ref = source.spans.firstWhere((s) => s.style == SpanStyle.noteRef);

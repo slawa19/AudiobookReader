@@ -17,7 +17,7 @@ Offset third(WidgetTester tester, bool right) {
 
 void main() {
   for (final reuse in [false, true]) {
-    testWidgets('отмена поиска после переиспользования $reuse: досчёт назад сохраняет страницу', (tester) async {
+    testWidgets('cancelling a seek after reuse of $reuse: the backward catch-up keeps the page', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       final book = Book(id: 'listener-chain', title: '', author: '', language: 'ru',
           chapters: const [Chapter(title: '', level: 1, firstBlock: 0, blockCount: 3)],
@@ -43,13 +43,13 @@ void main() {
       }
       await tester.pump();
       expect(st.layout.prependedCount, greaterThan(0));
-      expect(st.page, st.layout.prependedCount - 1, reason: 'назад — к соседней странице, а не к началу главы');
+      expect(st.page, st.layout.prependedCount - 1, reason: 'back goes to the adjacent page, not to the chapter start');
       expect(st.layout.pages[st.page].lastEnd, 33000);
       await tester.pumpWidget(const SizedBox());
     });
   }
 
-  testWidgets('К месту чтения забирает ручную анимацию к странице голоса', (tester) async {
+  testWidgets('the To current spot button takes over the manual animation to the voice page', (tester) async {
     final h = await listeningApp(tester);
     final st = reader(tester);
     for (var i = 0; i < 60 && st.page == 0; i++) {
@@ -68,21 +68,21 @@ void main() {
     await tester.tapAt(third(tester, true));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 32));
-    expect(st.page, voicePage - 1, reason: 'ручной переворот ещё не прошёл половину');
+    expect(st.page, voicePage - 1, reason: 'the manual page turn has not passed halfway yet');
     await tester.tap(find.byKey(const Key('to-reading-place')));
     await tester.pumpAndSettle();
     expectFollowingPage(tester);
   });
 
-  testWidgets('касание после вперёд на паузе удерживает страницу и выключает следование', (tester) async {
+  testWidgets('a tap after forward on pause holds the page and switches following off', (tester) async {
     final h = await listeningApp(tester, bookBytes: navigationBook(repetitions: 5));
     final st = reader(tester);
     h.app.services.narration.pause();
     await tester.pumpAndSettle();
     final origin = st.page;
-    expect(origin, 0, reason: 'встречное касание на краю книги удерживает исходную страницу');
+    expect(origin, 0, reason: 'a counter tap at the book edge holds the original page');
     final at = st.soundingPosition!;
-    expect(st.layout.findPage(at.block + 1, 0), origin + 1, reason: 'цель звука на соседней готовой странице');
+    expect(st.layout.findPage(at.block + 1, 0), origin + 1, reason: 'the audio target is on the adjacent ready page');
     await tester.tap(find.byKey(const Key('next')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 32));

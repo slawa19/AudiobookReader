@@ -19,7 +19,7 @@ import 'support/book_samples.dart';
 import 'support/flows.dart';
 import 'support/harness.dart' show reader, pumpPrototype, phone360;
 
-/// События сохраняют исходные поколение и элемент, включая запоздавший ход старого списка.
+/// Events keep the original generation and item, including a late tick of the old list.
 class DelayedPlayer extends FakePlayer {
   DelayedPlayer({required super.clock}) {
     super.events.listen((event) {
@@ -40,14 +40,14 @@ class DelayedPlayer extends FakePlayer {
   }
 }
 
-// Обычная проза: по умолчанию 12 абзацев по 2400 знаков, начала отрезков внутри строк.
+// Ordinary prose: by default 12 paragraphs of 2400 characters, segment starts inside lines.
 List<int> navigationBook({int repetitions = 14}) => utf8.encode('''<?xml version="1.0" encoding="utf-8"?>
 <FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
 <description><title-info><book-title>Переходы по прозе</book-title><lang>ru</lang></title-info></description>
 <body><section>${List.generate(12, (b) => '<p>${List.generate(repetitions, (s) => 'Утром путешественник $b осмотрел дорогу и продолжил путь. Вдали показались деревья, за которыми открывалась широкая долина. Он остановился у реки и посмотрел на другой берег.').join(' ')}</p>').join()}</section></body></FictionBook>''');
 
-/// Инвариант экрана для прозы: если глава ещё продолжается, следующая строка не помещается.
-/// Конец главы/книги разрешает короткую страницу; искусственное место старта — нет.
+/// Screen invariant for prose: if the chapter continues, the next line does not fit.
+/// The end of a chapter/book allows a short page; an artificial start place does not.
 void expectFullProsePage(ReaderScreenState st, {BookPageLayout? shown}) {
   final page = shown ?? st.layout.pages[st.page];
   final book = st.widget.book;
@@ -56,7 +56,7 @@ void expectFullProsePage(ReaderScreenState st, {BookPageLayout? shown}) {
       page.lastEnd == book.blocks[page.lastBlock].text.length;
   if (!atChapterEnd) {
     expect(last.top + last.height + st.pageStyle.lineHeight, greaterThan(st.columnSize.height),
-        reason: 'следующая строка прозы помещается: показан обрывок страницы');
+        reason: 'the next line of prose fits: a page stub is shown');
   }
 }
 
@@ -97,7 +97,7 @@ Future<AppHarness> listeningApp(WidgetTester tester,
 }
 
 void main() {
-  testWidgets('FR-4: звучащее смещение 15 в блоке длиной 22 передаётся экрану точно', (tester) async {
+  testWidgets('FR-4: the narrated offset 15 in a block of length 22 is passed to the screen exactly', (tester) async {
     final h = AppHarness(tester);
     await h.start(fakeTts: true);
     final file = await h.copy(utf8.encode('<FictionBook><body><section>'
@@ -117,7 +117,7 @@ void main() {
     expect(st.soundingPosition!.offset, 15);
   });
 
-  testWidgets('короткий конец главы разрешён инвариантом', (tester) async {
+  testWidgets('a short chapter end is allowed by the invariant', (tester) async {
     final p = await pumpPrototype(tester, size: phone360);
     final book = checked(utf8.encode('<FictionBook><body><section><p>Конец главы.</p></section>'
         '<section><p>${'Дальше продолжается обычная проза. ' * 70}</p></section></body></FictionBook>')).book;
@@ -135,7 +135,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('настоящий контроллер: назад на текущую страницу отменяет незавершённое ручное листание', (tester) async {
+  testWidgets('real controller: back to the current page cancels an unfinished manual page turn', (tester) async {
     final h = await listeningApp(tester);
     await h.until(() => h.app.queue.inFlight == 0);
     h.playbackClock.advance(const Duration(seconds: 5));
@@ -144,31 +144,31 @@ void main() {
     final original = st.layout.pages[st.page];
     final at = st.soundingPosition!;
     expect(at.offset, greaterThan(0));
-    expect(original.contains(at.block, 0), isTrue, reason: 'назад перезапустит тот же абзац на исходной странице');
+    expect(original.contains(at.block, 0), isTrue, reason: 'back will restart the same paragraph on the original page');
     final area = tester.getRect(find.byKey(const Key('page-area')));
     await tester.tapAt(Offset(area.right - 12, 300));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 16));
     final pc = tester.widget<PageView>(find.byType(PageView)).controller!;
-    expect(pc.page, greaterThan(st.page), reason: 'ручная анимация уже идёт');
+    expect(pc.page, greaterThan(st.page), reason: 'the manual animation is already running');
     final revision = h.app.services.narration.commandRevision;
     await tester.tap(find.byKey(const Key('previous')));
     expect(h.app.services.narration.commandRevision, revision + 1);
     expect(h.app.services.narration.unitStart, ReadingPosition(at.block, 0));
-    // Медленный кадр: прежний переворот завершится раньше замера высоты preparing.
+    // Slow frame: the previous page turn will finish before the preparing height is measured.
     await tester.pump(const Duration(milliseconds: 400));
     await h.until(() => h.player.playing);
     await tester.pumpAndSettle();
     expectFollowingPage(tester);
   });
 
-  testWidgets('настоящий контроллер: цель выбирает полную страницу перед сохранённой строкой', (tester) async {
+  testWidgets('real controller: the target picks the full page before the saved line', (tester) async {
     final h = await listeningApp(tester, narrow: true);
     var st = reader(tester);
     final book = st.widget.book;
     h.app.services.narration.close();
     await tester.pumpAndSettle();
-    // Сохранено именно начало строки, которое читатель видел.
+    // Exactly the start of the line that the reader saw is saved.
     final tp = piecePainter(st.pageStyle, book.blocks[0], 0, book.blocks[0].text.length,
         width: st.columnSize.width);
     final line = tp.getLineBoundary(const TextPosition(offset: 650)).start - 1;
@@ -189,8 +189,8 @@ void main() {
     final previous = st.layout.loadPrevious();
     await tester.pumpAndSettle();
     await previous;
-    expect(st.layout.pages[st.page], same(shown), reason: 'досчёт назад не меняет уже показанную страницу');
-    // Переходы плеера теперь идут по абзацам. Цель внутри префикса задаём явным стартом с предложения.
+    expect(st.layout.pages[st.page], same(shown), reason: 'backward catch-up does not change the shown page');
+    // Player jumps now go by paragraphs. A target inside the prefix is set by an explicit start from a sentence.
     final offset = chapterSegments(book.blocks)[1].mappings.first.blockStart;
     expect(st.layout.findPage(0, offset), isNotNull);
     h.app.services.narration.listen(book, PageRange(ReadingPosition(0, offset), ReadingPosition(0, offset + 1)));
@@ -204,7 +204,7 @@ void main() {
   });
 
   for (final delayed in [false, true]) {
-    testWidgets('настоящий контроллер: вперёд ×10, назад ×10 по абзацам; задержка событий $delayed', (tester) async {
+    testWidgets('real controller: forward ×10, back ×10 by paragraphs; event delay $delayed', (tester) async {
       final h = await listeningApp(tester, delayed: delayed);
       final n = h.app.services.narration;
       for (final direction in ['next', 'previous']) {
@@ -229,7 +229,7 @@ void main() {
     });
   }
 
-  testWidgets('прототип: тот же сценарий вперёд и назад по длинным абзацам', (tester) async {
+  testWidgets('prototype: the same scenario forward and back over long paragraphs', (tester) async {
     final p = await pumpPrototype(tester, size: phone360, demoAcceleration: 1);
     final book = checked(navigationBook()).book;
     final st = await openAt(tester, p, book, const ReadingPosition(0, 0));

@@ -9,7 +9,7 @@ void main() {
   final longestName = allVoices.map((voice) => voice.name).reduce((a, b) => a.length >= b.length ? a : b);
 
   for (final voiceName in [longestName, 'Aoede']) {
-    testWidgets('411 dp: ширина чипа голоса $voiceName без подписи состояния', (tester) async {
+    testWidgets('411 dp: width of the $voiceName voice chip without a state caption', (tester) async {
       final h = await panelApp(tester);
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(411, 900);
@@ -32,7 +32,7 @@ void main() {
       expect(tester.getRect(find.byKey(const Key('player-close'))), close);
       expect(tester.getRect(find.byKey(const Key('to-reading-place'))), back);
       if (voiceName == 'Aoede') {
-        // Прежняя ширина: отступы панели 12 + 8, два значка по 48 dp.
+        // Previous width: panel paddings 12 + 8, two 48 dp icons.
         expect(shortWidth, closeTo((411 - 20 - 96) * 0.55, 0.001));
         expect(tester.getSize(chip).width, shortWidth);
       } else {
@@ -42,7 +42,7 @@ void main() {
         );
         final naturalWidth = paragraph.getMaxIntrinsicWidth(double.infinity);
         expect(paragraph.size.width, greaterThanOrEqualTo(naturalWidth),
-            reason: '$voiceName должен помещаться целиком');
+            reason: '$voiceName must fit entirely');
         expect(paragraph.didExceedMaxLines, isFalse);
       }
       expect(tester.takeException(), isNull);

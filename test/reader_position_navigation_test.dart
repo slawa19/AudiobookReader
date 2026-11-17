@@ -21,7 +21,7 @@ Future<void> complete(ChapterPagination layout) async {
 List<(int, int, int)> pieces(BookPageLayout page) => [for (final f in page.fragments) (f.block, f.start, f.end)];
 
 void main() {
-  testWidgets('короткий быстрый бросок вправо подключает неизвестную предыдущую страницу', (tester) async {
+  testWidgets('a short fast flick to the right attaches the unknown previous page', (tester) async {
     final p = await pumpPrototype(tester);
     final book = chaptersBook();
     final st = await openAt(tester, p, book, const ReadingPosition(1, 123));
@@ -34,17 +34,17 @@ void main() {
     await finger.hold(300);
     await finger.up();
     await tester.pumpAndSettle();
-    expect(st.layout.pages[st.page], same(anchor), reason: 'малое движение с возвратом не листает');
+    expect(st.layout.pages[st.page], same(anchor), reason: 'a small movement with a return does not turn the page');
     await tester.fling(find.byKey(const Key('page-area')), const Offset(100, 0), 2000);
     await tester.pumpAndSettle();
     expect(st.layout.pages[st.page].firstOffset, 0,
-        reason: 'бросок открывает полную первую страницу главы вместо короткого префикса');
+        reason: 'the flick opens the full first page of the chapter instead of a short prefix');
     expect(st.layout.pages[st.page].lastEnd, greaterThan(123));
     expect(st.layout.pages[st.page], isNot(same(anchor)));
     await tester.pumpWidget(const SizedBox());
   });
 
-  test('пустые текстовые главы пропускаются назад; пустая картинка остаётся видимой', () async {
+  test('empty text chapters are skipped backwards; an empty image stays visible', () async {
     final style = PageStyle(fontSize: 16, lineHeight: 27, textScaler: TextScaler.noScaling);
     final layout = ChapterPagination();
     addTearDown(layout.dispose);
@@ -55,7 +55,7 @@ void main() {
           Block(index: 2, kind: BlockKind.paragraph, text: 'Последний.')], notes: const {});
     layout.start(book: book, style: style, column: const Size(272, 500), block: 2, offset: 0, throughBook: true);
     await layout.loadPrevious();
-    expect(layout.pages.first.firstBlock, 0, reason: 'пустая глава не должна повторяться бесконечно');
+    expect(layout.pages.first.firstBlock, 0, reason: 'an empty chapter must not repeat endlessly');
     final imageBook = Book(id: 'image-prefix', title: '', author: '', language: 'ru',
         chapters: const [Chapter(title: '', level: 1, firstBlock: 0, blockCount: 2)],
         blocks: const [Block(index: 0, kind: BlockKind.image, text: '', imageId: 'pic'),
@@ -66,7 +66,7 @@ void main() {
     expect(layout.pages.first.fragments.first.isImage, isTrue);
   });
 
-  testWidgets('новое листание вперёд отменяет незавершённый запрос назад', (tester) async {
+  testWidgets('a new forward page turn cancels an unfinished backward request', (tester) async {
     final p = await pumpPrototype(tester);
     final book = chaptersBook();
     final st = await openAt(tester, p, book, const ReadingPosition(1, 1000));
@@ -82,7 +82,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  test('назад от середины главы через её границу: покрытие без пропусков, показанные страницы неизменны', () async {
+  test('backwards across a chapter boundary: coverage without gaps, shown pages unchanged', () async {
     final book = chaptersBook();
     final layout = ChapterPagination();
     addTearDown(layout.dispose);
@@ -98,13 +98,13 @@ void main() {
     expect(firstAdded, greaterThan(0));
     expect(layout.pages[firstAdded], same(anchor));
     expect(pieces(anchor), original);
-    expect(layout.pages[firstAdded - 1].lastEnd, 2345, reason: 'полная обратная страница кончается перед якорем');
-    expect(layout.pages.first.chapter, 1, reason: 'назад считаем текущую главу, а не начало книги');
+    expect(layout.pages[firstAdded - 1].lastEnd, 2345, reason: 'the full backward page ends before the anchor');
+    expect(layout.pages.first.chapter, 1, reason: 'backwards lays out the current chapter, not the book start');
     final secondAdded = await layout.loadPrevious();
     expect(secondAdded, greaterThan(0));
     expect(layout.pages.first.chapter, 0);
     expect(layout.hasPrevious, isFalse);
-    // Обе стороны перехода: возвращение вперёд использует те же объекты и те же границы текста.
+    // Both sides of the transition: returning forward uses the same objects and the same text boundaries.
     for (var i = 0; i < suffix.length; i++) {
       final page = layout.pages[firstAdded + secondAdded + i];
       expect(page, same(suffix[i]));
@@ -117,8 +117,8 @@ void main() {
         final page = layout.pages[i];
         for (final f in page.fragments.where((f) => f.block == block.index)) {
           if (f.start != at) {
-            expect(i, layout.chapterFirstPage[page.chapter] + 1, reason: 'перекрытие только у первой границы главы');
-            expect(f.start, lessThan(at), reason: 'пропусков текста нет');
+            expect(i, layout.chapterFirstPage[page.chapter] + 1, reason: 'overlap only at the first chapter boundary');
+            expect(f.start, lessThan(at), reason: 'there are no text gaps');
             overlaps++;
           }
           expect(f.end, greaterThan(f.start));
@@ -130,7 +130,7 @@ void main() {
     expect(overlaps, 1);
   });
 
-  testWidgets('экран листает назад через неизвестную границу главы и возвращается к тому же тексту', (tester) async {
+  testWidgets('the screen turns back across an unknown chapter boundary and returns to the same text', (tester) async {
     final p = await pumpPrototype(tester);
     final book = chaptersBook();
     final st = await openAt(tester, p, book, const ReadingPosition(1, 123));
@@ -144,7 +144,7 @@ void main() {
     await back;
     expect(st.layout.pages[st.page].chapter, 1);
     expect(st.layout.pages[st.page].firstOffset, 0);
-    expect(st.layout.pages[st.page].lastEnd, greaterThan(123), reason: 'первая страница полна, часть строк повторится на следующей');
+    expect(st.layout.pages[st.page].lastEnd, greaterThan(123), reason: 'the first page is full, some lines will repeat on the next one');
     back = st.goToPage(-1);
     await tester.pumpAndSettle();
     await back;
@@ -158,12 +158,12 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('100 % известно на самой последней странице, пока итератор ещё не завершён', (tester) async {
+  testWidgets('100 % is known on the very last page while the iterator has not finished yet', (tester) async {
     final p = await pumpPrototype(tester);
     final book = millionBook();
     final st = await openAt(tester, p, book, const ReadingPosition(0, 2999000));
     expect(st.layout.isComplete, isFalse);
-    // Стартовая страница включает конец книги; обработчик завершения итератора ещё не вызван.
+    // The start page includes the end of the book; the iterator completion handler has not been called yet.
     expect(st.layout.endsBook(st.layout.pages[st.page]), isTrue);
     expect(p.library.isFinished(book.id), isTrue);
     expect(tester.widget<Text>(find.byKey(const Key('footer-percent'))).data, '100\u00a0%');

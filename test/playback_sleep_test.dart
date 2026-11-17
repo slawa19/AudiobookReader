@@ -9,7 +9,7 @@ import 'support/playback_harness.dart';
 void main() {
   for (final minutes in [15, 30, 60]) {
     test(
-      '9 $minutes минут: playing → paused ровно по сроку, таймер снят',
+      '9 $minutes minutes: playing → paused exactly on time, timer cleared',
       () async {
         final h = await PlaybackHarness.create(
           playbackBook([
@@ -20,7 +20,7 @@ void main() {
         h.controller.readFrom(h.book, 0);
         await until(() => h.player.playing);
         h.controller.setSleepTimer(SleepTimer.minutes(minutes, h.clock.now()));
-        // В рабочем приложении между событиями плеера писатель получает управление.
+        // In the real app the writer gets control between player events.
         for (var i = 0; i < minutes; i++) {
           h.clock.advance(const Duration(seconds: 59));
           await ioSettled();
@@ -45,7 +45,7 @@ void main() {
 
   for (final state in ['paused', 'preparing', 'waiting']) {
     test(
-      '9 срок истёк в $state: пауза и снятие, поздний звук не запускается',
+      '9 deadline expired in $state: pause and clearing, late audio does not start',
       () async {
         final h = await PlaybackHarness.create(
           playbackBook([
@@ -80,7 +80,7 @@ void main() {
     );
   }
 
-  test('9 таймер переживает смену главы, места, голоса и модели; снимается сменой книги и close', () async {
+  test('9 the timer survives chapter, place, voice and model changes; a book change and close clear it', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Первая.'],
@@ -118,7 +118,7 @@ void main() {
   });
 
   test(
-    '9 после ошибки истёкший таймер снимается перед Читать отсюда',
+    '9 after an error an expired timer is cleared before Read from here',
     () async {
       final h = await PlaybackHarness.create(
         playbackBook([
@@ -143,7 +143,7 @@ void main() {
   );
 
   test(
-    '9 до конца главы не запрашивает следующую, пауза на её начале',
+    '9 until the end of the chapter does not request the next one, pause at its start',
     () async {
       final h = await PlaybackHarness.create(
         playbackBook([
@@ -158,11 +158,11 @@ void main() {
       expect(h.engine.calls.map((c) => c.text), ['Первая.', 'Продолжение.']);
       await h.release(0);
       await h.release(1);
-      // Часы двигаем, только когда оба файла уже в плеере: на медленной машине (CI, 2026-11-15) запись звука
-      // не успевала за фиксированной паузой, и время уходило раньше, чем было что доигрывать.
-      await until(() => h.player.playing && h.player.items.length >= 2, 'оба отрезка в плеере');
+      // Advance the clock only when both files are already in the player: on a slow machine (CI, 2026-11-15) the
+      // audio write could not keep up with a fixed pause, and time ran out before there was anything left to play.
+      await until(() => h.player.playing && h.player.items.length >= 2, 'both segments in the player');
       h.clock.advance(const Duration(seconds: 3));
-      await until(() => c.state == NarrationState.paused, 'пауза в конце главы');
+      await until(() => c.state == NarrationState.paused, 'pause at the end of the chapter');
       expect(c.unitStart, const ReadingPosition(2, 0));
       expect(c.sleepTimer, isNull);
       expect(h.engine.calls.length, 2);
@@ -174,7 +174,7 @@ void main() {
   );
 
   test(
-    '9 до конца последней главы: stopped конец книги, таймер снят, дочитана',
+    '9 until the end of the last chapter: stopped end of book, timer cleared, finished',
     () async {
       final h = await PlaybackHarness.create(
         playbackBook([
@@ -194,7 +194,7 @@ void main() {
     },
   );
 
-  test('9 таймер после наполнения списка отрезает следующую главу; снятие возвращает хвост', () async {
+  test('9 the timer after the list is filled cuts off the next chapter; clearing it returns the tail', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Первая.'],
@@ -216,7 +216,7 @@ void main() {
     expect(h.engine.calls, isEmpty);
   });
 
-  test('9 минуты ограничивают цель запаса оставшимся временем', () async {
+  test('9 minutes limit the reserve target to the remaining time', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Первый.', 'Следующий.'],

@@ -1,6 +1,6 @@
 import 'package:audiobook_reader/library/secret_store.dart';
 
-/// Подставное хранилище без платформы и без внешних обращений.
+/// Fake store with no platform and no external calls.
 class TestSecretStore implements SecretStore {
   TestSecretStore([this.value]);
 

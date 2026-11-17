@@ -7,7 +7,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('FR-T3: отсортированный JSON UTF-8; каждое поле и формат меняют sha256', () {
+  test('FR-T3: sorted UTF-8 JSON; every field and the format change the sha256', () {
     const p = VoiceProfile(model: 'm', voiceId: 'v', style: 's');
     final fp = fingerprint('Речь', p, 'pcm');
     expect(
@@ -29,7 +29,7 @@ void main() {
     expect(p.key, isNot(const VoiceProfile(model: 'm', voiceId: 'v', style: 'S').key));
   });
 
-  test('FR-T7: пять языков и fallback, стиль без рода и не зависит от пола голоса', () {
+  test('FR-T7: five languages and a fallback, style is gender-neutral and independent of voice gender', () {
     expect(readingStyles.keys.toSet(), {'ru', 'en', 'pl', 'de', 'uk'});
     expect(samplePhrases.keys.toSet(), {'ru', 'en', 'pl', 'de', 'uk'});
     final styles = <String>{};
@@ -61,7 +61,7 @@ void main() {
     expect(samplePhraseFor('pl_PL'), samplePhrases['pl']);
   });
 
-  test('FR-M1/V3: единые тарифы до и с 01.01.2027, вход и выход, дата проверки и оценка', () {
+  test('FR-M1/V3: uniform tariffs before and from 01.01.2027, input and output, verification date and estimate', () {
     expect(tariffVerifiedOn, '2026-11-11');
     expect(tariffChangesOn, '2027-01-01');
     expect(secondsPerChar, 0.069);

@@ -37,7 +37,7 @@ Map<String, Object?> audioResponse({
   ],
 };
 
-/// WAV с нечётным вспомогательным RIFF-чанком: данные начинаются не с фиксированного смещения 44.
+/// WAV with an odd-sized auxiliary RIFF chunk: the data does not start at the fixed offset 44.
 Uint8List wav({int rate = 16000, int channels = 1, int bits = 16}) {
   final b = ByteData(58);
   void tag(int at, String s) {

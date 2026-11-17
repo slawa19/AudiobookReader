@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:audiobook_reader/book/model.dart';
 import 'package:audiobook_reader/library/file_library.dart';
 
-/// Диск и разбор настоящие; задерживается только выдача уже загруженной книги экрану.
+/// Disk and parsing are real; only handing an already loaded book to the screen is delayed.
 class GatedFileLibrary extends FileLibrary {
   GatedFileLibrary(super.root, {required super.settings, super.clock, super.timer});
 

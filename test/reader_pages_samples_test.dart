@@ -67,7 +67,7 @@ Future<void> renderPages(
       final renderedImages = tester.renderObjectList<RenderImage>(find.byType(RawImage)).toList();
       expect(renderedImages, hasLength(imageWidgets.length));
       for (final image in renderedImages) {
-        expect(image.image, isNotNull, reason: 'проверяется декодированная картинка, а не только пустая рамка');
+        expect(image.image, isNotNull, reason: 'the decoded image is checked, not just an empty frame');
       }
     }
     final paragraphs = tester
@@ -84,7 +84,7 @@ Future<void> renderPages(
           expect(
             page.fragments.any((f) => f.block == fragment.block && !f.isImage && f.start == 0),
             isTrue,
-            reason: 'изображение остаётся с первой строкой подписи',
+            reason: 'the image stays with the first caption line',
           );
         }
         continue;
@@ -94,12 +94,12 @@ Future<void> renderPages(
       expect(
         rendered.size.height,
         moreOrLessEquals(fragment.height, epsilon: 0.5),
-        reason: 'реальные строки блока ${block.index} не совпадают с расчётом',
+        reason: 'the real lines of block ${block.index} do not match the calculation',
       );
       textCount++;
     }
     for (final image in imageWidgets) {
-      expect(image.fit, BoxFit.contain, reason: 'даже без размеров из хранилища изображение не обрезается');
+      expect(image.fit, BoxFit.contain, reason: 'even without sizes from the store the image is not cropped');
     }
     expect(tester.takeException(), isNull);
   }
@@ -108,7 +108,7 @@ Future<void> renderPages(
 }
 
 void main() {
-  const column = Size(272, 516); // 320×640 с полями экрана чтения, NOTES.md.
+  const column = Size(272, 516); // 320×640 with the reading screen margins, NOTES.md.
   late Map<String, ParsedBook> samples;
   late Map<String, Map<String, Size>> sizes;
   setUpAll(() async {
@@ -117,7 +117,7 @@ void main() {
   });
 
   for (final (step, scale) in [(0, 1.0), (5, 1.3)]) {
-    testWidgets('настоящие FB2, FB2.ZIP и EPUB: покрытие и высота всех страниц, ступень ${step + 1} ×$scale', (
+    testWidgets('real FB2, FB2.ZIP and EPUB: coverage and height of all pages, step ${step + 1} ×$scale', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(320, 640);
@@ -149,7 +149,7 @@ void main() {
     });
   }
 
-  testWidgets('настоящий EPUB: длинные заголовок и подпись, портретная картинка и пустая подпись', (tester) async {
+  testWidgets('real EPUB: long title and caption, portrait image and empty caption', (tester) async {
     final text = fixture('epub_structures.xhtml')
         .replaceFirst('Заголовок', List.filled(400, 'Длинный заголовок').join(' '))
         .replaceFirst('Подпись ', List.filled(600, 'Длинная подпись ').join())
@@ -173,7 +173,7 @@ void main() {
     await renderPages(tester, parsed, layout, style, column);
   });
 
-  test('пустые блоки из разборщика: разделитель и картинка без подписи не дают строк подписи', () async {
+  test('empty blocks from the parser: a divider and an image without a caption produce no caption lines', () async {
     final book = samples['fb2_structure.xml']!.book;
     final empty = book.blocks.where((b) => b.text.isEmpty).toList();
     expect(empty.map((b) => b.kind), [BlockKind.separator, BlockKind.image]);
@@ -186,7 +186,7 @@ void main() {
     expect(fragments.single.start, fragments.single.end);
   });
 
-  testWidgets('окна измерения не добавляют переносов: длинный абзац, UTF-16 и явные строки стихов', (tester) async {
+  testWidgets('windows add no line breaks: a long paragraph, UTF-16 and explicit verse lines', (tester) async {
     final text = List.filled(500, 'Слова 😀 и длинноесловобезпробелов.').join(' ');
     final parsed = checked(
       epub(
@@ -207,14 +207,14 @@ void main() {
       expect(
         laidOutHeight,
         moreOrLessEquals(whole.height, epsilon: 0.5),
-        reason: 'окна должны дать те же строки, что и один TextPainter на всём блоке',
+        reason: 'the windows must give the same lines as one TextPainter over the whole block',
       );
       whole.dispose();
     }
     await renderPages(tester, parsed, layout, style, column);
   });
 
-  test('образцы отказов не доходят до reader как пустые книги', () {
+  test('rejection samples do not reach the reader as empty books', () {
     for (final bytes in [utf8.encode(fixture('fb2_empty.xml')), epub(content: fixture('epub_empty.xhtml'))]) {
       expect(() => parseBook(bytes), throwsA(isA<BookParseException>()));
     }

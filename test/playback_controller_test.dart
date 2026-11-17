@@ -14,14 +14,15 @@ import 'support/playback_harness.dart';
 
 const page = PageRange(ReadingPosition(0, 0), ReadingPosition(100, 0));
 
-// Каждое предложение длиннее 80 и короче 200 знаков: у сцен с двумя частями остаётся отдельный хвост.
+// Every sentence is longer than 80 and shorter than 200 characters: scenes with two parts keep a separate tail.
 const firstSentence =
     'Первое предложение достаточно длинное, чтобы первая часть старта содержала текст для непрерывного звучания. ';
 const secondSentence =
     'Второе предложение достаточно длинное, чтобы первая часть старта содержала текст для непрерывного звучания. ';
 
 void main() {
-  test('8 счётчик и новое место наблюдаются вместе, включая снятие истёкшего таймера и смену книги', () async {
+  test('8 the counter and the new position are observed together, including clearing an expired timer and '
+      'a book change', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Первый.', 'Второй.'],
@@ -56,7 +57,7 @@ void main() {
   });
 
   for (final reason in [TtsErrorReason.invalidKey, TtsErrorReason.other]) {
-    test('4 ошибка $reason сохраняет Google и не запускается сама', () async {
+    test('4 error $reason keeps the Google text and does not restart on its own', () async {
       final h = await PlaybackHarness.create(
         playbackBook([
           ['Текст.'],
@@ -81,7 +82,8 @@ void main() {
       expect(h.controller.state, NarrationState.stopped);
     });
   }
-  test('10 автоматическая часть длинного предложения переживает смену профиля; вперёд идёт к следующему абзацу', () async {
+  test('10 the automatic part of a long sentence survives a profile change; forward goes to the next paragraph',
+      () async {
     final text = '${List.filled(300, 'слово').join(' ')}.';
     final h = await PlaybackHarness.create(
       playbackBook([
@@ -106,7 +108,7 @@ void main() {
     h.controller.next();
     expect(h.controller.unitStart, const ReadingPosition(1, 0));
   });
-  test('1 idle → preparing → playing → paused → playing; прерывание без автопродолжения', () async {
+  test('1 idle → preparing → playing → paused → playing; an interruption does not auto-resume', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Первый.', 'Второй.'],
@@ -139,7 +141,8 @@ void main() {
     expect(c.commandRevision, rev + 1);
   });
 
-  test('1 preparing → paused; поздний ответ добавлен, но не звучит; resume без звука preparing', () async {
+  test('1 preparing → paused; a late response is added but does not sound; resume without audio is preparing',
+      () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Первый.'],
@@ -162,7 +165,7 @@ void main() {
     expect(c.state, NarrationState.playing);
   });
 
-  test('1 next/previous без звука preparing, из паузы остаётся paused; stopped игнорирует шаги', () async {
+  test('1 next/previous without audio is preparing, from pause stays paused; stopped ignores steps', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Первый.', 'Второй.', 'Третий.'],
@@ -186,7 +189,7 @@ void main() {
 
   for (final action in ['chapter', 'close', 'delete', 'clear', 'removeAudio']) {
     test(
-      '2 поздний ответ после $action и новой команды сохраняет только допустимый кэш и расход',
+      '2 a late response after $action and a new command keeps only the allowed cache and spend',
       () async {
         final h = await PlaybackHarness.create(
           playbackBook([
@@ -255,7 +258,7 @@ void main() {
   }
 
   test(
-    '3 одинаковые абзацы разных глав — один запрос; текущий сеанс ждёт прежний',
+    '3 identical paragraphs in different chapters make one request; the current session waits for the earlier one',
     () async {
       final h = await PlaybackHarness.create(
         playbackBook([
@@ -283,7 +286,7 @@ void main() {
     },
   );
 
-  test('4 ближайший ждёт повтора: дальний начатый заканчивается, новых дальних нет', () async {
+  test('4 the nearest waits for a retry: a started far one finishes, no new far ones', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Ближний.', 'Начатый.', 'Дальний.', 'Ещё дальше.'],
@@ -308,7 +311,7 @@ void main() {
     expect(h.controller.unitStart, const ReadingPosition(0, 0));
   });
 
-  test('4 playing → waiting → playing автоматически; waiting → paused; поздний звук молчит', () async {
+  test('4 playing → waiting → playing automatically; waiting → paused; a late sound stays silent', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Первый.', 'Второй.', 'Третий.'],
@@ -338,7 +341,7 @@ void main() {
 
   for (final paused in [false, true]) {
     test(
-      '4 постоянная ошибка ${paused ? 'на паузе сразу' : 'после готового звука'} → stopped с первым неготовым местом',
+      '4 permanent error ${paused ? 'right while paused' : 'after ready audio'} → stopped at the first unready spot',
       () async {
         final h = await PlaybackHarness.create(
           playbackBook([
@@ -376,7 +379,7 @@ void main() {
         expect(
           h.engine.calls.length,
           3,
-        ); // Третий был начат до прихода постоянной ошибки.
+        ); // The third was started before the permanent error arrived.
         h.library.savePosition(h.book.id, const ReadingPosition(2, 0));
         c.resume();
         expect(c.state, NarrationState.preparing);
@@ -386,7 +389,7 @@ void main() {
   }
 
   test(
-    '4 preparing → stopped; 404 хранит модель ошибки; без ключа старт запрещён',
+    '4 preparing → stopped; 404 keeps the error model; start is forbidden without a key',
     () async {
       final h = await PlaybackHarness.create(
         playbackBook([
@@ -419,7 +422,7 @@ void main() {
   );
 
   test(
-    '5 две части старта повторно используются при непрерывном проходе',
+    '5 two start parts are reused on a continuous pass',
     () async {
       const text = '$firstSentenceВторое предложение с остатком.';
       final h = await PlaybackHarness.create(
@@ -449,7 +452,7 @@ void main() {
     },
   );
 
-  test('5 одна готовая часть — только недостающая; целый файл — вообще без синтеза', () async {
+  test('5 one ready part means only the missing one; a whole file means no synthesis at all', () async {
     const text = '$firstSentenceВторое предложение.';
     final h = await PlaybackHarness.create(
       playbackBook([
@@ -471,7 +474,7 @@ void main() {
   });
 
   test(
-    '5 Читать отсюда внутри готовой группы — только хвост, не начало группы',
+    '5 Read from here inside a ready group takes only the tail, not the group start',
     () async {
       final h = await PlaybackHarness.create(
         playbackBook([
@@ -492,7 +495,7 @@ void main() {
   );
 
   test(
-    '8 FR-P3 три старта, Закрыть, место переживает новую FileLibrary',
+    '8 FR-P3 three starts, Close, the position survives a new FileLibrary',
     () async {
       const text =
           'Первое предложение. $secondSentenceТретье предложение.';
@@ -545,7 +548,7 @@ void main() {
     },
   );
 
-  test('8 скорость с первого звука; явные команды и close с передачей позиции; конец книги', () async {
+  test('8 speed from the first sound; explicit commands and close handing over the position; end of book', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Первый.', 'Второй.'],
@@ -577,7 +580,8 @@ void main() {
     expect(h.library.isFinished(h.book.id), isTrue);
   });
 
-  test('10 профиль книги важнее общего; смена из паузы с того же предложения, без лишнего restart', () async {
+  test('10 the book profile outranks the general one; a change from pause resumes at the same sentence, '
+      'with no extra restart', () async {
     const text = 'Первое предложение. $secondSentenceТретье.';
     final h = await PlaybackHarness.create(
       playbackBook([
@@ -622,7 +626,7 @@ void main() {
     );
   });
 
-  test('5 старт с отрезка короче 80 знаков делает один запрос', () async {
+  test('5 starting from a segment shorter than 80 characters makes one request', () async {
     const text = 'Первое предложение. Второе предложение.';
     final h = await PlaybackHarness.create(
       playbackBook([

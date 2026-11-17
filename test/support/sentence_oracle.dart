@@ -1,7 +1,8 @@
-// Независимая проверка начала предложения для тестов места старта (FR-P3). Написана заново регулярными
-// выражениями по тексту правил А§6.1 («знак конца и пробел»; (i) не после слова из одной буквы; (ii) дальше —
-// прописная, цифра или открывающая кавычка, в том числе после тире с пробелом), а не вызовом
-// `lib/tts/sentences.dart`: иначе тест сверял бы производственную функцию с ней самой (ревью логики 2026-11-14).
+// Independent check of a sentence start for the start-position tests (FR-P3). Written anew with regular
+// expressions from the text of rules А§6.1 ("end mark and a space"; (i) not after a one-letter word; (ii) next
+// comes an uppercase letter, a digit or an opening quote, including after a dash and a space), rather than by
+// calling `lib/tts/sentences.dart`: otherwise the test would compare the production function with itself
+// (logic review 2026-11-14).
 
 import 'package:audiobook_reader/book/model.dart';
 import 'package:audiobook_reader/book/speech_text.dart';
@@ -11,7 +12,7 @@ import 'package:audiobook_reader/reader/pagination.dart';
 final _end = RegExp(r'(\p{L}*)([.!?…])[»"”’)\]]*[ \t\n\r ]+$', unicode: true);
 final _start = RegExp(r'^(?:[—–-][  ]+)?[\p{Lu}0-9«"“„‘(\[]', unicode: true);
 
-/// Начинается ли предложение в тексте для речи [text] на смещении [s].
+/// Whether a sentence starts in the speech text [text] at offset [s].
 bool looksLikeSentenceStart(String text, int s) {
   if (s == 0) return text.isNotEmpty;
   if (s >= text.length || RegExp(r'\s').hasMatch(text[s])) return false;
@@ -21,7 +22,7 @@ bool looksLikeSentenceStart(String text, int s) {
   return _start.hasMatch(text.substring(s));
 }
 
-/// Первое начало предложения, стоящее на странице [page], — перебором каждого смещения.
+/// The first sentence start on the page [page], found by trying every offset.
 ReadingPosition? firstSentenceStartOnPage(Book book, BookPageLayout page) {
   for (final f in page.fragments) {
     final block = book.blocks[f.block];

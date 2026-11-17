@@ -13,7 +13,7 @@ Future<void> frames(WidgetTester tester, [int count = 28]) async {
 }
 
 void main() {
-  testWidgets('D1: ожидание первой страницы назад не выключает следование до показа', (tester) async {
+  testWidgets('D1: waiting for the first page back does not turn following off until shown', (tester) async {
     final h = await propertyApp(tester);
     h.app.services.narration.pause();
     await frames(tester);
@@ -22,7 +22,7 @@ void main() {
     expect(st.page, 0);
     final move = st.goToPage(-1);
     expect(textBounds(st), before);
-    expect(st.following, isTrue, reason: 'пока показан прежний текст, читатель ещё не переместился');
+    expect(st.following, isTrue, reason: 'while the previous text is shown the reader has not moved yet');
     await frames(tester, 120);
     await move;
     final after = textBounds(st);
@@ -31,7 +31,7 @@ void main() {
     expect(st.following, isFalse);
   });
 
-  testWidgets('D5: возврат через 16 мс отменяет уход с уже показанной страницы голоса', (tester) async {
+  testWidgets('D5: a return after 16 ms cancels the move away from the already shown voice page', (tester) async {
     final h = await listeningApp(tester);
     h.app.services.narration.pause();
     await frames(tester);
@@ -50,7 +50,7 @@ void main() {
     expectFollowingPage(tester);
   });
 
-  testWidgets('D1: событие идущего звука не отменяет ожидаемое ручное касание', (tester) async {
+  testWidgets('D1: a playing-audio event does not cancel the expected manual tap', (tester) async {
     final h = await propertyApp(tester);
     final st = reader(tester);
     final before = textBounds(st);
@@ -63,7 +63,7 @@ void main() {
     expect(st.following, isFalse);
   });
 
-  testWidgets('D6: отменённое малое перетаскивание догоняет команду звука на паузе', (tester) async {
+  testWidgets('D6: a cancelled small drag catches up with the audio command on pause', (tester) async {
     final h = await listeningApp(tester);
     final st = reader(tester);
     h.app.services.narration.pause();
@@ -80,7 +80,7 @@ void main() {
   });
 
   for (final count in [1, 2]) {
-    testWidgets('D7: $count касания во время близкого досчёта не теряются', (tester) async {
+    testWidgets('D7: $count taps during a nearby catch-up are not lost', (tester) async {
       final (h, st, block) = await freshPage(tester);
       final original = st.layout;
       final before = textBounds(st);
@@ -99,7 +99,7 @@ void main() {
   }
 
   for (final source in ['voice', 'page']) {
-    testWidgets('D7: досчёт прежней цели $source назад не заменяет страницу под новым жестом', (tester) async {
+    testWidgets('D7: backward catch-up of old $source target does not replace page under a gesture', (tester) async {
       final h = await propertyApp(tester);
       h.app.services.narration.pause();
       await frames(tester);

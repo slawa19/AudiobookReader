@@ -56,7 +56,7 @@ class GatedDurationPlayer extends FakePlayer {
 
 void main() {
   test(
-    '2 удалённая и повторно импортированная книга снова озвучивается',
+    '2 a deleted and re-imported book is narrated again',
     () async {
       final source = playbackBook([
         ['Книга.'],
@@ -82,7 +82,7 @@ void main() {
 
   for (final sample in [false, true]) {
     test(
-      '2 поздняя ошибка чтения длительности ${sample ? 'пробы' : 'книги'} после очистки игнорируется',
+      '2 a late duration-read error for the ${sample ? 'sample' : 'book'} after clearing is ignored',
       () async {
         late GatedDurationPlayer player;
         final h = await PlaybackHarness.create(
@@ -119,7 +119,7 @@ void main() {
     );
   }
 
-  test('6 очистка пробы во время запроса не восстанавливает samples; новая проба делает новый запрос', () async {
+  test('6 clearing the sample during a request does not restore samples; a new sample makes a new request', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Книга.'],
@@ -138,7 +138,7 @@ void main() {
     expect(Directory('${h.root.path}/samples').existsSync(), isTrue);
     expect(h.engine.calls.length, 2);
   });
-  test('6 общий лимит: старый сеанс, новый и проба; кэш пробы, новая модель, язык и стиль', () async {
+  test('6 shared limit: old session, new one and sample; sample cache, new model, language and style', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Старый.', 'Второй.'],
@@ -184,7 +184,7 @@ void main() {
     expect(h.queue.inFlight, 2);
   });
 
-  test('6 проба: временная ошибка повторяется, stop отменяет повтор; постоянная показывает Google', () async {
+  test('6 sample: a temporary error is retried, stop cancels the retry; a permanent one shows Google', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Книга.'],
@@ -219,7 +219,7 @@ void main() {
   });
 
   test(
-    '7 одновременные ответы и ошибка с usage учитываются каждый один раз',
+    '7 concurrent responses and an error with usage are each counted once',
     () async {
       final h = await PlaybackHarness.create(
         playbackBook([
@@ -251,7 +251,7 @@ void main() {
     },
   );
 
-  test('7 суммы месяцев по тарифу своего периода на 01.01.2027, включая пустые месяцы', () async {
+  test('7 month totals at the tariff of their own period on 01.01.2027, including empty months', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Книга.'],
@@ -292,7 +292,7 @@ void main() {
     expect(h.engine.calls, isEmpty);
   });
 
-  test('4 повторы 1,2,4,8,16,30,30 секунд; пауза отменяет таймер', () async {
+  test('4 retries at 1,2,4,8,16,30,30 seconds; pause cancels the timer', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Книга.'],
@@ -322,7 +322,7 @@ void main() {
     expect(h.controller.state, NarrationState.paused);
   });
 
-  test('4 запас непрерывный, 120 секунд делятся на скорость; дальний кэш не закрывает дыру', () async {
+  test('4 contiguous reserve, 120 seconds divided by speed; a distant cache does not close the gap', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Первый.', 'Второй.', 'Третий.', 'Четвёртый.'],
@@ -338,7 +338,7 @@ void main() {
     expect(h.engine.calls, isEmpty);
     h.clock.advance(const Duration(milliseconds: 100));
     await ioSettled();
-    // Готовый звук за дырой тоже ограничивает покупку (А§6.3).
+    // Ready audio beyond the gap also limits the purchase (А§6.3).
     expect(h.engine.calls, isEmpty);
     h.clock.advance(const Duration(seconds: 60));
     await h.calls(2);
@@ -348,7 +348,7 @@ void main() {
   });
 
   test(
-    'Q3 запись повторяется тем же PCM, расход до записи, запрос один',
+    'Q3 the write is retried with the same PCM, the cost is recorded before the write, one request',
     () async {
       final encoder = GatedEncoder()..failOnce = true;
       final h = await PlaybackHarness.create(
@@ -377,7 +377,7 @@ void main() {
 
   for (final action in ['close', 'clear', 'delete']) {
     test(
-      '2 поздняя запись на диск после $action и новой команды не трогает новый сеанс',
+      '2 a late disk write after $action and a new command does not touch the new session',
       () async {
         final encoder = GatedEncoder();
         final h = await PlaybackHarness.create(

@@ -38,7 +38,7 @@ Future<void> playedBook(PlaybackHarness h) async {
 }
 
 void main() {
-  test('шаги по читаемым блокам пропускают знаки и картинки, пересекают главу и останавливаются у края', () async {
+  test('steps over readable blocks skip punctuation and images, cross a chapter and stop at the edge', () async {
     final h = await PlaybackHarness.create(navigationBlocks());
     final c = h.controller;
     c.readFrom(h.book, 0);
@@ -64,7 +64,8 @@ void main() {
     expect(c.unitStart, const ReadingPosition(4, 0));
   });
 
-  test('назад: до трёх секунд — предыдущий блок, позже — текущий; второй шаг — предыдущий; пауза не считается началом', () async {
+  test('back: within three seconds goes to the previous block, later to the current; a second step goes to the '
+      'previous; a pause does not count as the start', () async {
     final h = await PlaybackHarness.create(playbackBook([[paragraph(0), paragraph(1)]], kind: BlockKind.paragraph));
     for (final s in chapterSegments(h.book.blocks)) {
       await h.cache(s.text, seconds: (s.text.length * secondsPerChar).ceilToDouble());
@@ -88,19 +89,20 @@ void main() {
     h.clock.advance(const Duration(seconds: 40));
     expect(c.blockProgress, greaterThan(0));
     c.previous();
-    expect(c.unitStart, const ReadingPosition(1, 0), reason: 'начало следующего отрезка не является началом абзаца');
+    expect(c.unitStart, const ReadingPosition(1, 0),
+        reason: 'the start of the next segment is not the start of a paragraph');
     await start();
     h.clock.advance(const Duration(seconds: 5));
     c.pause();
     c.previous();
-    expect(c.unitStart, const ReadingPosition(1, 0), reason: 'пауза посреди абзаца: назад — к его началу');
+    expect(c.unitStart, const ReadingPosition(1, 0), reason: 'a pause mid-paragraph: back goes to its start');
     c.previous();
     expect(c.unitStart, const ReadingPosition(0, 0));
     expect(c.state, NarrationState.paused);
     expect(h.engine.calls, isEmpty);
   });
 
-  test('следующий блок определяется звучащим местом внутри группы, а не началом отрезка', () async {
+  test('the next block is determined by the sounding position inside the group, not by the segment start', () async {
     final h = await PlaybackHarness.create(playbackBook([['Первый абзац.', 'Второй абзац.', 'Третий абзац.']],
         kind: BlockKind.paragraph));
     final segment = chapterSegments(h.book.blocks).single;
@@ -113,7 +115,7 @@ void main() {
     expect(h.controller.unitStart, const ReadingPosition(2, 0));
   });
 
-  test('прослушанные длинные абзацы: серия вперёд/назад не делает новых запросов', () async {
+  test('listened long paragraphs: a forward/back series makes no new requests', () async {
     final h = await PlaybackHarness.create(playbackBook([[paragraph(0), paragraph(1), paragraph(2)]],
         kind: BlockKind.paragraph), engineFactory: () => FakeTtsEngine(sampleRate: 100, secondsPerCharacter: 0.02));
     await playedBook(h);
@@ -129,7 +131,7 @@ void main() {
     }
   });
 
-  test('середина группы покупает только хвост; повтор использует его файл', () async {
+  test('the middle of a group buys only the tail; a repeat uses its file', () async {
     final h = await PlaybackHarness.create(playbackBook([['Первый абзац.', 'Второй абзац.', 'Третий абзац.']],
         kind: BlockKind.paragraph), engineFactory: () => FakeTtsEngine(sampleRate: 100, secondsPerCharacter: 0.1));
     await playedBook(h);
@@ -149,7 +151,7 @@ void main() {
     expect(h.engine.calls.length, bought + 1);
   });
 
-  testWidgets('прототип: те же читаемые блоки и правило трёх секунд для назад', (tester) async {
+  testWidgets('prototype: the same readable blocks and the three-second rule for back', (tester) async {
     final p = await pumpPrototype(tester, demoAcceleration: 1);
     final book = navigationBlocks();
     p.narration.readFrom(book, 0);

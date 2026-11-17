@@ -20,7 +20,7 @@ void main() {
   });
 
   test(
-    'AndroidSecretStore читает и пишет через настоящий Dart-код пакета',
+    'AndroidSecretStore reads and writes through the real Dart code of the package',
     () async {
       final calls = <MethodCall>[];
       String? saved;
@@ -33,7 +33,7 @@ void main() {
           saved = arguments['value']! as String;
           return null;
         }
-        fail('Неожиданный метод канала: ${call.method}');
+        fail('Unexpected channel method: ${call.method}');
       });
       final store = AndroidSecretStore();
       expect(await store.read(), isNull);
@@ -44,7 +44,7 @@ void main() {
     },
   );
 
-  test('нативная сборка по умолчанию подключает AndroidSecretStore', () async {
+  test('the native build wires up AndroidSecretStore by default', () async {
     final root = await Directory.systemTemp.createTemp('native-key-');
     String? saved = 'test-native-default-secret';
     messenger.setMockMethodCallHandler(channel, (call) async {
@@ -55,7 +55,7 @@ void main() {
         saved = arguments['value']! as String;
         return null;
       }
-      fail('Неожиданный метод канала: ${call.method}');
+      fail('Unexpected channel method: ${call.method}');
     });
     final app = await NativeApplication.create(root: root);
     try {
@@ -75,7 +75,7 @@ void main() {
 
   for (final operation in ['read', 'write']) {
     test(
-      'ошибка платформы при $operation не раскрывает секрет и детали',
+      'a platform error during $operation does not reveal the secret or details',
       () async {
         messenger.setMockMethodCallHandler(channel, (_) async {
           throw PlatformException(
@@ -92,7 +92,7 @@ void main() {
           throwsA(
             isA<SecretStoreException>().having(
               (error) => error.toString(),
-              'безопасный текст',
+              'safe text',
               allOf(
                 isNot(contains('test-platform-secret')),
                 isNot(contains('test-secret-details')),
@@ -104,7 +104,7 @@ void main() {
     );
   }
 
-  test('пакет защищённого хранилища импортирует только platform', () {
+  test('the secure storage package imports only platform', () {
     final imports = Directory('lib')
         .listSync(recursive: true)
         .whereType<File>()
@@ -119,7 +119,7 @@ void main() {
     expect(
       imports,
       isNotEmpty,
-      reason: 'проверка должна увидеть настоящую реализацию',
+      reason: 'the check must see the real implementation',
     );
     for (final file in imports) {
       expect(file.path.replaceAll('\\', '/'), startsWith('lib/platform/'));

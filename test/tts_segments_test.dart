@@ -16,7 +16,7 @@ List<List<int>> maps(SpeechSegment s) => [
 ];
 
 void main() {
-  test('без букв и цифр: нет отрезка, группа не прерывается; Unicode речь сохраняется', () {
+  test('no letters or digits: no segment, the group is not interrupted; Unicode speech is kept', () {
     for (final text in ['', ' ', '* * *', '…', '— § 😀 \u0301']) {
       for (final kind in [BlockKind.paragraph, BlockKind.heading, BlockKind.verse, BlockKind.cite]) {
         expect(chapterSegments([b(0, text, kind: kind)]), isEmpty);
@@ -38,7 +38,7 @@ void main() {
         ['До', 'А', 'После']);
   });
 
-  test('первая часть: минимум 80 целыми предложениями, максимум 200, без потери соответствий', () {
+  test('first part: at least 80 in whole sentences, at most 200, without losing mappings', () {
     for (final opening in ['— Да. ', '1. ']) {
       final second = '${'Б' * (80 - opening.length - 2)}. ';
       final first = '$opening$second';
@@ -63,7 +63,7 @@ void main() {
     expect(segmentParts(SpeechSegment(long, [])).first.text, '${'Б' * 120} ');
   });
 
-  test('правило 1: заголовок отдельно; соседние обычные короткие блоки объединяются', () {
+  test('rule 1: a heading stands alone; adjacent ordinary short blocks are merged', () {
     expect(texts(chapterSegments([b(0, 'До'), b(1, 'Глава', kind: BlockKind.heading), b(2, 'После')])), [
       'До',
       'Глава',
@@ -72,7 +72,7 @@ void main() {
     expect(texts(chapterSegments([b(0, 'До'), b(1, 'Текст'), b(2, 'После')])), ['До\nТекст\nПосле']);
   });
 
-  test('правила 2 и 4: ровно L — один; длиннее L — предложения, пробел, жёсткая граница', () {
+  test('rules 2 and 4: exactly L is one; longer than L: sentences, space, hard boundary', () {
     expect(texts(chapterSegments([b(0, 'я' * 10)], l: 10, lmin: 4)), ['я' * 10]);
     expect(texts(chapterSegments([b(0, 'Раз. Два. Три.')], l: 10, lmin: 4)), ['Раз. Два. ', 'Три.']);
     expect(texts(chapterSegments([b(0, 'Длинные слова здесь')], l: 10)), ['Длинные ', 'слова ', 'здесь']);
@@ -80,7 +80,7 @@ void main() {
     expect(texts(chapterSegments([b(0, 'я' * 11, kind: BlockKind.heading)], l: 10)), ['я' * 10, 'я']);
   });
 
-  test('правило 3: строго меньше Lmin; newline входит в L; пропущенное группу не прерывает', () {
+  test('rule 3: strictly less than Lmin; newline counts in L; a skipped block does not interrupt the group', () {
     expect(texts(chapterSegments([b(0, 'ааа'), b(1, 'ббб')], l: 7, lmin: 4)), ['ааа\nббб']);
     expect(texts(chapterSegments([b(0, 'ааа'), b(1, 'ббб')], l: 6, lmin: 4)), ['ааа', 'ббб']);
     expect(texts(chapterSegments([b(0, 'ааа'), b(1, 'бббб'), b(2, 'в')], l: 20, lmin: 4)), ['ааа', 'бббб', 'в']);
@@ -100,7 +100,7 @@ void main() {
     expect(chapterSegments([b(0, 'Подпись', kind: BlockKind.image)]), isEmpty);
   });
 
-  test('все длины по речи; соответствия точные через сноски и ударения, newline не привязан', () {
+  test('all lengths by speech; mappings are exact across footnotes and stress marks, newline is not anchored', () {
     final blocks = [
       b(10, 'А\u0301б1вг', spans: [const TextSpanRange(start: 3, end: 4, style: SpanStyle.noteRef)]),
       b(11, 'Конец'),
@@ -123,8 +123,8 @@ void main() {
     expect(texts(chapterSegments([blocks.first, b(11, 'Да')], l: 7, lmin: 5)), ['Абвг\nДа']);
   });
 
-  test('границы предложений берутся из sentences: обе стороны (i) и (ii), сноска после точки', () {
-    // При таком L ошибочная граница после «г.» изменила бы первый кусок: проверка не вакуумна.
+  test('sentence boundaries come from sentences: both sides (i) and (ii), a footnote after a period', () {
+    // With this L a wrong boundary after «г.» would change the first piece, so the check is not vacuous.
     expect(splitSpeech('г. Москве сегодня. Потом.', 12).first, 'г. Москве ');
     expect(splitSpeech('Он. Москве сегодня. Потом.', 12).first, 'Он. ');
     expect(splitSpeech('Стой! — крикнул он. Потом.', 10), ['Стой! — ', 'крикнул ', 'он. Потом.']);
@@ -139,7 +139,7 @@ void main() {
     ]);
   });
 
-  test('части: короткий отрезок целиком, максимум 200; остаток один; пустого остатка нет', () {
+  test('parts: a short segment whole, at most 200; one remainder; no empty remainder', () {
     SpeechSegment s(String t) => SpeechSegment(t, []);
     expect(texts(segmentParts(s('Первое. Второе. Третье.'))), ['Первое. Второе. Третье.']);
     expect(texts(segmentParts(s('Первое.'))), ['Первое.']);
@@ -148,7 +148,7 @@ void main() {
     expect(segmentParts(s('')), isEmpty);
   });
 
-  test('готовность: целый приоритетен; обе части готовы; одна готова — только недостающая (SC-2.1)', () {
+  test('readiness: the whole has priority; both parts ready; one ready means only the missing one (SC-2.1)', () {
     final s = chapterSegments([b(0, '${'Б' * 118}. Второе.')]).single;
     String fp(SpeechSegment s) => fingerprint(s.text, p, 'aac');
     final parts = segmentParts(s);
@@ -174,7 +174,7 @@ void main() {
     expect(segmentReadiness(s, other, 'aac', {fp(s), ...parts.map(fp)}.contains).ready, isFalse);
   });
 
-  test('готовность одночастного и пустого отрезка', () {
+  test('readiness of a one-part and an empty segment', () {
     final s = chapterSegments([b(0, 'Да.')]).single;
     final r = segmentReadiness(s, p, 'pcm', (_) => false, startup: true);
     expect(r.requests.length, 1);
@@ -182,7 +182,7 @@ void main() {
     expect(segmentReadiness(SpeechSegment('', []), p, 'pcm', (_) => false).ready, isTrue);
   });
 
-  test('хвост группы — самостоятельный; каноническая следующая группа не меняется (SC-2.1)', () {
+  test('group tail stands alone; the canonical next group does not change (SC-2.1)', () {
     final blocks = [b(10, 'Раз.'), b(11, 'Два.'), b(12, 'Три.'), b(13, 'я' * 200), b(14, 'Дальше.')];
     final all = chapterSegments(blocks);
     final from = segmentsFrom(blocks, block: 11);
@@ -200,7 +200,7 @@ void main() {
     expect(texts(segmentsFrom(blocks, block: 10)), texts(all));
   });
 
-  test('старт с предложения внутри блока до конца его отрезка, с переводом смещения через сноску', () {
+  test('start from a sentence inside a block to the end of its segment, translating the offset across a footnote', () {
     final blocks = [
       b(0, 'Раз.1 Два. Три.', spans: [const TextSpanRange(start: 4, end: 5, style: SpanStyle.noteRef)]),
       b(1, 'Четыре.'),
@@ -217,7 +217,7 @@ void main() {
     expect(segmentsFrom(long, block: 99), isEmpty);
   });
 
-  test('инвариант: случайные входы, 10000 без пробелов, суррогаты, сноски и картинки', () {
+  test('invariant: random inputs, 10000 without spaces, surrogates, footnotes and images', () {
     final random = Random(1765);
     final cases = <List<Block>>[
       [b(0, 'я' * 10000)],

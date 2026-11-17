@@ -28,13 +28,13 @@ Future<void> heights(WidgetTester tester, Book book, ChapterPagination layout, P
     expect(rendered, hasLength(page.fragments.length));
     for (var i = 0; i < rendered.length; i++) {
       expect(rendered[i].size.height, moreOrLessEquals(page.fragments[i].height, epsilon: 0.1),
-          reason: 'кусок ${page.fragments[i].start}–${page.fragments[i].end}, bold=$bold');
+          reason: 'fragment ${page.fragments[i].start}–${page.fragments[i].end}, bold=$bold');
     }
   }
 }
 
 void main() {
-  testWidgets('а: системный жирный шрифт не расходится с измеренными высотами', (tester) async {
+  testWidgets('a: the system bold font does not diverge from the measured heights', (tester) async {
     final book = paragraphs([List.filled(40, 'Это проверка системного жирного текста и высоты страницы. ').join(), 'Конец.']);
     final style = PageStyle(fontSize: 16, lineHeight: 27, textScaler: TextScaler.noScaling);
     final layout = await paginate(tester: tester, book: book, style: style, column: const Size(272, 500));
@@ -42,7 +42,7 @@ void main() {
     await heights(tester, book, layout, style);
   });
 
-  testWidgets('б: длинное слово на границе страницы рисуется с посчитанной высотой', (tester) async {
+  testWidgets('b: a long word at the page boundary is drawn with the calculated height', (tester) async {
     final style = PageStyle(fontSize: 28.6, lineHeight: 48, textScaler: TextScaler.noScaling);
     final book = paragraphs(['${List.filled(3, 'Тут текст. ').join()}${List.filled(20, 'человеконенавистничество ').join()}']);
     final layout = await paginate(tester: tester, book: book, style: style, column: const Size(272, 500));
@@ -53,13 +53,13 @@ void main() {
     final whole = piecePainter(style, plain.blocks.single, 0, plain.blocks.single.text.length, width: 272);
     final oldBoundary = whole.getPositionForOffset(const Offset(0.5, 504)).offset - 1;
     expect(normal.pages.first.lastEnd, oldBoundary,
-        reason: 'обычная строка на прежней границе: десять строк полного TextPainter, без подгонки по слову');
+        reason: 'an ordinary line at the previous boundary: ten lines of the full TextPainter, no fitting by word');
     expect(normal.pages.first.fragments.single.height, 480);
     whole.dispose();
     await heights(tester, plain, normal, style);
   });
 
-  test('в: конец блока переходит дальше, конец книги открывает непустую последнюю страницу', () {
+  test('c: the end of a block moves on, the end of the book opens a non-empty last page', () {
     final book = paragraphs(['Первый.', 'Второй.'], chapters: true);
     final style = PageStyle(fontSize: 16, lineHeight: 27, textScaler: TextScaler.noScaling);
     final layout = ChapterPagination();

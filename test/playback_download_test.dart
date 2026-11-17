@@ -22,7 +22,7 @@ import 'support/playback_harness.dart';
 
 void main() {
   test(
-    'оценка, доля готового, остановка и пропорциональная цена остатка',
+    'estimate, ready share, stop and a proportional price for the remainder',
     () async {
       final d = await DownloadHarness.create(
         playbackBook([
@@ -59,7 +59,7 @@ void main() {
     },
   );
 
-  test('оценка считает одинаковый текст один раз; готовность и доля — все вхождения', () async {
+  test('the estimate counts identical text once; readiness and share count all occurrences', () async {
     final d = await DownloadHarness.create(
       playbackBook([
         ['Повтор.', 'Повтор.', 'Другой.'],
@@ -81,7 +81,7 @@ void main() {
   });
 
   test(
-    'готовность: целый файл, все части и только недостающая часть',
+    'readiness: a whole file, all parts and only the missing part',
     () async {
       final text = 'Первое предложение. ${'Продолжение ' * 24}';
       final d = await DownloadHarness.create(
@@ -116,7 +116,7 @@ void main() {
   );
 
   test(
-    'уход и возврат: первый неготовый; ручная остановка отменяет продолжение',
+    'leaving and returning: the first unready one; a manual stop cancels the continuation',
     () async {
       final d = await DownloadHarness.create(
         playbackBook([
@@ -148,9 +148,9 @@ void main() {
     },
   );
 
-  for (final change in ['книги', 'приложения', 'модели']) {
+  for (final change in ['book', 'app', 'model']) {
     test(
-      'смена $change: задача остановлена, старое сохранено, новый профиль не озвучен',
+      'changing the $change: the task is stopped, the old narration is kept, the new profile is not narrated',
       () async {
         final d = await DownloadHarness.create(
           playbackBook([
@@ -164,9 +164,9 @@ void main() {
         expect(d.downloads.isVoiced(h.book.id, 1, old), isTrue);
         d.start();
         await h.calls(2);
-        if (change == 'книги') {
+        if (change == 'book') {
           h.library.setBookVoice(h.book.id, 'Kore');
-        } else if (change == 'приложения') {
+        } else if (change == 'app') {
           h.settings.voice = 'Kore';
         } else {
           h.settings.modelId = TtsModel.flashLite.id;
@@ -185,7 +185,7 @@ void main() {
     );
   }
 
-  test('постоянная ошибка: причина и текст Google у задачи; прослушивание не тронуто', () async {
+  test('permanent error: the cause and the Google text stay with the task; listening is untouched', () async {
     final d = await DownloadHarness.create(
       playbackBook([
         ['Ошибка.', 'Готовое.'],
@@ -228,7 +228,7 @@ void main() {
     expect(d.downloads.isVoiced(h.book.id, 0, h.profile), isTrue);
   });
 
-  test('ошибка без прослушивания не открывает панель плеера', () async {
+  test('an error without listening does not open the player panel', () async {
     final d = await DownloadHarness.create(
       playbackBook([
         ['Текст.'],
@@ -246,7 +246,7 @@ void main() {
     expect(h.controller.bookId, isNull);
   });
 
-  test('временная ошибка повторяется; пауза прослушивания не мешает; stop отменяет повтор', () async {
+  test('a temporary error is retried; pausing listening does not interfere; stop cancels the retry', () async {
     final d = await DownloadHarness.create(
       playbackBook([
         ['Текст.'],
@@ -268,7 +268,7 @@ void main() {
     expect(h.engine.calls.length, 2);
   });
 
-  test('общий лимит двух: прослушивание и скачивание', () async {
+  test('a shared limit of two: listening and downloading', () async {
     final d = await DownloadHarness.create(
       playbackBook([
         ['Слушаем.'],
@@ -277,7 +277,7 @@ void main() {
     );
     final h = d.h;
     h.controller.readFrom(h.book, 0);
-    // Задаём границу после старта до микрозадачи очереди.
+    // Set the boundary after the start but before the queue microtask.
     h.controller.setSleepTimer(SleepTimer.endOfChapter(h.clock.now()));
     await h.calls(1);
     d.start(1);
@@ -299,7 +299,7 @@ void main() {
   });
 
   test(
-    'поздняя постоянная ошибка в фоне остаётся у задачи и не перезапускается',
+    'a late permanent error in the background stays with the task and is not restarted',
     () async {
       final d = await DownloadHarness.create(
         playbackBook([
@@ -321,7 +321,8 @@ void main() {
     },
   );
 
-  test('фон отменяет временные повторы, возврат продолжает, смена профиля в фоне отменяет продолжение', () async {
+  test('background cancels temporary retries, returning continues, a profile change in the background cancels '
+      'the continuation', () async {
     final d = await DownloadHarness.create(
       playbackBook([
         ['Текст.'],
@@ -349,7 +350,7 @@ void main() {
   });
 
   test(
-    'новый запуск после очистки ждёт старый ответ, но не принимает его звук',
+    'a new start after clearing waits for the old response but does not accept its audio',
     () async {
       final d = await DownloadHarness.create(
         playbackBook([
@@ -379,7 +380,7 @@ void main() {
   );
 
   test(
-    'тариф на сегодня и остановка единственной прежней задачи новым start',
+    'the tariff for today and stopping the only previous task with a new start',
     () async {
       final d = await DownloadHarness.create(
         playbackBook([
@@ -410,7 +411,7 @@ void main() {
 
   for (final downloadFirst in [false, true]) {
     test(
-      'один запрос на отпечаток: первым ${downloadFirst ? 'скачивание' : 'прослушивание'}',
+      'one request per fingerprint: ${downloadFirst ? 'download' : 'listening'} first',
       () async {
         final text = 'Первое предложение. ${'Дальше ' * 36}';
         final d = await DownloadHarness.create(
@@ -442,9 +443,9 @@ void main() {
     );
   }
 
-  for (final deletion in ['книги', 'озвучки книги', 'всей озвучки']) {
+  for (final deletion in ['book', 'book narration', 'all narration']) {
     test(
-      'удаление $deletion во время запроса: расход есть, файла и новых запросов нет',
+      'deleting the $deletion during a request: the spend is recorded, there is no file and no new requests',
       () async {
         final d = await DownloadHarness.create(
           playbackBook([
@@ -457,10 +458,10 @@ void main() {
         h.engine.enqueue(usage: const TtsUsage(audioTokens: 23));
         d.start();
         await h.calls(2);
-        if (deletion == 'книги') {
+        if (deletion == 'book') {
           h.controller.deleteBook(h.book.id);
           await until(() => h.library.shelf.isEmpty);
-        } else if (deletion == 'озвучки книги') {
+        } else if (deletion == 'book narration') {
           h.controller.deleteBookNarration(h.book.id);
         } else {
           h.controller.clearAllNarration();
@@ -482,7 +483,7 @@ void main() {
         d.downloads.setForeground(true);
         await ioSettled();
         expect(h.engine.calls.length, 2);
-        if (deletion == 'книги') {
+        if (deletion == 'book') {
           expect(
             Directory('${h.root.path}/books/${h.book.id}').existsSync(),
             isFalse,
@@ -499,7 +500,7 @@ void main() {
     );
   }
 
-  test('завершение, перезапуск на той же папке, очистка и новое скачивание занимают место', () async {
+  test('finishing, a restart on the same folder, clearing and a new download take up space', () async {
     final source = Book.fromJson({
       ...playbackBook([
         ['Готовая глава.'],

@@ -51,7 +51,7 @@ Future<(AppHarness, ReaderScreenState, int)> freshPage(WidgetTester tester, {boo
 }
 
 void main() {
-  testWidgets('настоящий контроллер: вперёд трижды продолжает прежние страницы, как обычное листание', (tester) async {
+  testWidgets('real controller: forward three times continues previous pages like ordinary turning', (tester) async {
     final h = await openBackfillBook(tester);
     var st = reader(tester);
     final book = st.widget.book;
@@ -76,8 +76,8 @@ void main() {
     }
     final control = st.layout.pages.skipWhile((p) => !identical(p, origin)).map(bounds).toList();
     final col = st.columnSize;
-    // Контрольный экран уже листал эти страницы. Второй открыт на том же месте, но его
-    // фоновой раскладке ещё не дали времени досчитать следующий абзац.
+    // The control screen has already turned these pages. The second one is open at the same place, but its
+    // background layout has not yet been given time to calculate the next paragraph.
     tester.state<NavigatorState>(find.byType(Navigator).first).push(PageRouteBuilder<void>(
         transitionDuration: Duration.zero, reverseTransitionDuration: Duration.zero,
         pageBuilder: (_, animation, secondaryAnimation) => ReaderScreen(services: h.app.services, book: book)));
@@ -90,11 +90,11 @@ void main() {
     original.pause();
     await tester.pump(const Duration(milliseconds: 400));
     original.resume();
-    expect(original.findPage(block + 1, 0), isNull, reason: 'первая команда действительно за краем расчёта');
+    expect(original.findPage(block + 1, 0), isNull, reason: 'the first command is really beyond the calculated edge');
     await tester.tap(find.byKey(const Key('play-pause')));
     for (var i = 0; i < 3; i++) {
       await tester.tap(find.byKey(const Key('next')));
-      expect(st.layout, same(original), reason: 'близкая команда продолжает раскладку');
+      expect(st.layout, same(original), reason: 'a nearby command continues the layout');
       await h.until(() => h.app.services.narration.state == NarrationState.playing);
       await tester.pumpAndSettle();
       expect(st.layout, same(original));
@@ -104,7 +104,7 @@ void main() {
     final voice = st.soundingPosition!;
     final shown = st.layout.pages[st.page];
     expect(shown.firstBlock < voice.block || shown.firstOffset < voice.offset, isTrue,
-        reason: 'звучащий абзац находится внутри прежней страницы, а не переносится наверх');
+        reason: 'the narrated paragraph is inside the previous page and is not moved to the top');
     while (st.page > 0) {
       await turn(tester);
       expect(bounds(st.layout.pages[st.page]), control[st.page]);
@@ -113,7 +113,7 @@ void main() {
   });
 
   for (final distance in [30000, 30001]) {
-    testWidgets('настоящий контроллер: граница близкой цели $distance знаков от готового края', (tester) async {
+    testWidgets('real controller: nearby-target boundary, $distance characters from the ready edge', (tester) async {
       final (_, st, _) = await freshPage(tester);
       final original = st.layout;
       final page = original.pages[st.page];
@@ -124,7 +124,7 @@ void main() {
       expect(book.charsBefore(at.$1) + at.$2, absolute);
       expect(book.chapterOf(at.$1), page.chapter);
       st.goToPosition(ReadingPosition(at.$1, at.$2), user: false);
-      expect(st.layout.pages[st.page], same(page), reason: 'до готовности цели прежняя страница остаётся');
+      expect(st.layout.pages[st.page], same(page), reason: 'until the target is ready the previous page stays');
       if (distance == 30000) {
         expect(st.layout, same(original));
       }
@@ -135,7 +135,7 @@ void main() {
     });
   }
 
-  testWidgets('настоящий контроллер: другая глава даже рядом начинает новую раскладку', (tester) async {
+  testWidgets('real controller: another chapter starts a new layout even when nearby', (tester) async {
     final (_, st, block) = await freshPage(tester, atChapterEnd: true);
     final original = st.layout;
     final goal = st.widget.book.chapters[2].firstBlock;
@@ -146,7 +146,7 @@ void main() {
     expect(st.layout.pages.first.firstBlock, goal);
   });
 
-  testWidgets('оглавление на неизвестное начало текущей главы сохраняет прежний путь', (tester) async {
+  testWidgets('the table of contents to an unknown chapter start keeps the previous path', (tester) async {
     final (_, st, _) = await freshPage(tester);
     final original = st.layout;
     final chapter = st.widget.book.chapters[1];
@@ -161,7 +161,7 @@ void main() {
     expectFollowingPage(tester);
   });
 
-  testWidgets('настоящий контроллер: команды во время досчёта заменяют цель без промежуточных страниц', (tester) async {
+  testWidgets('real controller: commands during catch-up replace the target, no intermediate pages', (tester) async {
     final (h, st, block) = await freshPage(tester);
     final original = st.layout;
     final shown = original.pages[st.page];
@@ -182,7 +182,7 @@ void main() {
     expectFollowingPage(tester);
   });
 
-  testWidgets('настоящий контроллер: команда к готовой странице отменяет близкое ожидание', (tester) async {
+  testWidgets('real controller: a command to a ready page cancels the nearby wait', (tester) async {
     final (h, st, block) = await freshPage(tester);
     final original = st.layout;
     final shown = original.pages[st.page];
@@ -193,11 +193,11 @@ void main() {
     expect(h.app.services.narration.unitStart, ReadingPosition(block, 0));
     await tester.pumpAndSettle();
     expect(st.layout, same(original));
-    expect(original.pages[st.page], same(shown), reason: 'отменённая цель не появляется после досчёта');
+    expect(original.pages[st.page], same(shown), reason: 'the cancelled target does not appear after the catch-up');
     expectFollowingPage(tester);
   });
 
-  testWidgets('настоящий контроллер: смена шрифта отменяет близкий досчёт и держит новую цель', (tester) async {
+  testWidgets('real controller: a font change cancels the nearby catch-up and keeps the new target', (tester) async {
     final (h, st, block) = await freshPage(tester);
     final original = st.layout;
     for (var i = 0; i < 3; i++) {
@@ -217,7 +217,7 @@ void main() {
   });
 
   for (final playing in [false, true]) {
-    testWidgets('настоящий контроллер: назад к близкому неизвестному абзацу, звук $playing', (tester) async {
+    testWidgets('real controller: back to a nearby unknown paragraph, sound $playing', (tester) async {
       final (h, st, block) = await freshPage(tester);
       final original = st.layout;
       final shown = original.pages[st.page];
@@ -236,12 +236,12 @@ void main() {
     });
   }
 
-  testWidgets('настоящий контроллер: естественный ход за готовый край сохраняет раскладку', (tester) async {
+  testWidgets('real controller: natural progress beyond the ready edge keeps the layout', (tester) async {
     final (h, st, block) = await freshPage(tester);
     final original = st.layout;
     h.app.services.narration.resume();
     final revision = h.app.services.narration.commandRevision;
-    // Подставные WAV дают 0,1 секунды на знак. Ход пересекает границу абзаца без кадров досчёта.
+    // Fake WAVs give 0.1 seconds per character. Progress crosses the paragraph boundary without catch-up frames.
     for (var i = 0; i < 80 && h.app.services.narration.block == block; i++) {
       h.playbackClock.advance(const Duration(seconds: 5));
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 5)));
@@ -257,7 +257,7 @@ void main() {
   });
 
   for (final action in ['resume', 'back']) {
-    testWidgets('настоящий контроллер: $action досчитывает близкое место после ручного ухода', (tester) async {
+    testWidgets('real controller: $action catches up the nearby place after a manual move away', (tester) async {
       final (h, st, block) = await freshPage(tester);
       final original = st.layout;
       h.app.services.narration.resume();
@@ -266,14 +266,14 @@ void main() {
       await tester.pumpAndSettle();
       await browse;
       expect(st.following, isFalse);
-      // Пока читатель смотрит назад, голос пересекает готовый край. Кадры страницы
-      // не двигают подставные часы звука; звук и файловые операции идут отдельно.
+      // While the reader looks back, the voice crosses the ready edge. Page frames
+      // do not advance the fake audio clock; audio and file operations run separately.
       await h.until(() => h.player.playing);
       final wait = Stopwatch()..start();
       while (h.app.services.narration.block == block) {
         if (wait.elapsed >= const Duration(seconds: 10)) {
-          fail('За 10 с голос не вышел из блока $block: ${h.app.services.narration.state}, '
-              'плеер играет: ${h.player.playing}');
+          fail('Within 10 s the voice did not leave block $block: ${h.app.services.narration.state}, '
+              'player playing: ${h.player.playing}');
         }
         h.playbackClock.advance(const Duration(seconds: 5));
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 5)));

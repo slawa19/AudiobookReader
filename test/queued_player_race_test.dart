@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'queued_player_test.dart' show Harness, item;
 
 void main() {
-  test('быстрые pause → play во время вставки не оставляют движок на паузе', () async {
+  test('quick pause → play during an insert does not leave the engine paused', () async {
     final h = Harness();
     h.player.append(item(0));
     h.player.play();

@@ -6,7 +6,7 @@ import 'package:audiobook_reader/reader/pagination.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Пакетные проверки ждут тот же порционный расчёт, которым пользуется экран.
+/// Batch checks wait for the same incremental layout the screen uses.
 Future<ChapterPagination> paginate({
   required Book book,
   required PageStyle style,

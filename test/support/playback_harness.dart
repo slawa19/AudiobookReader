@@ -52,16 +52,16 @@ Book playbackBook(
 
 Future<void> until(
   bool Function() condition, [
-  String reason = 'асинхронная операция',
+  String reason = 'asynchronous operation',
 ]) async {
   final limit = DateTime.now().add(const Duration(seconds: 8));
   while (!condition()) {
-    if (DateTime.now().isAfter(limit)) fail('Не завершилась $reason');
+    if (DateTime.now().isAfter(limit)) fail('Did not finish: $reason');
     await Future<void>.delayed(const Duration(milliseconds: 2));
   }
 }
 
-/// Даёт завершиться файловому вводу-выводу; часы логики при этом не продвигаются.
+/// Lets file I/O finish; the logic clock does not advance meanwhile.
 Future<void> ioSettled() async {
   for (var i = 0; i < 35; i++) {
     await Future<void>.delayed(const Duration(milliseconds: 2));
@@ -220,19 +220,19 @@ class PlaybackHarness {
 
   Future<void> calls(int count) => until(
     () => engine.calls.length >= count,
-    '$count запросов (сейчас ${engine.calls.length})',
+    '$count requests (now ${engine.calls.length})',
   );
   Future<void> release(int index) async {
     final call = engine.calls[index];
     call.release();
-    // Ждём сам результат — файл звука в хранилище, а не фиксированную паузу: на загруженной машине (CI,
-    // 2026-11-15) кодирование и запись не укладывались в неё. Если файла не будет (тест на отказ записи,
-    // сменённый голос), ожидание кончается по пределу.
+    // Wait for the result itself, the audio file in the store, rather than a fixed pause: on a loaded machine
+    // (CI, 2026-11-15) encoding and writing did not fit into it. If the file never appears (a write-failure
+    // test, a changed voice), the wait ends at the limit.
     String? stored;
     try {
       stored = key(call.text);
     } on Object {
-      // Книга уже удалена с полки: файла не будет, ждать нечего.
+      // The book is already removed from the shelf: there will be no file, nothing to wait for.
     }
     final limit = DateTime.now().add(const Duration(seconds: 2));
     while (stored != null && !audio.has(stored, bookId: book.id) && DateTime.now().isBefore(limit)) {
@@ -251,7 +251,7 @@ class PlaybackHarness {
     controller.dispose();
     sampler.dispose();
     queue.dispose();
-    // Поздние ответы всё ещё вправе учесть расход до закрытия библиотеки.
+    // Late responses may still account for usage before the library is closed.
     queue.invalidateAll();
     for (final call in engine.calls) {
       call.release();

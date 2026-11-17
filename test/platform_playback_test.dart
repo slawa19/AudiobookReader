@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-  test('удержание экрана передаётся каналом по порядку, ошибка видна корню', () async {
+  test('screen wake lock is passed through the channel in order, the error is visible to the root', () async {
     final values = <bool>[];
     final errors = <Object>[];
     messenger.setMockMethodCallHandler(AndroidScreenAwake.channel, (call) async {
@@ -27,7 +27,7 @@ void main() {
     expect(values, [true, false, true]);
     expect(errors, hasLength(1));
   });
-  test('служба подтверждается платформой, ссылка передаётся в системное действие', () async {
+  test('the service is confirmed by the platform, the link is passed to the system action', () async {
     final calls = <String>[];
     messenger.setMockMethodCallHandler(AndroidMediaService.channel, (call) async {
       calls.add(call.method);

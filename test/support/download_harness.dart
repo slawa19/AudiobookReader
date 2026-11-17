@@ -50,7 +50,7 @@ class DownloadHarness {
         call.release();
       }
     }
-    await until(() => downloads.task == null, 'скачивание главы');
+    await until(() => downloads.task == null, 'chapter download');
     await h.queue.drain();
   }
 }

@@ -3,15 +3,15 @@ import 'package:audiobook_reader/screens/reader_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// Размеры экранов из задания (dp) и плотность снимков.
+/// Screen sizes from the brief (dp) and the density of the screenshots.
 const phone412 = Size(412, 915);
 const phone360 = Size(360, 800);
 const phone393 = Size(393, 852);
 const phone320 = Size(320, 640);
 const snapshotDpr = 2.0;
 
-/// Поднимает прототип на экране [size] dp с системным масштабом шрифта [textScale], строкой состояния 32 dp
-/// и полоской жестов 20 dp (режим «от края до края»).
+/// Starts the prototype on a [size] dp screen with the system font scale [textScale], a 32 dp status bar
+/// and a 20 dp gesture bar (edge-to-edge mode).
 Future<Prototype> pumpPrototype(
   WidgetTester tester, {
   Size size = phone412,
@@ -19,7 +19,7 @@ Future<Prototype> pumpPrototype(
   double demoAcceleration = 4,
   String locale = 'ru',
 }) async {
-  // В тестах тени по умолчанию рисуются сплошной обводкой; для снимков нужны настоящие.
+  // In tests shadows are drawn as a solid outline by default; screenshots need real ones.
   debugDisableShadows = false;
   addTearDown(() => debugDisableShadows = true);
   tester.view.devicePixelRatio = snapshotDpr;
@@ -27,14 +27,14 @@ Future<Prototype> pumpPrototype(
   tester.view.padding = const FakeViewPadding(top: 32 * snapshotDpr, bottom: 20 * snapshotDpr);
   tester.view.viewPadding = const FakeViewPadding(top: 32 * snapshotDpr, bottom: 20 * snapshotDpr);
   tester.platformDispatcher.textScaleFactorTestValue = textScale;
-  // Язык телефона. Тестовая среда Flutter по умолчанию en_US; тесты по умолчанию — на русском.
+  // Phone language. The Flutter test environment defaults to en_US; tests default to Russian.
   tester.platformDispatcher.localesTestValue = [Locale(locale)];
   tester.platformDispatcher.localeTestValue = Locale(locale);
   addTearDown(() {
     tester.view.reset();
     tester.platformDispatcher.clearAllTestValues();
   });
-  // Часы приложения закреплены: тарифы «на сегодня» и таймер сна не зависят от дня прогона.
+  // The app clock is pinned: "today" tariffs and the sleep timer do not depend on the day of the run.
   final p = (await tester.runAsync(
       () => Prototype.create(demoAcceleration: demoAcceleration, clock: () => DateTime(2026, 11, 14, 12, 30))))!;
   addTearDown(() {
@@ -47,7 +47,7 @@ Future<Prototype> pumpPrototype(
   return p;
 }
 
-/// Дорисовывает картинки (обложки, иллюстрации): их декодирование идёт вне подставного времени теста.
+/// Finishes drawing images (covers, illustrations): their decoding runs outside the fake time of the test.
 Future<void> settle(WidgetTester tester, {bool animations = true}) async {
   await tester.pump();
   await tester.runAsync(() async {

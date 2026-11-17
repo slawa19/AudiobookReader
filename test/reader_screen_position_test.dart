@@ -14,8 +14,8 @@ Book millionBook() => Book(id: 'three-million', title: 'Три миллиона'
     blocks: [Block(index: 0, kind: BlockKind.paragraph, text: List.filled(300000, 'Текст тут ').join())],
     notes: const {});
 
-// Сохранённая строка огромного абзаца проверяется отдельно. Произвольные цели считаются от
-// начала абзаца, поэтому для проверки независимости от объёма книги нужны обычные отдельные абзацы.
+// The saved line of a huge paragraph is checked separately. Arbitrary targets are calculated from
+// the start of the paragraph, so checking independence of book size needs ordinary separate paragraphs.
 Book millionParagraphBook() => Book(id: 'million-paragraphs', title: 'Три миллиона', author: '', language: 'ru',
     chapters: [for (var i = 0; i < 3; i++) Chapter(title: 'Глава $i', level: 1, firstBlock: i * 1000, blockCount: 1000)],
     blocks: [for (var i = 0; i < 3000; i++) Block(index: i, kind: BlockKind.paragraph,
@@ -38,7 +38,7 @@ void main() {
     measured.clear();
   });
 
-  testWidgets('3 миллиона: открытие на 90 % измеряет только текст от позиции; шрифт держит якорь сразу', (tester) async {
+  testWidgets('3 million: opening at 90 % measures only the text from the position; a font change keeps the anchor immediately', (tester) async {
     final p = await pumpPrototype(tester);
     final book = millionBook();
     expect(book.totalChars, 3000000);
@@ -46,7 +46,7 @@ void main() {
     expect(find.byType(BookPage), findsWidgets);
     expect(measured, isNotEmpty);
     expect(measured.every((r) => r.$2 >= 2700000), isTrue,
-        reason: 'первая страница не должна измерять 2,7 миллиона знаков перед местом');
+        reason: 'the first page must not measure 2.7 million characters before the place');
     expect(measured.fold(0, (n, r) => n + r.$3 - r.$2), lessThan(16384));
     expect(st.layout.pages[st.page].firstOffset, 2700000);
     measured.clear();
@@ -59,7 +59,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('3 миллиона: ползунок 50 % считает только целевой блок, не предыдущие главы', (tester) async {
+  testWidgets('3 million: the 50 % slider calculates only the target block, not the previous chapters', (tester) async {
     final p = await pumpPrototype(tester);
     final book = millionParagraphBook();
     final st = await openAt(tester, p, book, const ReadingPosition(0, 0));
@@ -71,7 +71,7 @@ void main() {
     final target = book.placeAt(fraction);
     tester.widget<Slider>(find.byKey(const Key('book-slider'))).onChangeEnd!(fraction);
     await tester.pump();
-    expect(measured, isNotEmpty, reason: 'целевая страница считается в этой команде, а не ждёт хвоста очереди');
+    expect(measured, isNotEmpty, reason: 'the target page is calculated in this command, not after the queue tail');
     expect(measured.every((r) => r.$1 >= target.$1), isTrue);
     expect(measured.fold(0, (n, r) => n + r.$3 - r.$2), lessThan(16384));
     final page = st.layout.pages[st.page];
@@ -81,7 +81,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('далёкие оглавление, голос и возврат к голосу начинают страницу от места', (tester) async {
+  testWidgets('a distant table of contents, voice and voice return start the page at the place', (tester) async {
     final p = await pumpPrototype(tester);
     final book = millionParagraphBook();
     final st = await openAt(tester, p, book, const ReadingPosition(0, 0));
