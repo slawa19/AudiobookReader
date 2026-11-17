@@ -65,7 +65,7 @@ The command must succeed, print exactly one signer, and its `certificate SHA-256
 (lowercase hexadecimal, no colons):
 
 ```
-<SIGNING_CERT_SHA256>
+708d7a231f8ba86815ab3c2057526f0df31f8448860d0deff23ec200300bf563
 ```
 
 The same fingerprint is stored in the repository variable `SIGNING_CERT_SHA256`, and the release workflow fails if the
