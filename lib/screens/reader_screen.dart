@@ -20,7 +20,7 @@ import 'settings_screen.dart';
 import 'toc_screen.dart';
 import 'voice_screen.dart';
 
-/// Экран чтения (FR-R1–R8, FR-P3, FR-P4, FR-P8). Иммерсивный: только текст; панели — по касанию центра.
+/// The reading screen (FR-R1–R8, FR-P3, FR-P4, FR-P8). Immersive: text only; panels — on a tap in the center.
 class ReaderScreen extends StatefulWidget {
   const ReaderScreen({super.key, required this.services, required this.book});
 
@@ -45,7 +45,7 @@ class ReaderScreenState extends State<ReaderScreen> {
   bool _pendingSave = true;
   bool _pendingMove = false;
   bool _pendingUser = false;
-  // Близкая программная цель продолжает раскладку вместо нового старта от блока.
+  // A nearby programmatic target continues the layout instead of a new start from the block.
   static const _nearbyLayoutChars = 30000;
   int _seenPrepend = 0;
   int? _waitingPage;
@@ -69,19 +69,19 @@ class ReaderScreenState extends State<ReaderScreen> {
   late EdgeInsets _pad;
   late Size _column;
 
-  /// Сообщения об ошибке и скачивание измеряются по содержимому; управление имеет постоянную высоту.
+  /// Error messages and the download are measured by content; the controls have a constant height.
   double? _messageBody;
 
-  // Переходы по страницам. Каждый переход получает номер; завершение старого перехода не трогает признаки
-  // нового. Перетаскивание пальцем сразу отменяет автоматический переход (№13 ревью).
+  // Page transitions. Each transition gets a number; the completion of an old transition does not touch the flags
+  // of the new one. Dragging with a finger immediately cancels the automatic transition (review item 13).
   int _navOp = 0;
 
   bool _programmatic = false;
   int? _animatingTo;
   bool _userDragging = false;
 
-  /// Страница, с которой начался жест пальцем; `null` — жеста нет. Следование выключает только жест, который
-  /// действительно сменил страницу (решение по ревью логики 2026-11-14).
+  /// The page from which a finger gesture began; `null` — no gesture. Following is turned off only by a gesture that
+  /// actually changed the page (logic review decision 2026-11-14).
   int? _dragStartPage;
   bool _dragWaiting = false;
   VelocityTracker? _edgeVelocity;
@@ -90,24 +90,25 @@ class ReaderScreenState extends State<ReaderScreen> {
   int _edgeSide = 0;
   int _pointerPage = 0;
 
-  /// Место выбранного абзаца на странице, где его выбрали: перераскладка держит его на экране (№3 ревью логики).
+  /// The place of the selected paragraph on the page where it was selected: re-layout keeps it on screen (logic review
+  /// item 3).
   ReadingPosition? _selectedAt;
 
-  /// Последний увиденный счётчик явных команд контроллера (А§5): изменился — следование включается.
+  /// The last seen counter of explicit controller commands (А§5): if it changed — following is turned on.
   int _seenCommands = 0;
   ReadingPosition? _lastSounding;
 
-  /// Палец схватил страницу во время автоматического переворота за голосом: следование выключается, даже если
-  /// страница вернулась (решение C проверки жестов).
+  /// A finger grabbed the page during an automatic page turn after the voice: following is turned off even if
+  /// the page came back (gesture review decision C).
   bool _grabbedAuto = false;
 
-  /// Защита от касания вдогонку (решение A проверки жестов, А§8.1): после смены слоя под пальцем экран
-  /// [layerSettleTime] не принимает касаний.
+  /// Protection against a follow-up touch (gesture review decision A, А§8.1): after the layer under the finger changes,
+  /// the screen does not accept touches for [layerSettleTime].
   bool _guarded = true;
   Timer? _guardTimer;
   Object? _layerSignature;
 
-  /// Для тестов: номер страницы и раскладка.
+  /// For tests: the page number and the layout.
   int get page => _page;
   ChapterPagination get layout => _layout!;
   bool get panelsVisible => _panels;
@@ -123,7 +124,7 @@ class ReaderScreenState extends State<ReaderScreen> {
 
   bool get _mine => narration.bookId == book.id && narration.state != NarrationState.idle;
 
-  // Новый размер страницы блокирует старые жесты; близкая цель в той же раскладке — нет.
+  // A new page size blocks old gestures; a nearby target in the same layout does not.
   bool get _reflowing => _pendingLayout != null && !identical(_pendingLayout, _layout);
 
   @override
@@ -147,7 +148,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     s.downloads.removeListener(_rebuild);
     s.settings.removeListener(_rebuild);
     s.library.removeListener(_rebuild);
-    // Закрытие книги завершает прослушивание (А§6.6); позицию к этому моменту уже пишет контроллер.
+    // Closing the book ends listening (А§6.6); the controller already writes the position by this time.
     if (narration.bookId == book.id && narration.state != NarrationState.idle) narration.close();
     unawaited(s.flush());
     setImmersive(false);
@@ -164,8 +165,8 @@ class ReaderScreenState extends State<ReaderScreen> {
     if (mounted) setState(() {});
   }
 
-  /// Слой под пальцем сменился: [layerSettleTime] касания не принимаются. Вызывается из build (смена панелей) и
-  /// после закрытия листа, диалога или экрана поверх чтения.
+  /// The layer under the finger changed: touches are not accepted for [layerSettleTime]. Called from build (panel
+  /// change) and after closing a sheet, a dialog or a screen on top of reading.
   void _guardLayer() {
     _guarded = true;
     _guardTimer?.cancel();
@@ -174,14 +175,15 @@ class ReaderScreenState extends State<ReaderScreen> {
     });
   }
 
-  /// Лист, диалог или экран поверх чтения закрылся — то, что было под ним, получает защиту от касания вдогонку.
+  /// A sheet, a dialog or a screen on top of reading closed — what was under it gets protection against a follow-up
+  /// touch.
   Future<T?> _afterLayer<T>(Future<T?> layer) async {
     final result = await layer;
     if (mounted) setState(_guardLayer);
     return result;
   }
 
-  // --- раскладка --------------------------------------------------------------------------------------
+  // --- layout -----------------------------------------------------------------------------------------
 
   void _ensureLayout(PageStyle style, Size column) {
     final key = (style, column, book.id);
@@ -198,18 +200,18 @@ class ReaderScreenState extends State<ReaderScreen> {
     _heldAfterClose = null;
     final visible = _layout == null ? null : _current;
     final retain = held != null && visible != null && visible.contains(held.block, held.offset);
-    // Удерживаемое место задаёт видимость, а начало остаётся от уже показанной страницы.
+    // The held place defines visibility, and the start remains from the already shown page.
     final from = visible != null && (held == null || retain)
         ? ReadingPosition(visible.firstBlock, visible.firstOffset)
         : held == null ? _anchor : ReadingPosition(held.block, 0);
-    // «Закрыть» уже передал позицию контроллером (FR-P8); одна перераскладка её не перезаписывает.
+    // "Close" already passed the position through the controller (FR-P8); a single re-layout does not overwrite it.
     _startLayout(from, retain: held, completeRetain: retain,
         savePosition: !closing && (pending == null || pendingSave),
         move: pending != null && pendingMove, user: pending != null && pendingUser);
   }
 
-  /// Сохранённые начала строк сохраняются точно. Для иной цели вызывающий передаёт начало блока
-  /// и удерживаемую позицию; поиск её страницы также идёт порциями, даже внутри длинного абзаца.
+  /// Saved line starts are preserved exactly. For another target the caller passes the block start
+  /// and the held position; the search for its page also goes in batches, even inside a long paragraph.
   void _startLayout(ReadingPosition place, {ReadingPosition? retain, bool completeRetain = false,
       bool savePosition = true, bool move = false, bool user = false}) {
     _cancelPending();
@@ -218,8 +220,8 @@ class ReaderScreenState extends State<ReaderScreen> {
     final next = ChapterPagination();
     next.start(book: book, style: metrics.style, column: metrics.column, block: place.block, offset: place.offset,
         throughBook: true, imageSizes: s.library.imageSizes(book.id));
-    // До удерживаемого места — не больше текста одной прежней страницы. Первую подходящую страницу
-    // показываем сразу, без промежуточного показа страницы, с которой голос уже ушёл.
+    // Up to the held place — no more than the text of one previous page. The first suitable page
+    // is shown at once, without an intermediate display of the page the voice has already left.
     while (completeRetain && retain != null && next.findPage(retain.block, retain.offset) == null && !next.isComplete) {
       next.advancePage();
     }
@@ -252,7 +254,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     if (pending == null) return;
     pending.removeListener(_onPendingLayout);
     if (identical(pending, _layout)) {
-      // Поиск мог временно забрать слушателя у показанной раскладки. Любая отмена возвращает его.
+      // The search may have temporarily taken the listener from the shown layout. Any cancellation returns it.
       pending.removeListener(_onLayout);
       pending.addListener(_onLayout);
     } else {
@@ -277,7 +279,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     final target = pending.findPage(goal.block, goal.offset, preferredPage: identical(pending, _layout) ? _page : null);
     if (target == null && identical(pending, _layout) && !pending.isLoadingPrevious &&
         (pending.isComplete || pending.pages.last.chapter > book.chapterOf(goal.block))) {
-      // Досчёт исчерпал главу без цели — обычный поиск от её блока.
+      // The catch-up exhausted the chapter without a target — an ordinary search from its block.
       _startLayout(ReadingPosition(goal.block, 0), retain: goal,
           savePosition: _pendingSave, move: _pendingMove, user: _pendingUser);
       return;
@@ -312,7 +314,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     _resetPages();
     _markLastAfterFrame();
     final generation = _generation;
-    // При stopped позиция контроллера остаётся до явного перемещения читателем (А§5).
+    // In stopped the controller position stays until the reader explicitly moves (А§5).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || generation != _generation) return;
       if (move) _reportShownPage();
@@ -350,7 +352,7 @@ class ReaderScreenState extends State<ReaderScreen> {
         _page += added;
         if (_waitingPage != null) _waitingPage = _waitingPage! + added;
         if (_flipTarget != null) _flipTarget = _flipTarget! + added;
-        // Вставка перед массивом меняет только локальный индекс, но не видимый текст.
+        // An insertion before the array changes only the local index, not the visible text.
         _resetPages();
       }
     });
@@ -382,7 +384,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     final changingMetrics = _pendingLayout != null && _pendingMetrics != _shownMetrics;
     if (!changingMetrics && target != null &&
         (!user || target == _page)) {
-      // Возврат к любому уже посчитанному месту сохраняет страницу и положение текста (А§5).
+      // Returning to any already computed place keeps the page and the text position (А§5).
       _goToCalculatedPage(target, user: user);
       return;
     }
@@ -400,8 +402,8 @@ class ReaderScreenState extends State<ReaderScreen> {
   void _goToCalculatedPage(int target, {required bool user}) {
     _cancelPending();
     layout.resume();
-    // Новая команда может прийти до кадра, который подключит заменённый PageController.
-    // Готовая страница показывается сразу, а не теряется вместе с отменённым ожиданием.
+    // A new command may arrive before the frame that attaches the replaced PageController.
+    // A ready page is shown at once and is not lost together with the cancelled wait.
     if (_pc == null || !_pc!.hasClients) {
       _cancelPageRequest();
       _onPageChanged(target, programmatic: !user);
@@ -411,7 +413,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     }
   }
 
-  /// Готовое место сохраняет страницу, близкое досчитывается, далёкое ищется от начала блока.
+  /// A ready place keeps the page, a near one is computed up to, a far one is searched from the block start.
   void goToPosition(ReadingPosition place, {bool user = true}) {
     final shown = layout.findPage(place.block, place.offset, preferredPage: _page);
     final changingMetrics = _pendingLayout != null && _pendingMetrics != _shownMetrics;
@@ -441,7 +443,8 @@ class ReaderScreenState extends State<ReaderScreen> {
         _onPendingLayout();
       } else if (_pendingLayout == null && layout.pages.first.firstBlock == place.block &&
           layout.pages.first.firstOffset == 0) {
-        // Этот блок уже считается с начала: продолжаем его очередь, не измеряя готовый префикс заново.
+        // This block is already being computed from its start: continue its queue without re-measuring the ready
+        // prefix.
         _waitOnLayout(place, user: user);
         _onPendingLayout();
       } else {
@@ -463,7 +466,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     return 0;
   }
 
-  /// Пока цель не готова, остаётся прежняя страница. Новая команда заменяет цель того же досчёта.
+  /// Until the target is ready, the previous page stays. A new command replaces the target of the same catch-up.
   void _waitOnLayout(ReadingPosition place, {required bool user, bool backwards = false}) {
     final continuing = identical(_pendingLayout, _layout);
     if (!continuing) {
@@ -494,22 +497,22 @@ class ReaderScreenState extends State<ReaderScreen> {
 
   bool get _onLastPage => layout.endsBook(_current);
 
-  /// Доля книги на экране; на последней странице книга дочитана — 100 % (FR-L4, правило d).
+  /// The fraction of the book on screen; on the last page the book is finished — 100 % (FR-L4, rule d).
   double get _fraction => _onLastPage ? 1 : book.fractionAt(_current.firstBlock, _current.firstOffset);
 
-  // --- листание -----------------------------------------------------------------------------------------
+  // --- paging -----------------------------------------------------------------------------------------
 
-  /// Касание правой или левой трети. Второе касание во время анимации первого не теряется: первый переход
-  /// доводится мгновенно, второй идёт от него. Касание пальцем останавливает анимацию прокрутки ещё до того,
-  /// как распознано как касание, поэтому цель первого перехода помнится всё время его анимации.
+  /// A tap on the right or left third. A second tap during the animation of the first is not lost: the first transition
+  /// is finished instantly, the second goes from it. A finger touch stops the scroll animation even before it is
+  /// recognized as a tap, so the first transition's target is remembered during its whole animation.
   void _flip(int delta) {
     if (_reflowing) return;
     if (_pendingLayout != null) _cancelPending();
     final pc = _pc;
     if (pc == null) return;
     if (_grabbedAuto) {
-      // Касание остановило автоматический переворот: это выбор читателя и на краю книги,
-      // где встречный переворот остаётся на той же странице.
+      // The touch stopped the automatic page turn: this is the reader's choice, also at the edge of the book,
+      // where an opposing turn stays on the same page.
       _grabbedAuto = false;
       _navOp++;
       _programmatic = false;
@@ -556,7 +559,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     _waitingDone?.complete();
     _waitingDone = null;
     target = target.clamp(0, layout.pages.length - 1);
-    // Уже листаем туда же автоматически — не перезапускать анимацию (озвучка зовёт сюда на каждом шаге).
+    // Already paging there automatically — do not restart the animation (narration calls here on every step).
     if (target == _page || (!user && _programmatic && target == _animatingTo)) return;
     final op = ++_navOp;
     _programmatic = !user;
@@ -574,7 +577,7 @@ class ReaderScreenState extends State<ReaderScreen> {
       setState(_resetPages);
       return;
     }
-    if (op != _navOp || !mounted) return; // начался другой переход — его признаки не трогаем
+    if (op != _navOp || !mounted) return; // another transition began — do not touch its flags
     _programmatic = false;
     _animatingTo = null;
     if (pc.hasClients && pc.page != null && pc.page!.round() != _page) {
@@ -582,23 +585,23 @@ class ReaderScreenState extends State<ReaderScreen> {
     }
   }
 
-  /// Сообщение о смене страницы от [PageView] поколения [generation]: сообщения уже заменённого (раскладка
-  /// пересчиталась) не значат ничего — ни листания пользователем, ни отключения следования.
+  /// A page change message from the [PageView] of generation [generation]: messages from an already replaced one (the
+  /// layout was recomputed) mean nothing — neither paging by the user nor turning following off.
   void _onPageChangedFrom(int generation, int i) {
     if (generation != _generation) return;
     _onPageChanged(i);
   }
 
   void _onPageChanged(int i, {bool? programmatic}) {
-    // Жест пальцем ещё идёт: что он сделал, решается, когда страница встанет (_onScroll).
+    // A finger gesture is still going: what it did is decided when the page settles (_onScroll).
     final gesture = _dragStartPage != null;
     final auto = (programmatic ?? _programmatic) && !_userDragging;
     setState(() {
       _page = i;
       _anchor = _pagePosition;
       if (!auto && !gesture) _userMoved();
-      // Выбор абзаца снимается при любой смене страницы — жестом, касанием, ползунком, оглавлением, голосом:
-      // невидимого выбора не бывает (решение B проверки жестов).
+      // The paragraph selection is cleared on any page change — by gesture, tap, slider, table of contents, voice:
+      // there is no such thing as an invisible selection (gesture review decision B).
       _selectedBlock = null;
       _selectedAt = null;
     });
@@ -606,23 +609,23 @@ class ReaderScreenState extends State<ReaderScreen> {
     if (!auto && !gesture) _saveScreenPosition();
   }
 
-  /// Пользователь сам сменил страницу. При открытой панели этой книги — в том числе в `stopped` — следование
-  /// выключается: место на экране теперь выбрал он (А§5, №1 ревью логики).
+  /// The user changed the page themselves. With this book's panel open — including in `stopped` — following
+  /// is turned off: the place on screen is now chosen by the user (А§5, logic review item 1).
   void _userMoved() {
     if (_mine) {
       _following = false;
     }
   }
 
-  /// «Дочитана» (FR-L4) — отдельный факт: показ последней страницы его ставит, показ страницы раньше — снимает.
-  /// Перераскладка (шрифт, панель) его не снимает: это не уход назад.
+  /// "Finished" (FR-L4) is a separate fact: showing the last page sets it, showing a page earlier clears it.
+  /// A re-layout (font, panel) does not clear it: that is not a move back.
   void _reportShownPage() {
     if (_onLastPage) {
       s.library.setFinished(book.id, true);
     } else if (_page < layout.pages.length - 1 || _current.lastBlock < book.blocks.length - 1 ||
         _current.lastEnd < book.blocks.last.text.length) {
-      // Последний известный кусок может оказаться концом книги; до завершения расчёта не снимаем
-      // признак, уже поставленный контроллером озвучки.
+      // The last known piece may turn out to be the end of the book; until the computation completes, do not clear
+      // the flag already set by the narration controller.
       s.library.setFinished(book.id, false);
     }
   }
@@ -631,8 +634,8 @@ class ReaderScreenState extends State<ReaderScreen> {
     if (_reflowing) return false;
     if (n is ScrollStartNotification && n.dragDetails != null) {
       if (_pendingLayout != null) _cancelPending();
-      // Палец на странице: автоматический переход отменяется. Следование выключится, только если жест в итоге
-      // сменит страницу: малое перетаскивание с возвратом и отменённый жест ничего не меняют.
+      // A finger on the page: the automatic transition is cancelled. Following turns off only if the gesture eventually
+      // changes the page: a small drag with a return and a cancelled gesture change nothing.
       _userDragging = true;
       _dragStartPage ??= _page;
       _dragWaiting = false;
@@ -656,7 +659,8 @@ class ReaderScreenState extends State<ReaderScreen> {
           setState(_userMoved);
           _saveScreenPosition();
         } else if (_following) {
-          // Команда могла прийти, пока палец держал страницу. После возврата жеста догоняем её и на паузе.
+          // A command may have arrived while a finger held the page. After the gesture returns, catch up with it, on a
+          // pause too.
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted && _dragStartPage == null && _following) _onNarration();
           });
@@ -683,8 +687,8 @@ class ReaderScreenState extends State<ReaderScreen> {
     final velocity = _edgeVelocity?.getVelocity().pixelsPerSecond.dx ?? 0;
     final pc = _pc;
     if (pc == null || !pc.hasClients) return;
-    // У края ещё нет страницы для обычной физики PageView. Применяем те же пороги броска;
-    // малое перетаскивание с возвратом и остановкой не становится командой назад.
+    // At the edge there is no page yet for the ordinary PageView physics. Apply the same fling thresholds;
+    // a small drag with a return and a stop does not become a "back" command.
     final physics = pc.position.physics;
     if (_pointerTravel.abs() >= physics.minFlingDistance && velocity.abs() >= physics.minFlingVelocity &&
         velocity.sign == -_edgeSide) {
@@ -692,15 +696,15 @@ class ReaderScreenState extends State<ReaderScreen> {
     }
   }
 
-  /// Позицию пишет экран, только пока прослушивание не активно (А§5).
+  /// The screen writes the position only while listening is not active (А§5).
   void _saveScreenPosition() {
     if (narration.bookId == book.id && narration.isActive) return;
     s.library.savePosition(book.id, _pagePosition, fraction: _fraction);
   }
 
-  // --- следование за голосом (А§5, FR-P4) ---------------------------------------------------------------
+  // --- following the voice (А§5, FR-P4) ---------------------------------------------------------------
 
-  /// Место, которое сейчас звучит в этой книге, — как его сообщает контроллер.
+  /// The place that is voiced now in this book — as the controller reports it.
   ReadingPosition? get soundingPosition {
     if (narration.bookId != book.id) return null;
     return narration.sounding;
@@ -712,16 +716,16 @@ class ReaderScreenState extends State<ReaderScreen> {
     final previousAt = _lastSounding;
     final at = soundingPosition;
     _lastSounding = at;
-    // Явная команда пользователя — откуда бы ни пришла (экран, уведомление, гарнитура) — включает следование
-    // (А§5, №5 ревью логики). Автоматические переходы счётчик не меняют.
+    // An explicit user command — wherever it comes from (screen, notification, headset) — turns following on
+    // (А§5, logic review item 5). Automatic transitions do not change the counter.
     final command = narration.commandRevision != _seenCommands;
     if (command) {
       _seenCommands = narration.commandRevision;
       if (narration.bookId == book.id) {
         _following = true;
-        // Явная команда звука отменяет прежнее листание, даже если голос остался
-        // на текущей странице: завершение той анимации уже не является выбором читателя.
-        // Пока палец держит страницу, его жест сохраняет приоритет (А§5).
+        // An explicit audio command cancels the previous paging, even if the voice stayed
+        // on the current page: the completion of that animation is no longer the reader's choice.
+        // While a finger holds the page, its gesture keeps priority (А§5).
         if (_dragStartPage == null) {
           _cancelPageRequest();
           if (_pc != null && _animatingTo != null) _resetPages();
@@ -730,14 +734,15 @@ class ReaderScreenState extends State<ReaderScreen> {
     }
     if (narration.bookId == book.id) {
       if (state == NarrationState.stopped && _lastState != NarrationState.stopped) _following = true;
-      // Пока выбран абзац для «Читать отсюда», страница под пальцем не уходит за голосом (№8 проверки путей):
-      // иначе кнопка исчезает, не дождавшись нажатия. Снят выбор — экран догоняет голос.
+      // While a paragraph is selected for "Read from here", the page under the finger does not follow the voice (path
+      // review item 8): otherwise the button disappears before it can be pressed. Once the selection is cleared, the
+      // screen catches up with the voice.
       final choosing = _selectedBlock != null;
-      // Незавершённое ручное касание тоже имеет приоритет над очередным событием звука.
+      // An unfinished manual touch also has priority over the next audio event.
       final gesture = _dragStartPage != null || (_waitingPage != null && _waitingUser) ||
           (_animatingTo != null && !_programmatic);
-      // Голос продвинулся в страницу, которую читатель листнул вперёд. Простое событие или смена высоты
-      // этого не делает: предыдущее место обязано быть за пределами той же страницы.
+      // The voice advanced into the page that the reader flipped forward. A plain event or a height change
+      // does not do that: the previous place must be outside the same page.
       if (!_following && !choosing && !gesture && _pendingLayout == null && _layout != null &&
           state == NarrationState.playing && at != null && previousAt != null &&
           (at.block > previousAt.block || (at.block == previousAt.block && at.offset > previousAt.offset)) &&
@@ -773,7 +778,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     }
   }
 
-  // --- жесты ---------------------------------------------------------------------------------------------
+  // --- gestures ---------------------------------------------------------------------------------------
 
   void _clearSelection() {
     setState(() {
@@ -788,7 +793,7 @@ class ReaderScreenState extends State<ReaderScreen> {
       _clearSelection();
       return;
     }
-    // Знак сноски важнее панелей: видимую ссылку открываем и при открытых панелях (№12 ревью).
+    // A footnote mark outranks the panels: a visible link is opened with the panels open too (review item 12).
     final local = d.localPosition - Offset(_pad.left, _pad.top);
     final hit = hitTestPage(book: book, page: _current, style: _style, columnWidth: _column.width, p: local);
     if (hit.noteId != null) {
@@ -827,9 +832,9 @@ class ReaderScreenState extends State<ReaderScreen> {
     setImmersive(!v);
   }
 
-  // --- действия -------------------------------------------------------------------------------------------
+  // --- actions ----------------------------------------------------------------------------------------
 
-  /// Переход на другой экран: строка состояния там нужна, иммерсивный режим — только у чтения.
+  /// A transition to another screen: the status bar is needed there, immersive mode — only in reading.
   Future<T?> _push<T>(Widget screen) async {
     setImmersive(false);
     final result = await _afterLayer(Navigator.of(context).push<T>(MaterialPageRoute<T>(builder: (_) => screen)));
@@ -839,13 +844,13 @@ class ReaderScreenState extends State<ReaderScreen> {
 
   bool _requireKey() {
     if (s.settings.hasApiKey) return true;
-    // Нет ключа: «Слушать» ведёт в настройки на поле ключа (FR-P7).
+    // No key: "Listen" leads to the settings, to the key field (FR-P7).
     _push<void>(SettingsScreen(services: s, focusKey: true));
     return false;
   }
 
-  /// «Слушать» (FR-P3): экран только сообщает видимую страницу, место выбирает контроллер. Следование включено
-  /// сразу: кнопки «К месту чтения» после старта быть не может.
+  /// "Listen" (FR-P3): the screen only reports the visible page, the controller chooses the place. Following is turned
+  /// on at once: the "To reading place" button cannot exist after the start.
   void listen() {
     if (!_requireKey()) return;
     final page = PageRange(_pagePosition, ReadingPosition(_current.lastBlock, _current.lastEnd));
@@ -863,18 +868,20 @@ class ReaderScreenState extends State<ReaderScreen> {
     narration.readFrom(book, block);
   }
 
-  // «Слушать» из паузы и из панели ошибки, «назад», «вперёд» — команды контроллера; следование включает его
-  // счётчик явных команд (_onNarration), одинаково для экрана, уведомления и гарнитуры (правило a, А§5).
+  // "Listen" from a pause and from the error panel, "back", "forward" — controller commands; following is turned on by
+  // its counter of explicit commands (_onNarration), the same for the screen, the notification and the headset (rule a,
+  // А§5).
   void _play() => narration.resume();
   void _previous() => narration.previous();
   void _next() => narration.next();
 
   void _closeNarration() {
-    // «Закрыть» — одна команда контроллера: сеанс завершён, затем позиция чтения — место на экране — отдана
-    // писателю (FR-P8). Панель уходит, страница становится длиннее и пересчитывается так, чтобы это место
-    // осталось на экране: если экран следовал за голосом — звучавшее место, иначе — начало страницы, которую
-    // пользователь листал сам. Прежде бралось начало страницы, и пересчёт уводил экран назад, туда, где звучавшего
-    // абзаца уже не было (замечание владельца 2026-11-14). «Дочитана» — отдельный факт и здесь не меняется.
+    // "Close" is one controller command: the session ends, then the reading position — the place on screen — is handed
+    // to the writer (FR-P8). The panel goes away, the page becomes longer and is recomputed so that this place
+    // stays on screen: if the screen was following the voice — the voiced place, otherwise — the start of the page that
+    // the user flipped to themselves. Previously the page start was taken, and the recomputation took the screen back
+    // to where the voiced paragraph no longer was (owner's remark 2026-11-14). "Finished" is a separate fact and is not
+    // changed here.
     final place = (_following ? soundingPosition : null) ?? _pagePosition;
     _anchor = place;
     _heldAfterClose = place;
@@ -885,17 +892,18 @@ class ReaderScreenState extends State<ReaderScreen> {
   Future<void> _openContents() async {
     final chapter = await _push<int>(TocScreen(services: s, book: book, current: _current.chapter));
     if (chapter == null || !mounted) return;
-    // Новые _Slide сразу скрыты: результат pop приходит до первого кадра возврата.
+    // The new _Slide are hidden at once: the pop result arrives before the first return frame.
     _panelsVersion++;
     _setPanels(false);
     final listening = narration.bookId == book.id &&
         (narration.isActive || narration.state == NarrationState.paused);
     if (listening) {
-      // Во время прослушивания выбор главы — новое место звука: голос к началу главы (и текущей тоже), следование
-      // включает команда контроллера, страницу ведёт голос — переход не ручное листание (№1 проверки путей, a).
+      // During listening, choosing a chapter is a new audio place: the voice goes to the chapter start (the current one
+      // too), following is turned on by a controller command, the voice drives the page — the transition is not manual
+      // paging (path review item 1, a).
       final block = book.chapters[chapter].firstBlock;
       if (layout.findPage(block, 0) == null) {
-        // Оглавление явно выбирает новое начало, а не продолжение близкого участка.
+        // The table of contents explicitly chooses a new start, not a continuation of a nearby stretch.
         setState(() => _startLayout(ReadingPosition(block, 0), move: true));
       }
       narration.moveIfListening(book, block);
@@ -904,12 +912,12 @@ class ReaderScreenState extends State<ReaderScreen> {
     }
   }
 
-  /// Отказ по ключу: «Изменить ключ» ведёт к полю ключа в настройках; «Назад» возвращает в книгу (FR-P7).
+  /// A key rejection: "Change key" leads to the key field in settings; "Back" returns to the book (FR-P7).
   Future<void> _changeKey() => _push<void>(SettingsScreen(services: s, focusKey: true));
 
   Future<void> _openVoice() => _push<void>(VoiceScreen(services: s, book: book));
 
-  // --- построение ------------------------------------------------------------------------------------------
+  // --- building ---------------------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -921,9 +929,10 @@ class ReaderScreenState extends State<ReaderScreen> {
     final task = s.downloads.task;
     final downloading = task != null && task.bookId == book.id && task.status == DownloadStatus.running;
     final downloadLine = downloading ? DownloadLine(task: task, onStop: s.downloads.stop) : null;
-    // Смена слоя под пальцем — нижняя панель чтения ↔ панель плеера, вид панели плеера (управление, ошибка,
-    // конец книги), строка скачивания — защита от касания вдогонку (решение A проверки жестов, А§8.1). Показ и
-    // скрытие панелей чтения касанием центра слоем под пальцем не считается: они встают у краёв, а не под палец.
+    // A layer change under the finger — the reading bottom panel ↔ the player panel, the player panel view (controls,
+    // error, end of book), the download row — protection against a follow-up touch (gesture review decision A, А§8.1).
+    // Showing and hiding the reading panels by a tap in the center is not counted as a layer under the finger: they
+    // appear at the edges, not under the finger.
     final playerKind = !_mine
         ? 'none'
         : narration.state != NarrationState.stopped
@@ -937,10 +946,11 @@ class ReaderScreenState extends State<ReaderScreen> {
       _messageBody = null;
       _guardLayer();
     }
-    // Системная «Назад» (решение J проверки жестов, А§8.1): 1) снять выбор абзаца; 2) лист, диалог, сноску
-    // закрывает навигатор — это свои маршруты; 3) панели чтения скрыты — показать их, книга не закрывается;
-    // 4) панели показаны — закрыть книгу. Краевой жест Android — это «Назад»: случайное смахивание от края в
-    // иммерсивном чтении только показывает панели. Стрелка «Назад» в шапке закрывает книгу сразу.
+    // The system "Back" (gesture review decision J, А§8.1): 1) clear the paragraph selection; 2) a sheet, dialog or
+    // footnote is closed by the navigator — they are their own routes; 3) the reading panels are hidden — show them,
+    // the book is not closed; 4) the panels are shown — close the book. The Android edge gesture is "Back": an
+    // accidental swipe from the edge in immersive reading only shows the panels. The "Back" arrow in the header closes
+    // the book at once.
     return PopScope(
       canPop: _selectedBlock == null && _panels,
       onPopInvokedWithResult: (didPop, _) {
@@ -974,8 +984,8 @@ class ReaderScreenState extends State<ReaderScreen> {
       body: LayoutBuilder(builder: (context, c) {
         final area = Size(c.maxWidth, c.maxHeight);
         final playerVisible = _mine;
-        // Страница кончается над всем, что занято внизу постоянно: панелью плеера (вместе с её строкой
-        // скачивания и «К месту чтения») или строкой скачивания и долей книги.
+        // The page ends above everything that is permanently occupied at the bottom: the player panel (together with
+        // its download row and "To reading place") or the download row and the book fraction.
         final reserved = playerVisible
             ? ((narration.state == NarrationState.stopped || downloading ? _messageBody : null) ??
                 PlayerPanel.controlsHeight + _bottomInset) + 16
@@ -999,8 +1009,9 @@ class ReaderScreenState extends State<ReaderScreen> {
           children: [
             Positioned.fill(
               child: Listener(
-                // Палец лёг на страницу посреди автоматического переворота за голосом — схватил её (решение C).
-                // Проверяется в момент касания: к началу перетаскивания переворот уже остановлен.
+                // A finger landed on the page in the middle of an automatic page turn after the voice — grabbed it
+                // (decision C). Checked at the moment of the touch: by the start of the drag the turn is already
+                // stopped.
                 onPointerDown: (event) {
                   _grabbedAuto = _programmatic && _animatingTo != null;
                   _edgeVelocity = VelocityTracker.withKind(event.kind)..addPosition(event.timeStamp, event.position);
@@ -1026,15 +1037,15 @@ class ReaderScreenState extends State<ReaderScreen> {
                   child: PageView.builder(
                     key: ValueKey('pages-$_generation'),
                     controller: _pc,
-                    // Даже единственная готовая страница принимает жест к ещё не посчитанному краю.
+                    // Even the single ready page accepts a gesture toward a not-yet-computed edge.
                     physics: !_reflowing
                         ? const AlwaysScrollableScrollPhysics() : const NeverScrollableScrollPhysics(),
                     onPageChanged: (i) => _onPageChangedFrom(generation, i),
                     itemCount: _layout!.pages.length,
-                    // Преимущественно вертикальный жест (угол к горизонтали больше 45° на момент распознавания) не
-                    // листает и не делает ничего (решение D, FR-R2). Распознаватель стоит внутри страницы, глубже
-                    // распознавателя листания, и первым видит каждое движение пальца: он забирает жест, когда палец
-                    // ушёл вверх или вниз дальше порога и дальше, чем вбок.
+                    // A predominantly vertical gesture (angle to the horizontal over 45° at the moment of recognition)
+                    // does not page and does nothing (decision D, FR-R2). The recognizer sits inside the page, deeper
+                    // than the paging recognizer, and sees every finger movement first: it takes the gesture when the
+                    // finger has gone up or down beyond the threshold and farther than sideways.
                     itemBuilder: (context, i) => RawGestureDetector(
                       gestures: {
                         MostlyVerticalDragRecognizer: GestureRecognizerFactoryWithHandlers<MostlyVerticalDragRecognizer>(
@@ -1091,7 +1102,8 @@ class ReaderScreenState extends State<ReaderScreen> {
                 title: book.title,
                 subtitle: chapterLabel(book, previewChapter),
                 chapterExcerpt: book.chapters[previewChapter].title.trim().isEmpty,
-                // Стрелка «Назад» в шапке закрывает книгу сразу; системная «Назад» — по порядку решения J.
+                // The "Back" arrow in the header closes the book at once; the system "Back" — in the order of decision
+                // J.
                 onBack: () => Navigator.of(context).pop(),
                 onContents: _openContents,
                 onAppearance: () => _afterLayer(showTextAppearanceSheet(context, s.settings, s.themePreviews)),
@@ -1146,8 +1158,8 @@ class ReaderScreenState extends State<ReaderScreen> {
     );
   }
 
-  /// Ползунок по книге и доля. Название главы — только в шапке; при перетаскивании шапка показывает главу,
-  /// в которую попадёт палец.
+  /// The book slider and the fraction. The chapter title is only in the header; while dragging, the header shows the
+  /// chapter that the finger will land in.
   Widget _sliderStrip(BuildContext context) {
     final theme = Theme.of(context);
     final value = _sliderDrag ?? _fraction;
@@ -1165,15 +1177,15 @@ class ReaderScreenState extends State<ReaderScreen> {
           Slider(
             key: const Key('book-slider'),
             value: value.clamp(0.0, 1.0),
-            // Внешний вид Material 3 2024 года; флаг помечен устаревшим, но другого способа включить его нет.
+            // The 2024 Material 3 look; the flag is marked deprecated, but there is no other way to turn it on.
             // ignore: deprecated_member_use
             year2023: false,
             onChanged: (v) => setState(() => _sliderDrag = v),
             onChangeEnd: (v) {
               final (b, o) = book.placeAt(v);
               final target = _layout!.findPage(b, o, preferredPage: _page);
-              // Ползунок отпущен на другой странице — ручное перемещение, следование выключается. Касание без
-              // сдвига (та же страница) ничего не меняет (решение H, FR-P4, FR-R5).
+              // The slider is released on another page — a manual move, following is turned off. A tap without
+              // a shift (the same page) changes nothing (decision H, FR-P4, FR-R5).
               setState(() {
                 _sliderDrag = null;
                 if (target != _page) _userMoved();
@@ -1186,7 +1198,8 @@ class ReaderScreenState extends State<ReaderScreen> {
     );
   }
 
-  /// «Читать отсюда» — у абзаца, но всегда в видимой части экрана: не за его краем и не под панелью плеера.
+  /// "Read from here" — at the paragraph, but always in the visible part of the screen: not past its edge and not under
+  /// the player panel.
   Widget _readFromHere(BuildContext context, Size area) {
     final frags = _current.fragments.where((f) => f.block == _selectedBlock).toList();
     if (frags.isEmpty) return const SizedBox.shrink();
@@ -1218,7 +1231,7 @@ class ReaderScreenState extends State<ReaderScreen> {
   }
 }
 
-/// Плавное появление панели: сдвиг + прозрачность; спрятанная панель не ловит касания.
+/// Smooth appearance of the panel: shift + opacity; a hidden panel does not catch touches.
 class _Slide extends StatelessWidget {
   const _Slide({super.key, required this.visible, required this.from, required this.alignment, required this.child});
 
@@ -1281,8 +1294,8 @@ class _TopBar extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          // 8 dp сбоку: области 48 × 48 крайних кнопок не заходят в скругление нижних углов шапки (касание у угла
-          // «Назад» не срезано, проверка жестов 2026-11-14).
+          // 8 dp at the side: the 48 × 48 areas of the outermost buttons do not reach into the rounding of the header's
+          // lower corners (a touch at the corner of "Back" is not cut off, gesture review 2026-11-14).
           padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1298,7 +1311,7 @@ class _TopBar extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Название главы — не больше двух строк; начало безымянной — одной строкой.
+                        // The chapter title — at most two lines; the start of an unnamed one — one line.
                         Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleMedium),
                         if (subtitle != null && subtitle!.isNotEmpty)
                           Text(subtitle!,
@@ -1364,7 +1377,7 @@ class _BottomPanel extends StatelessWidget {
                 runSpacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  // Голос книги — и до первого прослушивания (FR-V2).
+                  // The book's voice — also before the first listening (FR-V2).
                   VoiceChip(key: const Key('voice-chip-idle'), voiceName: voiceName, onPressed: onVoice),
                 ],
               ),
@@ -1387,10 +1400,10 @@ class _BottomPanel extends StatelessWidget {
   }
 }
 
-/// Вертикальный распознаватель, который забирает жест только преимущественно вертикальный: палец ушёл вверх или
-/// вниз дальше порога касания и дальше, чем вбок (угол к горизонтали больше 45°). Тогда листание страниц спор
-/// проигрывает и жест не делает ничего (решение D проверки жестов, FR-R2). Преимущественно горизонтальный жест он
-/// не трогает — его забирает листание.
+/// A vertical recognizer that takes only a predominantly vertical gesture: the finger went up or
+/// down beyond the touch threshold and farther than sideways (angle to the horizontal over 45°). Then the page paging
+/// arena loses and the gesture does nothing (gesture review decision D, FR-R2). A predominantly horizontal gesture it
+/// does not touch — paging takes it.
 class MostlyVerticalDragRecognizer extends VerticalDragGestureRecognizer {
   MostlyVerticalDragRecognizer({super.debugOwner});
 
@@ -1417,8 +1430,8 @@ class MostlyVerticalDragRecognizer extends VerticalDragGestureRecognizer {
       super.hasSufficientGlobalDistanceToAccept(pointerDeviceKind, deviceTouchSlop) && _moved.dy.abs() > _moved.dx.abs();
 }
 
-/// Пока идёт «Скачать главу» — короткая строка с долей готового и «Стоп» (решение владельца 2026-11-14, FR-D2).
-/// Видна всегда: в подвале страницы, в нижней панели и в панели плеера.
+/// While "Download chapter" runs — a short row with the ready fraction and "Stop" (owner's decision 2026-11-14, FR-D2).
+/// Always visible: in the page footer, in the bottom panel and in the player panel.
 class DownloadLine extends StatelessWidget {
   const DownloadLine({super.key, required this.task, required this.onStop});
 
@@ -1429,8 +1442,9 @@ class DownloadLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    // Форма строки только рисуется (ShapeDecoration), а не обрезает касания: у Material со скруглённой формой
-    // попадание считается по форме, и углы области «Стоп» 48 × 48 срезались (решение I проверки жестов, FR-R8).
+    // The row's shape is only painted (ShapeDecoration) and does not clip touches: with a Material of rounded shape
+    // hit testing follows the shape, and the corners of the "Stop" 48 × 48 area were cut off (gesture review decision
+    // I, FR-R8).
     return DecoratedBox(
       key: const Key('download-strip'),
       decoration: ShapeDecoration(color: scheme.surfaceContainerHigh, shape: const StadiumBorder()),

@@ -6,7 +6,7 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.Executors
 
-/** Канал передаёт только пути; чтение PCM и кодирование не занимают UI-поток. */
+/** The channel passes only paths; reading PCM and encoding do not occupy the UI thread. */
 class AudioEncoderChannel(messenger: BinaryMessenger) {
     private val methods = MethodChannel(messenger, "audiobook_reader/audio_encoder")
     private val worker = Executors.newSingleThreadExecutor()

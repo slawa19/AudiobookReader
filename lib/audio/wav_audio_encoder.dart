@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'audio_encoder.dart';
 
-/// WAV PCM без сжатия: тесты и Linux используют тот же файловый контракт.
+/// Uncompressed WAV PCM: tests and Linux use the same file contract.
 class WavAudioEncoder implements AudioEncoder {
   const WavAudioEncoder();
 
@@ -18,7 +18,7 @@ class WavAudioEncoder implements AudioEncoder {
     required String outputPath,
     required int sampleRate,
   }) async {
-    if (pcmPath == outputPath) throw ArgumentError('Вход и выход совпадают');
+    if (pcmPath == outputPath) throw ArgumentError('Input and output are the same file');
     final output = File(outputPath);
     try {
       final input = File(pcmPath);
@@ -27,7 +27,7 @@ class WavAudioEncoder implements AudioEncoder {
           sampleRate > 0x7fffffff ||
           length.isOdd ||
           length > 0xffffffff - 36) {
-        throw ArgumentError('Неверные параметры PCM');
+        throw ArgumentError('Invalid PCM parameters');
       }
       final header = ByteData(44);
       void tag(int offset, String value) {

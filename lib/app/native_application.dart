@@ -45,7 +45,7 @@ import 'notification_artwork.dart';
 import 'screen_awake.dart';
 import 'theme.dart';
 
-/// Корень Android: файлы, синтез, плееры и медиасессия живут дольше экранов.
+/// The Android root: files, synthesis, players and the media session outlive the screens.
 class NativeApplication extends AppAssembly {
   final FileLibrary library;
   @override
@@ -69,7 +69,7 @@ class NativeApplication extends AppAssembly {
   http.Client? _transport;
   Uri? _art;
 
-  /// В тестах меняются только источник входящих файлов и каталог хранения.
+  /// Tests replace only the incoming-files source and the storage directory.
   static Future<NativeApplication> create({
     Directory? root,
     IncomingFiles? incoming,
@@ -121,7 +121,7 @@ class NativeApplication extends AppAssembly {
     );
   }
 
-  /// Готовая полка передаётся в конструктор; [create] выбирает Android-хранилище.
+  /// A ready shelf is passed to the constructor; [create] selects the Android storage.
   NativeApplication.fromLibrary(
     this.library,
     this.incoming, {
@@ -151,7 +151,7 @@ class NativeApplication extends AppAssembly {
     downloads = FileChapterDownloads(
       queue: queue,
       tariffs: tariffs,
-      bookFor: (id) => library.cachedBook(id) ?? (throw StateError('Книга не открыта: $id')),
+      bookFor: (id) => library.cachedBook(id) ?? (throw StateError('Book is not open: $id')),
       screenAwake: _screenAwake,
     );
     this.player = player ?? JustAudioPlayer(beforePlay: () async => await _focus?.activateNarration() ?? false);
@@ -233,7 +233,7 @@ class NativeApplication extends AppAssembly {
     );
   }
 
-  /// Вызывается main до runApp. Тесты подставляют порты без запуска Android.
+  /// Called by main before runApp. Tests substitute the ports without starting Android.
   Future<void> connectMedia() async {
     await AudioService.init(
       builder: () => media,
@@ -290,7 +290,7 @@ class NativeApplication extends AppAssembly {
   @override
   void attach(GlobalKey<NavigatorState> navigator) {
     _navigator = navigator;
-    // Подписка одна, не зависит от переходов между полкой, чтением и настройками.
+    // A single subscription, independent of navigation between shelf, reading and settings.
     _subscription ??= incoming.incomingFiles.listen((file) {
       unawaited(_enqueueImport(file, open: true));
     }, onError: (Object error) => _failure(error));
@@ -311,7 +311,7 @@ class NativeApplication extends AppAssembly {
     _opening++;
     final context = _navigator?.currentContext;
     library.recordFileFailure(name ?? (context == null ? '' : context.l10n.addBook), error);
-    // Отказ виден на полке даже если файл пришёл поверх открытой книги.
+    // A failure is visible on the shelf even if the file arrived on top of an open book.
     unawaited(_returnToShelf());
   }
 
@@ -327,8 +327,8 @@ class NativeApplication extends AppAssembly {
       }
       return false;
     });
-    // dispose прежнего чтения возвращает системные панели. Новое чтение
-    // начинает свой жизненный цикл только после завершения этого перехода.
+    // Disposing the previous reading screen restores the system bars. The new reading
+    // starts its own lifecycle only after this transition completes.
     return _shelfReady = Future.wait(closing).then((_) {});
   }
 
@@ -353,7 +353,7 @@ class NativeApplication extends AppAssembly {
       try {
         entry = await library.addFile(incomingFile.path, incomingFile.name);
       } finally {
-        // Копия принадлежит получателю: также после отказа и обнаружения повтора.
+        // The copy belongs to the receiver: also after a failure and after a duplicate is detected.
         if (await file.exists()) await file.delete();
       }
       if (entry == null) {
@@ -368,14 +368,14 @@ class NativeApplication extends AppAssembly {
 
   Future<void> _open(ShelfEntry entry) async {
     final opening = ++_opening;
-    // До полной загрузки остаётся прежний экран; пустой ReaderScreen не создаётся.
+    // The previous screen stays until loading finishes; an empty ReaderScreen is never created.
     final book = await library.loadBook(entry.id);
     if (opening != _opening) return;
     await _returnToShelf();
     if (opening != _opening) return;
     final navigator = _navigator?.currentState;
     if (navigator == null) return;
-    // Обложка готова до нажатия «Слушать»: старт службы не ждёт рисования PNG.
+    // The cover is ready before "Listen" is pressed: starting the service does not wait for the PNG to render.
     _art = await notificationArtwork(
       library.root,
       entry,

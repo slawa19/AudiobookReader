@@ -4,11 +4,11 @@ import '../../library/library.dart';
 import '../../screens/reader_screen.dart';
 import '../app.dart';
 
-// ТОЛЬКО ПРОТОТИП. Панель «Состояния для показа»: включает состояния, которые в жизни вызывает сеть
-// (preparing, waiting, ошибки 402/404/неверный ключ/прочие, конец книги, ход и ошибка скачивания главы, отказы
-// добавления),
-// чтобы их можно было посмотреть без Gemini. В настоящем приложении этой панели и входа в неё нет.
-// Вход: долгое нажатие на заголовок «Книги» на полке или на название книги в шапке экрана чтения.
+// PROTOTYPE ONLY. The "Demo states" panel: turns on states that in real life are caused by the network
+// (preparing, waiting, errors 402/404/invalid key/other, end of book, progress and failure of a chapter download,
+// add failures),
+// so that they can be looked at without Gemini. The real app has neither this panel nor an entry to it.
+// Entry: long press on the "Books" heading on the shelf or on the book title in the reading screen header.
 
 Future<void> showDemoStates(BuildContext context, Prototype p) async {
   final inReader = context.findAncestorStateOfType<ReaderScreenState>() != null;

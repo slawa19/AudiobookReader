@@ -27,9 +27,9 @@ class SynthesisRequest {
   final int generation, bookGeneration;
 }
 
-/// Потребитель задаёт упорядоченный остаток работы, а не запускает сетевые вызовы.
-/// Пауза запрещает новые запросы и повторы; уже начатое по-прежнему публикуется.
-/// Такой же потребитель сможет задать весь остаток скачиваемой главы.
+/// The consumer sets an ordered remainder of work and does not start network calls.
+/// A pause forbids new requests and retries; what has already started is still published.
+/// The same kind of consumer will be able to set the whole remainder of a downloaded chapter.
 class SynthesisTask {
   SynthesisTask._(
     this.queue,
@@ -40,7 +40,7 @@ class SynthesisTask {
   final SynthesisQueue queue;
   final void Function() changed;
   final void Function(TtsError error) failed;
-  // Только прослушивание ограничивает покупку; скачивание главы и проба — нет.
+  // Only listening limits the purchase; chapter download and the probe do not.
   final bool Function(SynthesisRequest)? canStart;
   List<SynthesisRequest> _requests = [];
   bool _active = true, _disposed = false, _settling = false;
@@ -76,7 +76,7 @@ class _Flight {
   bool writeBlocked = false;
 }
 
-/// Единственный реестр оплачиваемых запросов. Обработчик ответа не знает плеера.
+/// The single registry of paid requests. The response handler does not know the player.
 class SynthesisQueue {
   SynthesisQueue({
     required this.engine,
@@ -102,7 +102,7 @@ class SynthesisQueue {
   bool _scheduled = false, _disposed = false;
   int get inFlight => _network;
 
-  /// Идущая часть выбирает ту же схему готовности, что уже опубликованная часть.
+  /// A part in flight picks the same readiness scheme as an already published part.
   bool isPending(String key, {String? bookId}) =>
       _flights[key]?.targets.values.any(
         (r) => r.bookId == bookId && _valid(r),
@@ -175,7 +175,7 @@ class SynthesisQueue {
       for (final r in task._requests) {
         if (!_valid(r) || _has(r)) continue;
         final retry = _retries[r.fingerprint];
-        // Пока ближайший ждёт повтора, свободное место не отдаётся дальним.
+        // While the nearest one waits for a retry, free space is not given to the far ones.
         if (retry != null && !retry.due) break;
         final flight = _flights[r.fingerprint];
         if (flight != null) {
@@ -197,7 +197,7 @@ class SynthesisQueue {
   }
 
   void _attach(_Flight flight, SynthesisRequest r) {
-    // После очистки новая команда ждёт завершения старого вызова, но не получает его звук.
+    // After clearing, a new command waits for the old call to finish but does not get its audio.
     if (flight.request.generation != r.generation) return;
     if (flight.targets.values.any(
       (old) => old.bookId == r.bookId && old.bookGeneration != r.bookGeneration,
@@ -265,7 +265,7 @@ class SynthesisQueue {
     } on TtsError catch (e) {
       failure = e;
     } catch (e) {
-      // Не печатаем произвольный объект транспорта: в нём могут оказаться заголовки.
+      // Do not print an arbitrary transport object: it may contain headers.
       failure = TtsError('${e.runtimeType}: synthesis request failed');
     }
     _network--;
@@ -301,13 +301,13 @@ class SynthesisQueue {
           }
         }
       }
-      // Останавливаем новую работу сразу, не после ожидания писателя расхода.
+      // Stop new work at once, not after waiting for the usage writer.
       await _usage(failure.usage, r.profile.model, at);
     } else {
-      // Оба ответа проходят через единственного писателя Library, независимо от сеанса.
+      // Both responses pass through the single Library writer, independent of the session.
       await _usage(result!.usage, r.profile.model, at);
       _retries.remove(r.fingerprint)?.timer?.cancel();
-      // Один PCM может понадобиться разным книгам. Цели добавляются и во время записи.
+      // One PCM may be needed by different books. Targets are added during the write too.
       final written = <(String?, int, int)>{};
       while (true) {
         final pending = flight.targets.entries
@@ -348,7 +348,7 @@ class SynthesisQueue {
     _schedule();
   }
 
-  /// Инвалидация происходит до дискового удаления; поздний put вообще не начинается.
+  /// Invalidation happens before the disk delete; a late put does not start at all.
   void invalidateBook(String id, {bool deleted = false}) {
     _bookGenerations[id] = (_bookGenerations[id] ?? 0) + 1;
     if (deleted) _deleted[id] = false;
@@ -362,7 +362,7 @@ class SynthesisQueue {
     _schedule();
   }
 
-  /// Отказ удаления оставляет книгу на полке; старые ответы всё ещё невалидны.
+  /// A delete failure leaves the book on the shelf; old responses are still invalid.
   void restoreBook(String id) {
     _deleted.remove(id);
     _schedule();
@@ -390,7 +390,7 @@ class SynthesisQueue {
     _schedule();
   }
 
-  /// Барьер завершения ответов и дисковых публикаций; удаление его не ждёт.
+  /// A barrier for the completion of responses and disk publications; delete does not wait for it.
   Future<void> drain() async {
     while (_operations.isNotEmpty) {
       await Future.wait(_operations.toList());

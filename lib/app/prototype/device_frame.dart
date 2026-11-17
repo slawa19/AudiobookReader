@@ -2,14 +2,14 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../library/settings.dart';
 
-/// Только прототип в браузере: приложение внутри рамки телефона заданного размера в dp, с переключателем
-/// размеров и масштаба шрифта. Окно браузера любой ширины не растягивает экран телефона.
+/// Prototype only, in the browser: the app inside a phone frame of a given size in dp, with a switcher for
+/// sizes and font scale. A browser window of any width does not stretch the phone screen.
 class DeviceFrame extends StatefulWidget {
   const DeviceFrame({super.key, required this.child, this.settings});
 
   final Widget child;
 
-  /// Для быстрого переключателя языка интерфейса над рамкой.
+  /// For the quick interface-language switcher above the frame.
   final AppSettings? settings;
 
   @override

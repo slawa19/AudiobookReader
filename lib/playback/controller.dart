@@ -14,7 +14,7 @@ import 'player.dart';
 import 'synthesis_queue.dart';
 import 'voice_sample.dart';
 
-/// Первые три секунды блока считаются его началом при команде «назад».
+/// The first three seconds of a block count as its start for the "back" command.
 const blockStartWindow = Duration(seconds: 3);
 
 class _Segment {
@@ -32,7 +32,7 @@ class _Unit {
   Duration? duration;
 }
 
-/// Настоящая логика прослушивания; платформенный адаптер получает только файлы и команды.
+/// The real listening logic; the platform adapter receives only files and commands.
 class FileNarrationController extends NarrationController {
   FileNarrationController({
     required this.library,
@@ -110,8 +110,8 @@ class FileNarrationController extends NarrationController {
 
   @override
   void notifyListeners() {
-    // Шаг — полпроцента блока или восемь знаков для длинного абзаца.
-    // Одинаковый снимок не пересобирает экран и уведомление на каждом ходе.
+    // The step is half a percent of the block or eight characters for a long paragraph.
+    // An identical snapshot does not rebuild the screen and the notification on every tick.
     final visible = (
       _state,
       _reason,
@@ -206,8 +206,8 @@ class FileNarrationController extends NarrationController {
       final exact = at == null
           ? -1
           : canonical.indexWhere((s) => _first(s) == at);
-      // Каноническая часть длинного предложения уже имеет точную границу.
-      // Повторная нормализация к началу предложения увела бы назад на другой отрезок.
+      // The canonical part of a long sentence already has an exact boundary.
+      // Normalizing again to the sentence start would take us back to a different segment.
       final list = at == null
           ? canonical
           : exact >= 0
@@ -240,7 +240,7 @@ class FileNarrationController extends NarrationController {
   double get _elapsed =>
       _current == null ? 0 : player.position.inMicroseconds / 1000000 / speed;
 
-  // Готовность и отпечатки проверяем только для окна запаса, главы делим по надобности.
+  // Readiness and fingerprints are checked only for the reserve window; chapters are split as needed.
   void _ensureUnits() {
     var ahead = -_elapsed;
     for (var i = _cursor; i < _units.length; i++) {
@@ -349,15 +349,15 @@ class FileNarrationController extends NarrationController {
     if (book == null || !isActive || _position == null) return;
     _updatePosition();
     final current = _position!.block;
-    // Это оценка места, а не время текущего файла: один абзац может занимать несколько файлов.
+    // This is an estimate of the place, not the time of the current file: one paragraph may occupy several files.
     final seconds = _position!.offset * secondsPerChar / speed;
-    // Пауза посреди абзаца началом не считается: «назад» возвращает к началу этого абзаца.
+    // A pause in the middle of a paragraph does not count as its start: "back" returns to the start of this paragraph.
     final atStart = !_heard || seconds < blockStartWindow.inMilliseconds / 1000;
     final from = forward ? current + 1 : atStart ? current - 1 : current;
     final target = spokenBlockFrom(book, from, forward: forward);
     if (target == null) return;
     _command();
-    // Каноническое начало/части берутся из кэша; segmentsFrom нужен только для хвоста группы.
+    // The canonical start/parts come from the cache; segmentsFrom is needed only for the tail of the group.
     _begin(book, ReadingPosition(target, 0), _intent);
   }
 
@@ -402,8 +402,8 @@ class FileNarrationController extends NarrationController {
         final session = _session;
         _ensureUnits();
         var ahead = -_elapsed;
-        // Пробуем только окно запаса. Файлы за дырой учитываются в покупке,
-        // но в плеер попадает лишь непрерывный префикс.
+        // Only the reserve window is tried. Files beyond the gap count toward the purchase,
+        // but only the contiguous prefix reaches the player.
         for (var i = _cursor; i < _boundary && ahead < _target; i++) {
           final u = _units[i];
           final file = queue.audio.file(u.request.fingerprint, bookId: bookId);
@@ -430,7 +430,7 @@ class FileNarrationController extends NarrationController {
             u.item = item;
             _appended++;
             player.append(item);
-            // Первый звук не ждёт проб оставшихся файлов.
+            // The first audio does not wait for the probes of the remaining files.
             if (_intent) {
               player.play();
             }
@@ -447,7 +447,7 @@ class FileNarrationController extends NarrationController {
             .take(math.max(0, _boundary - _cursor))
             .map((u) => u.request)
             .toList();
-        // Пауза сохраняет интерес к уже идущему ответу и его постоянной ошибке.
+        // A pause keeps interest in a response already in flight and its permanent error.
         _task?.update(requests, active: _intent && _failure == null);
         if (_cursor >= _appended) _exhausted();
         if (!_disposed) notifyListeners();
@@ -465,8 +465,8 @@ class FileNarrationController extends NarrationController {
         if (index < _cursor) return;
         _cursor = index;
         _current = null;
-        // Список заменяется, сеанс синтеза остаётся. Старый drained не вправе
-        // завершить уже восстановленный список.
+        // The list is replaced, the synthesis session stays. The old drained has no right to
+        // complete the already restored list.
         player.clear(++_playerGeneration);
         _appended = index;
         for (final u in _units.skip(index)) {
@@ -557,8 +557,8 @@ class FileNarrationController extends NarrationController {
       _badUnit = u;
       _failure = TtsError('$type: audio file unreadable');
     } else {
-      // Замена уже оплаченного файла сохраняет его место в резерве, как повтор
-      // временной ошибки; дальний готовый звук не должен запирать эту дыру.
+      // Replacing an already paid file keeps its place in the reserve, like a retry
+      // of a temporary error; far-away ready audio must not lock this gap.
       _requested.add(u.request.fingerprint);
     }
     if (_failure != null && !_intent) _stopError();
@@ -575,7 +575,7 @@ class FileNarrationController extends NarrationController {
 
   void _stopError() {
     final e = _failure!;
-    // Первое ещё не опубликованное место, а не место последнего готового дальнего файла.
+    // The first not-yet-published place, not the place of the last ready far-away file.
     final missing =
         _badUnit ??
         _units
@@ -615,8 +615,8 @@ class FileNarrationController extends NarrationController {
       _stopError();
       return;
     }
-    // Конец материализованного окна ещё не означает конец главы или книги.
-    // Сначала открываем следующие отрезки, затем проверяем настоящую границу.
+    // The end of the materialized window does not yet mean the end of the chapter or the book.
+    // First open the following segments, then check the real boundary.
     if (_cursor >= _units.length) _ensureUnits();
     final more =
         _nextSegment < _segments.length ||
@@ -644,7 +644,7 @@ class FileNarrationController extends NarrationController {
     settings.speed = speed;
     player.setSpeed(speed);
     notifyListeners();
-    // Пересчёт запаса идёт на следующем событии/ответе; сама команда запросов не делает.
+    // The reserve is recomputed on the next event/response; the command itself makes no requests.
   }
 
   @override

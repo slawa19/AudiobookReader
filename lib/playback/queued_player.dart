@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'player.dart';
 
-/// Снимок относится к исходному элементу, а не к изменяемой длине списка.
+/// The snapshot refers to the original item, not to the mutable length of the list.
 class EnginePlayback {
   const EnginePlayback({
     this.item,
@@ -18,14 +18,14 @@ class EnginePlayback {
   final bool playing, ready, completed, progress;
 }
 
-/// Ошибка движка сообщает только исходный элемент, без сообщения и путей.
+/// An engine error reports only the original item, without a message or paths.
 class EngineFailure {
   const EngineFailure(this.item);
   final PlayerItem? item;
 }
 
-/// play принимает команду сразу; его завершение не означает конец файла.
-/// Остальные Future завершаются после применения операции к платформе.
+/// play accepts the command at once; its completion does not mean the end of the file.
+/// The other Futures complete after the operation is applied to the platform.
 abstract interface class PlaylistEngine {
   Stream<EnginePlayback> get events;
   EnginePlayback get snapshot;
@@ -55,8 +55,8 @@ class _Playlist {
   PlayerItem? get current => index < items.length ? items[index] : null;
 }
 
-/// Единственная очередь всех операций, включая pause, seek, смену поколения
-/// и освобождение движка. Учёт загруженного меняется только после Future движка.
+/// The single queue of all operations, including pause, seek, generation change
+/// and engine release. The loaded accounting changes only after the engine's Future.
 class QueuedPlayer implements PlayerPort {
   QueuedPlayer({required this.createEngine, required this.beforePlay, required this.readDuration});
   final PlaylistEngine Function() createEngine;
@@ -122,8 +122,8 @@ class QueuedPlayer implements PlayerPort {
     list.frozen = list.failed = true;
     list.intent = list.playing = false;
     list.playRequested = false;
-    // queued-команды уже видят failed и не запускают хвост. Само событие
-    // публикуется только после освобождения декодера и остановки звука.
+    // queued commands already see failed and do not start the tail. The event itself
+    // is published only after the decoder is released and the audio is stopped.
     _enqueue(() async {
       if (!_active(list)) return;
       await _disposeList(list);
@@ -148,8 +148,8 @@ class QueuedPlayer implements PlayerPort {
     final index = list.items.indexWhere((i) => identical(i, item));
     if (index < 0) return;
     if (state.completed) {
-      // Завершился именно этот префикс. append мог уже принять следующий файл,
-      // хотя платформенная вставка ещё не завершилась.
+      // It is this very prefix that completed. append may have already accepted the next file
+      // although the platform insert has not finished yet.
       final through = index + 1;
       if (through <= list.finished) return;
       list.finished = through;
@@ -225,8 +225,8 @@ class QueuedPlayer implements PlayerPort {
         if (!_active(list)) return;
         await engine.load(item);
       } else {
-        // STATE_ENDED может сам продолжить после вставки. Когда конец уже
-        // известен, сначала снимаем платформенное намерение играть.
+        // STATE_ENDED may continue by itself after an insert. When the end is already
+        // known, first clear the platform intent to play.
         if (list.exhausted) await engine.pause();
         if (!_active(list)) return;
         await engine.append(item);
@@ -266,12 +266,12 @@ class QueuedPlayer implements PlayerPort {
     list.revision++;
     list.intent = list.playing = false;
     list.playRequested = false;
-    // Физическая пауза ждёт незавершённую операцию движка. Прерывать вставку
-    // параллельной командой нельзя: все команды используют одну очередь.
+    // A physical pause waits for the engine's unfinished operation. Interrupting an insert
+    // with a parallel command is not allowed: all commands use one queue.
     _command(list, () async {
       await list.engine?.pause();
-      // Пока вставка ждала, intent мог снова стать true и её завершение могло
-      // послать play. После фактической паузы следующая play-команда нужна заново.
+      // While the insert waited, intent could become true again and its completion could
+      // send play. After the actual pause the next play command is needed again.
       list.playRequested = false;
     });
   }
@@ -291,7 +291,7 @@ class QueuedPlayer implements PlayerPort {
     final list = _list;
     final tail = list.items.indexWhere((i) => i.segment > segment);
     if (tail < 0) return;
-    // Даже при границе перед current сам текущий элемент сохраняется.
+    // Even when the boundary is before current, the current item itself is kept.
     final first = tail > list.index ? tail : list.index + 1;
     if (first >= list.items.length) return;
     list.items.removeRange(first, list.items.length);

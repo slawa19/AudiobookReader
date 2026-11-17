@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'clock.dart';
 import 'player.dart';
 
-/// Подставной плеер WAV. Никакого синтеза длительности по тексту: время берётся из файла.
+/// A fake WAV player. No duration synthesis from text: the time is taken from the file.
 class FakePlayer implements PlayerPort {
   FakePlayer({required this.clock});
   final PlaybackClock clock;
@@ -50,7 +50,7 @@ class FakePlayer implements PlayerPort {
       i += 8 + size + size % 2;
     }
     if (rate == null || rate <= 0 || length == null) {
-      throw const FormatException('Не WAV');
+      throw const FormatException('Not a WAV');
     }
     return Duration(microseconds: (length * 1000000 / rate).round());
   }
@@ -121,7 +121,7 @@ class FakePlayer implements PlayerPort {
     _emit(PlayerEventKind.interrupted);
   }
 
-  /// Ошибка декодирования текущего файла, управляемая тестом.
+  /// A decoding error of the current file, controlled by the test.
   void failCurrent() {
     if (current == null) return;
     pause();

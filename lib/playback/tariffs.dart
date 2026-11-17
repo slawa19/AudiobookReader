@@ -1,7 +1,7 @@
 import '../tts/voices.dart';
 import '../library/library.dart';
 
-/// Две суммы для AppServices.spentByMonth; каждый месяц оплачивается по своему тарифу.
+/// Two amounts for AppServices.spentByMonth; each month is paid at its own tariff.
 List<({DateTime month, double dollars})> spentByMonth(
   Library library,
   DateTime today,
@@ -25,8 +25,8 @@ List<({DateTime month, double dollars})> spentByMonth(
     ),
 ];
 
-/// Цена по тарифу на сегодня (FR-V3, FR-M1). Дату даёт корень сборки: экраны тарифов и дат не знают и получают
-/// готовые числа.
+/// The price at today's tariff (FR-V3, FR-M1). The date is supplied by the assembly root: screens know neither tariffs
+/// nor dates and receive ready numbers.
 class Tariffs {
   Tariffs({required this.today});
 
@@ -34,6 +34,6 @@ class Tariffs {
 
   double dollarsPerHour(TtsModel model) => model.dollarsPerHourAt(today());
 
-  /// До 01.01.2027 настройки предупреждают о будущем удвоении цены.
+  /// Until 2027-01-01 the settings warn about the future doubling of the price.
   bool get beforePriceChange => today().isBefore(DateTime(2027));
 }

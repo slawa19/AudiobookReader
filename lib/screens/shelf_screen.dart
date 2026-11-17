@@ -6,7 +6,7 @@ import 'reader_screen.dart';
 import 'services.dart';
 import 'settings_screen.dart';
 
-/// Полка (FR-L2, FR-L4, FR-L5). Последняя открытая книга — крупной карточкой «Продолжить».
+/// The shelf (FR-L2, FR-L4, FR-L5). The last opened book — a large "Continue" card.
 class ShelfScreen extends StatefulWidget {
   const ShelfScreen({super.key, required this.services});
 
@@ -20,7 +20,7 @@ class _ShelfScreenState extends State<ShelfScreen> {
   AppServices get services => widget.services;
   Library get library => services.library;
 
-  /// Книга открывается: повторное нажатие, пока читается `book.json`, второй экран не откроет.
+  /// A book is opening: a repeated tap while `book.json` is being read does not open a second screen.
   bool _opening = false;
 
   @override
@@ -30,8 +30,8 @@ class _ShelfScreenState extends State<ShelfScreen> {
       listenable: Listenable.merge([library, services.audio]),
       builder: (context, _) {
         final books = library.shelf;
-        // «Продолжить» — только у книги, которую открывали (последняя открытая). Ни разу не открытые — первыми
-        // под карточкой, новые сверху; остальные — по времени последнего открытия (FR-L4, правило e).
+        // "Continue" is only for a book that was opened (the last opened one). Never-opened ones go first
+        // under the card, new on top; the rest — by time of last opening (FR-L4, rule e).
         final continued = books.where((e) => e.opened).firstOrNull;
         final rows = [
           ...books.where((e) => !e.opened),
@@ -47,8 +47,8 @@ class _ShelfScreenState extends State<ShelfScreen> {
                   onPressed: () => services.addBook(context),
                   child: const Icon(Icons.add_rounded, size: 28),
                 ),
-          // Список не просвечивает через системную панель. Хвост прокрутки
-          // поднимает последнюю строку целиком над кнопкой добавления.
+          // The list does not show through the system bar. The scroll tail
+          // lifts the last row entirely above the add button.
           body: SafeArea(
             top: false,
             bottom: !empty,
@@ -63,7 +63,7 @@ class _ShelfScreenState extends State<ShelfScreen> {
                       Expanded(
                         child: GestureDetector(
                           key: const Key('shelf-title'),
-                          // Только прототип: долгое нажатие на заголовок — «Состояния для показа».
+                          // Prototype only: long press on the heading — "Demo states".
                           onLongPress:
                               services.openDemoStates == null ? null : () => services.openDemoStates!(context),
                           child: Text(l10n.shelfTitle, style: bookTitleStyle(context, 30)),
@@ -193,7 +193,7 @@ class _ContinueCard extends StatelessWidget {
     final scheme = theme.colorScheme;
     final l10n = context.l10n;
     final fraction = entry.fraction;
-    // На узком экране с крупным шрифтом обложка и название меньше, чтобы слово не рвалось посередине.
+    // On a narrow screen with a large font the cover and title are smaller so that a word is not broken in the middle.
     final narrow = MediaQuery.sizeOf(context).width / MediaQuery.textScalerOf(context).scale(1) < 330;
     return Card.filled(
       color: scheme.surfaceContainerLow,
@@ -233,7 +233,8 @@ class _ContinueCard extends StatelessWidget {
                           value: fraction ?? 0,
                           minHeight: 6,
                           borderRadius: BorderRadius.circular(3),
-                          // Внешний вид Material 3 2024 года; флаг помечен устаревшим, но другого способа включить его нет.
+                          // The 2024 Material 3 look; the flag is marked deprecated, but there is no other way to turn
+                          // it on.
                           // ignore: deprecated_member_use
                           year2023: false,
                         ),

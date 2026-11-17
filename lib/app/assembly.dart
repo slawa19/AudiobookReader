@@ -3,10 +3,10 @@ import 'package:material_ui/material_ui.dart';
 import '../library/settings.dart';
 import '../screens/services.dart';
 
-/// Параметр --fake в scripts/build-apk.sh; Android читает тот же FAKE_TTS для отдельного хранилища.
+/// The --fake parameter in scripts/build-apk.sh; Android reads the same FAKE_TTS for a separate storage.
 const useFakeTts = bool.fromEnvironment('FAKE_TTS');
 
-/// Зависимости живут дольше экранов; платформу подключает только корень сборки.
+/// Dependencies outlive the screens; only the assembly root wires in the platform.
 abstract class AppAssembly {
   AppSettings get settings;
   AppServices get services;

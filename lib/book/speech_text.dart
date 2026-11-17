@@ -1,8 +1,8 @@
-// Текст для речи (ARCHITECTURE.md, раздел 3): текст блока без структурных знаков сносок (`noteRef`) и без знака
-// ударения U+0301, с соответствием смещений обратно в `Block.text`. Чистый Dart.
+// Text for speech (ARCHITECTURE.md, section 3): the block text without structural footnote marks (`noteRef`) and
+// without the stress mark U+0301, with a mapping of offsets back into `Block.text`. Pure Dart.
 //
-// По ней ищутся границы предложений (старт «Слушать», А§5) — знак сноски после точки не прячет начало следующего
-// предложения. По ней же строятся отрезки озвучки (А§6.1).
+// It is used to find sentence boundaries (start of "Listen", А§5) — a footnote mark after a period does not hide the
+// start of the next sentence. It is also used to build narration segments (А§6.1).
 
 import 'model.dart';
 
@@ -11,16 +11,16 @@ const _stress = '́';
 class SpeechText {
   const SpeechText(this.text, this._toBlock);
 
-  /// То, что произносится.
+  /// What is pronounced.
   final String text;
 
-  /// Смещение в `Block.text` для каждого смещения в [text] и для его конца (длина `text.length + 1`).
+  /// The offset in `Block.text` for each offset in [text] and for its end (length `text.length + 1`).
   final List<int> _toBlock;
 
-  /// Смещение в `Block.text`, соответствующее смещению [i] текста для речи.
+  /// The offset in `Block.text` corresponding to the speech-text offset [i].
   int toBlock(int i) => _toBlock[i.clamp(0, _toBlock.length - 1)];
 
-  /// Первое смещение текста для речи, которое в блоке стоит не раньше [blockOffset].
+  /// The first speech-text offset that is in the block no earlier than [blockOffset].
   int fromBlock(int blockOffset) {
     for (var i = 0; i < _toBlock.length; i++) {
       if (_toBlock[i] >= blockOffset) return i;

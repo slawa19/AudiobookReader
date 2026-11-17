@@ -9,8 +9,8 @@ import '../playback/tariffs.dart';
 import '../playback/voice_sample.dart';
 import 'reader_sheets.dart';
 
-/// Всё, что экраны получают от корня сборки (`app`): зависимости передаются в конструкторы (А§8).
-/// Удаление звука и книг — команды [narration] (А§4): экран не собирает их из нескольких вызовов.
+/// Everything the screens get from the assembly root (`app`): dependencies are passed into constructors (А§8).
+/// Deleting audio and books are [narration] commands (А§4): the screen does not assemble them from several calls.
 class AppServices {
   AppServices({
     required this.library,
@@ -30,37 +30,37 @@ class AppServices {
     this.fakeTts = false,
   });
 
-  /// Цвета тем для превью в «Виде текста»: палитры живут в `app`.
+  /// Theme colors for the preview in "Text appearance": the palettes live in `app`.
   final Map<ThemeChoice, ThemePreview> themePreviews;
 
   final Library library;
   final AppSettings settings;
 
-  /// Признак подставной сборки приходит из app, без обратного импорта screens → app.
+  /// The fake-build flag comes from app, without a reverse import screens → app.
   final bool fakeTts;
   final NarrationController narration;
   final ChapterDownloads downloads;
   final VoiceSampler sampler;
   final AudioStore audio;
 
-  /// Цена за час звука по тарифу на сегодня — экран дат не знает.
+  /// The price per hour of audio at today's tariff — the screen does not know dates.
   final Tariffs tariffs;
 
-  /// «+» на полке: системный выбор файла. В прототипе — имитация.
+  /// "+" on the shelf: the system file picker. In the prototype — a simulation.
   final Future<void> Function(BuildContext context) addBook;
 
   final void Function(BuildContext context, String url) openUrl;
 
-  /// Потрачено: текущий и прошлый месяц, долларов (FR-M2).
+  /// Spent: the current and the previous month, in dollars (FR-M2).
   final List<({DateTime month, double dollars})> Function() spentByMonth;
 
-  /// Только прототип: панель «Состояния для показа». В настоящем приложении — `null`.
+  /// Prototype only: the "Demo states" panel. In the real app — `null`.
   final void Function(BuildContext context)? openDemoStates;
 
-  /// Корень настоящего приложения также показывает ошибки записи.
+  /// The real app's root also shows write errors.
   final Future<void> Function()? onFlush;
   Future<void> flush() => onFlush?.call() ?? library.flush();
 
-  /// Настоящее приложение согласует открытие с полки и из входящего файла.
+  /// The real app coordinates opening from the shelf and from an incoming file.
   final Future<void> Function(ShelfEntry entry)? openBook;
 }

@@ -8,34 +8,34 @@ import '../tts/voices.dart';
 
 enum SampleState { idle, loading, playing, failed }
 
-/// «Проба» голоса (А§6.8): одна фраза, отдельный короткий плеер, второй раз — без запроса. Постоянная ошибка
-/// показывается в строке голоса текстом Google как есть.
+/// A voice "probe" (А§6.8): one phrase, a separate short player, the second time — without a request. A permanent error
+/// is shown in the voice row with Google's text as is.
 abstract class VoiceSampler extends ChangeNotifier {
-  /// Голос, чья проба сейчас готовится, играет или упала.
+  /// The voice whose probe is now being prepared, is playing or has failed.
   String? get voice;
   SampleState get state;
 
-  /// Доля проигранного пробы.
+  /// The fraction of the probe played.
   double get progress;
 
-  /// Текст Google при [SampleState.failed].
+  /// Google's text for [SampleState.failed].
   String? get errorMessage;
 
-  /// Фраза пробы для языка книги (`tts`, таблица по языку книги).
+  /// The probe phrase for the book language (`tts`, a table by book language).
   String phraseFor(String bookLanguage) => samplePhraseFor(bookLanguage);
 
-  /// Проба полного профиля [profile] (голос и модель) фразой и стилем на языке книги [bookLanguage] (FR-T7). Звук
-  /// кэшируется по всему, что влияет на звук: голос, модель, язык (фраза и стиль) — другой профиль озвучивается
-  /// заново (А§6.8, №10 ревью логики).
+  /// A probe of the full profile [profile] (voice and model) with the phrase and style in the language of the book
+  /// [bookLanguage] (FR-T7). The audio is cached by everything that affects the sound: voice, model, language (phrase
+  /// and style) — another profile is synthesized again (А§6.8, logic review item 10).
   void play(VoiceProfile profile, {required String bookLanguage});
   void stop();
 
-  /// Пробы удалены «Очисткой озвучки» (А§4): следующая проба озвучивается заново. Зовёт только
+  /// Probes deleted by "Clear narration" (А§4): the next probe is synthesized again. Called only by
   /// `NarrationController`.
   void clearCache();
 }
 
-/// Подставная проба: первый раз «готовится» чуть меньше секунды, потом «играет» три секунды. Звука нет.
+/// A fake probe: the first time it is "prepared" for a bit under a second, then "plays" for three seconds. No audio.
 class FakeVoiceSampler extends VoiceSampler {
   FakeVoiceSampler({
     this.loading = const Duration(milliseconds: 900),
@@ -46,10 +46,10 @@ class FakeVoiceSampler extends VoiceSampler {
   final Duration loading;
   final Duration length;
 
-  /// Подставное хранилище: новая проба занимает место в `samples/`.
+  /// The fake storage: a new probe takes up space in `samples/`.
   final FakeAudioStore? audio;
 
-  /// Байт одной пробы (≈ 3 с сжатого звука).
+  /// Bytes of one probe (≈ 3 s of compressed audio).
   static const sampleBytes = 12000;
   final Set<String> _cached = {};
   String? _voice;
@@ -58,7 +58,7 @@ class FakeVoiceSampler extends VoiceSampler {
   String? _error;
   Timer? _timer;
 
-  /// Только для показа: следующая проба этого голоса упадёт с ошибкой Google.
+  /// For display only: the next probe of this voice will fail with a Google error.
   String? demoFailVoice;
 
   @override

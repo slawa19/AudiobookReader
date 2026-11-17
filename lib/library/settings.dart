@@ -2,11 +2,11 @@ import 'package:flutter/foundation.dart';
 
 import 'secret_store.dart';
 
-/// Тема: «как в системе» по умолчанию (FR-R6).
+/// Theme: "same as system" by default (FR-R6).
 enum ThemeChoice { system, light, sepia, dark }
 
-/// Ступени размера текста книги (docs/mockup/NOTES.md): кегль и интерлиньяж, dp. По умолчанию — третья.
-/// На экране обе величины ещё умножаются на системный масштаб шрифта (решение владельца 2026-11-14, FR-R6).
+/// Book text size steps (docs/mockup/NOTES.md): font size and line height, dp. The default is the third.
+/// On screen both values are additionally multiplied by the system font scale (owner's decision 2026-11-14, FR-R6).
 const fontSteps = <({double size, double lineHeight})>[
   (size: 14, lineHeight: 24),
   (size: 15, lineHeight: 26),
@@ -17,12 +17,13 @@ const fontSteps = <({double size, double lineHeight})>[
 ];
 const defaultFontStep = 2;
 
-/// Скорости плеера (FR-P5).
+/// Player speeds (FR-P5).
 const speeds = <double>[0.75, 1, 1.25, 1.5, 1.75, 2];
 
-/// Настройки приложения (А§4). FileLibrary сохраняет их в settings.json; прототип — в памяти.
+/// App settings (А§4). FileLibrary saves them to settings.json; the prototype — in memory.
 ///
-/// Голос и модель хранятся строками: `library` не знает модуля `tts` (А§2). Умолчания передаёт `app`.
+/// The voice and model are stored as strings: `library` does not know the `tts` module (А§2). Defaults are passed by
+/// `app`.
 class AppSettings extends ChangeNotifier {
   AppSettings({
     required this._voice,
@@ -49,10 +50,10 @@ class AppSettings extends ChangeNotifier {
   String get voice => _voice;
   String get modelId => _modelId;
 
-  /// Язык интерфейса: код языка или `null` — «Как в системе» (язык телефона; не из поддерживаемых — английский).
+  /// Interface language: a language code or `null` — "Same as system" (the phone language; if unsupported — English).
   String? get language => _language;
 
-  /// Ключ сюда не попадает: его хранит отдельное защищённое хранилище.
+  /// The key does not get here: a separate protected storage keeps it.
   Map<String, Object?> toJson() => {
     'theme': theme.name,
     'fontStep': fontStep,
@@ -72,8 +73,8 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Ключ в настоящем приложении лежит в защищённом хранилище; экрану нужен только хвост — не больше четырёх
-  /// последних знаков, у короткого ключа — сколько есть.
+  /// In the real app the key lies in the protected storage; the screen needs only the tail — at most the last four
+  /// characters, for a short key — as many as there are.
   bool get hasApiKey => _apiKey != null && _apiKey!.isNotEmpty;
   String? get apiKey => _apiKey;
   String get apiKeyTail {
@@ -94,12 +95,12 @@ class AppSettings extends ChangeNotifier {
     _apiKey = value == null || value.isEmpty ? null : value;
     final store = _secretStore;
     if (store != null && value != null && value.isNotEmpty) {
-      // Значение захватывается при изменении; быстрые правки пишутся по порядку.
+      // The value is captured at the time of the change; quick edits are written in order.
       _secretWriter = _secretWriter.then((_) async {
         try {
           await store.write(value);
         } catch (_) {
-          // Ни исходная ошибка, ни её стек не должны вынести ключ в диагностику.
+          // Neither the original error nor its stack may carry the key into diagnostics.
           _secretWriteFailed = true;
         }
       });
@@ -107,8 +108,8 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Вызывается библиотекой до готовности приложения. Сбой чтения после
-  /// восстановления данных оставляет пустое поле для повторного ввода ключа.
+  /// Called by the library before the app is ready. A read failure after
+  /// data recovery leaves the field empty for re-entering the key.
   Future<void> loadApiKey() async {
     final store = _secretStore;
     if (store == null) return;
@@ -120,7 +121,7 @@ class AppSettings extends ChangeNotifier {
     }
   }
 
-  /// Дожидается записи ключа. Также вызывается FileLibrary.flush().
+  /// Waits for the key to be written. Also called by FileLibrary.flush().
   Future<void> flushApiKey() async {
     await _secretWriter;
     if (_secretWriteFailed) {

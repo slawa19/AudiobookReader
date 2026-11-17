@@ -21,8 +21,8 @@ class MediaStrings {
   final String channel, preparing, waiting, paused, ended, play, pause, previous, next;
 }
 
-/// Пауза оставляет foreground. При idle/stopped обработчик явно снимает его
-/// через Android-мост: одного stopSelf в audio_service недостаточно при привязке.
+/// A pause keeps the foreground. On idle/stopped the handler explicitly clears it
+/// through the Android bridge: a bare stopSelf in audio_service is not enough when a client is bound.
 class NarrationMediaState {
   const NarrationMediaState(this.session, this.foreground, this.playing, this.processing, this.message);
   final bool session, foreground, playing;
@@ -58,13 +58,13 @@ class MediaCard {
   final Uri? art;
 }
 
-/// Порт службы Android: подтверждает foreground до фокуса и снимает при завершении.
+/// The Android service port: confirms the foreground before focus and clears it on completion.
 abstract interface class MediaServiceLifecycle {
   Future<void> awaitForeground();
   Future<void> stopForeground();
 }
 
-/// Команды системы идут в тот же контроллер, что и команды экрана.
+/// System commands go to the same controller as screen commands.
 class NarrationMediaHandler extends BaseAudioHandler {
   NarrationMediaHandler({
     required this.controller,
@@ -103,10 +103,10 @@ class NarrationMediaHandler extends BaseAudioHandler {
             displayTitle: book.title,
             displaySubtitle: book.chapter,
             displayDescription: state.message,
-            // Длительности нет: карточка управляет отрезками, а не секундами.
+            // No duration: the card controls segments, not seconds.
           );
-    // MediaItem сравнивается пакетом только по id; глава и статус одной книги
-    // тоже должны обновлять карточку.
+    // The package compares MediaItem only by id; the chapter and status of one book
+    // must update the card too.
     final mediaKey = item == null ? null : (item.id, item.title, item.artist, item.artUri, item.displayDescription);
     if (_mediaKey != mediaKey) {
       _mediaKey = mediaKey;
@@ -158,8 +158,8 @@ class NarrationMediaHandler extends BaseAudioHandler {
       ),
     );
     if (ending) {
-      // Мост ждёт native idle. Новый старт публикуется только после снятия
-      // foreground, иначе позднее завершение могло бы снять уже новую службу.
+      // The bridge waits for native idle. A new start is published only after the foreground
+      // is cleared, otherwise a late completion could clear the already new service.
       _stopping = lifecycle.stopForeground().whenComplete(() {
         _stopping = null;
         publish();
@@ -198,7 +198,7 @@ class NarrationMediaHandler extends BaseAudioHandler {
 
   @override
   Future<void> onTaskRemoved() async {
-    // Смахивание окна не закрывает книгу и не останавливает службу.
+    // Swiping the window away neither closes the book nor stops the service.
   }
   @override
   Future<void> onNotificationDeleted() async {
@@ -211,8 +211,8 @@ class NarrationMediaHandler extends BaseAudioHandler {
   }
 }
 
-/// Аудиофокус принадлежит прослушиванию также во время подготовки и ожидания,
-/// поэтому звонок до первого файла тоже снимает намерение играть.
+/// Audio focus belongs to listening also during preparation and waiting,
+/// so a call before the first file clears the intent to play as well.
 abstract interface class AudioFocusSession {
   Stream<AudioInterruptionEvent> get interruptions;
   Stream<void> get noisy;
@@ -263,7 +263,7 @@ class NarrationAudioFocus {
       if (revision != null && revision != _revision) return false;
       return session.setActive(active);
     });
-    // Ошибку получает вызывающий; следующая команда не застревает на ней.
+    // The caller gets the error; the next command does not get stuck on it.
     _operations = result.then<void>((_) {}, onError: (Object error, StackTrace stack) {});
     return result;
   }

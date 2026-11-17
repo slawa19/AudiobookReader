@@ -6,7 +6,7 @@ import '../book/model.dart';
 import 'page_style.dart';
 import 'pagination.dart';
 
-/// Цвета страницы. Берутся из темы приложения экраном и передаются сюда, чтобы `reader` не зависел от Material.
+/// Page colors. Taken from the app theme by the screen and passed here so that `reader` does not depend on Material.
 class PageColors {
   const PageColors({
     required this.ink,
@@ -20,14 +20,14 @@ class PageColors {
   final Color ink2;
   final Color accent;
 
-  /// Подсветка звучащего или выбранного абзаца.
+  /// Highlight of the voiced or selected paragraph.
   final Color highlight;
 
-  /// Линия цитаты.
+  /// The quote line.
   final Color rule;
 }
 
-/// Одна страница книги: куски блоков на заранее рассчитанных местах. Ничего не решает сама.
+/// One book page: block pieces at precomputed places. Decides nothing itself.
 class BookPage extends StatelessWidget {
   const BookPage({
     super.key,
@@ -48,8 +48,8 @@ class BookPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Стиль по умолчанию сброшен: иначе текст унаследует, например, межбуквенный интервал темы Material,
-    // и строки перенесутся не там, где их посчитала разбивка.
+    // The default style is reset: otherwise the text would inherit, for example, the Material theme's letter spacing,
+    // and lines would wrap not where the pagination counted them.
     return DefaultTextStyle(style: const TextStyle(), child: _stack());
   }
 
@@ -122,8 +122,8 @@ class BookPage extends StatelessWidget {
       top: f.top,
       left: fragmentInset(style, block),
       right: 0,
-      // RichText, как TextPainter, использует явный стиль страницы. Text.rich добавлял системный boldText
-      // только при рисовании, хотя в измерении такого начертания не было.
+      // RichText, like TextPainter, uses the page's explicit style. Text.rich added the system boldText
+      // only when painting, although the measurement had no such weight.
       child: RichText(
         text: pieceSpan(style, block, f.start, f.end, color: colors.ink, subColor: colors.ink2, noteColor: colors.accent),
         textAlign: pieceAlign(block),
@@ -135,7 +135,7 @@ class BookPage extends StatelessWidget {
   }
 }
 
-/// Что под пальцем на странице. Координаты — в системе колонки текста.
+/// What is under the finger on the page. Coordinates are in the text column's system.
 class PageHit {
   const PageHit({this.block, this.noteId});
 
@@ -143,11 +143,11 @@ class PageHit {
   final String? noteId;
 }
 
-/// Наименьшая сторона области касания знака сноски (FR-R8: цели касания не меньше 48 dp).
+/// The smallest side of the touch area of a footnote mark (FR-R8: touch targets at least 48 dp).
 const noteTarget = 48.0;
 
-/// Ищет блок и знак сноски под точкой [p]. Знак сноски мал, поэтому ловится областью не меньше
-/// [noteTarget] × [noteTarget] с центром на знаке.
+/// Finds the block and the footnote mark under point [p]. A footnote mark is small, so it is caught by an area of at
+/// least [noteTarget] × [noteTarget] centered on the mark.
 PageHit hitTestPage({
   required Book book,
   required BookPageLayout page,
@@ -159,8 +159,8 @@ PageHit hitTestPage({
   for (final f in page.fragments) {
     if (p.dy >= f.top - 4 && p.dy <= f.top + f.height + 4) block = f.block;
   }
-  // Области 48 × 48 соседних знаков перекрываются: открывается знак, ближайший к точке касания, а не первый по
-  // порядку (решение G проверки жестов).
+  // The 48 × 48 areas of neighboring marks overlap: the mark closest to the touch point opens, not the first in
+  // order (gesture review decision G).
   PageHit? best;
   var bestDistance = double.infinity;
   for (final f in page.fragments) {

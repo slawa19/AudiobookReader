@@ -10,7 +10,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
     final prototype = await Prototype.create();
-    // Прототип в браузере: приложение в рамке телефона.
+    // Prototype in the browser: the app inside a phone frame.
     runApp(
       DeviceFrame(
         settings: prototype.settings,
@@ -24,7 +24,7 @@ Future<void> main() async {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       runApp(AudiobookApp.application(assembly: application));
     } catch (error) {
-      // Ошибка хранилища остаётся видна даже без готовых настроек и полки.
+      // A storage error stays visible even without ready settings and shelf.
       runApp(
         MaterialApp(
           home: Scaffold(

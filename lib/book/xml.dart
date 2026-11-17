@@ -1,5 +1,5 @@
-// Небольшое дерево XML. Восстанавливает только незакрытые элементы и неизвестные сущности (А§3).
-// DTD не загружается и не исполняется: внешних обращений у разборщика нет.
+// A small XML tree. Recovers only unclosed elements and unknown entities (А§3).
+// The DTD is neither loaded nor executed: the parser makes no external requests.
 import 'dart:convert';
 
 import 'html_entities.dart';
@@ -292,7 +292,7 @@ XmlElement parseXml(String input) {
       }
       whitespace();
       name();
-      // Только внешнее объявление. Внутренние DTD не нужны для книжной модели.
+      // External declaration only. Internal DTDs are not needed for the book model.
       final end = source.indexOf('>', at);
       if (end < 0 ||
           !RegExp(

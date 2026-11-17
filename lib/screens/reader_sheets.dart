@@ -6,10 +6,12 @@ import '../playback/narration.dart';
 import '../reader/page_style.dart';
 import 'common.dart';
 
-/// Превью темы в листе «Вид текста»: фон и цвет текста. Палитры живут в `app`, поэтому их передают сюда.
+/// The theme preview in the "Text appearance" sheet: background and text color. The palettes live in `app`, so they are
+/// passed here.
 typedef ThemePreview = ({Color bg, Color ink, Color line});
 
-/// «Вид текста» (FR-R6): размер и тема применяются сразу; страница за листом видна почти без затемнения.
+/// "Text appearance" (FR-R6): size and theme apply at once; the page behind the sheet is visible with almost no
+/// dimming.
 Future<void> showTextAppearanceSheet(BuildContext context, AppSettings settings, Map<ThemeChoice, ThemePreview> previews) {
   return showScrollableSheet<void>(
     context,
@@ -54,7 +56,8 @@ Future<void> showTextAppearanceSheet(BuildContext context, AppSettings settings,
                       min: 0,
                       max: (fontSteps.length - 1).toDouble(),
                       divisions: fontSteps.length - 1,
-                      // Внешний вид Material 3 2024 года; флаг помечен устаревшим, но другого способа включить его нет.
+                      // The 2024 Material 3 look; the flag is marked deprecated, but there is no other way to turn it
+                      // on.
                       // ignore: deprecated_member_use
                       year2023: false,
                       onChanged: (v) => settings.fontStep = v.round(),
@@ -76,8 +79,8 @@ Future<void> showTextAppearanceSheet(BuildContext context, AppSettings settings,
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: LayoutBuilder(builder: (context, c) {
-                  // Четыре плитки в ряд, если самое длинное слово подписи помещается в плитку; иначе — по две
-                  // (узкий экран, крупный шрифт, длинные слова): слово не рвётся посередине.
+                  // Four tiles in a row if the longest label word fits in a tile; otherwise — two per row
+                  // (narrow screen, large font, long words): a word is not broken in the middle.
                   final labelStyle = theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700);
                   final scaler = MediaQuery.textScalerOf(context);
                   var longest = 0.0;
@@ -186,7 +189,7 @@ class _ThemeTile extends StatelessWidget {
   }
 }
 
-/// Скорость (FR-P5): шесть значений, меняет плеер без нового синтеза.
+/// Speed (FR-P5): six values, changed by the player without new synthesis.
 Future<void> showSpeedSheet(BuildContext context, AppSettings settings, NarrationController narration) {
   return showScrollableSheet<void>(
     context,
@@ -257,7 +260,7 @@ class _Choice extends StatelessWidget {
   }
 }
 
-/// Таймер сна (FR-D1): 15, 30, 60 минут, «до конца главы», «выключить».
+/// The sleep timer (FR-D1): 15, 30, 60 minutes, "until end of chapter", "off".
 Future<void> showSleepSheet(BuildContext context, NarrationController narration) {
   return showScrollableSheet<void>(context, (context) {
     final l10n = context.l10n;
@@ -334,7 +337,7 @@ class _Option extends StatelessWidget {
   }
 }
 
-/// Сноска поверх страницы, без перехода (FR-R3).
+/// A footnote over the page, without a transition (FR-R3).
 Future<void> showNoteSheet(BuildContext context, {required Book book, required String noteId, required PageStyle style}) {
   final note = book.notes[noteId];
   if (note == null) return Future.value();

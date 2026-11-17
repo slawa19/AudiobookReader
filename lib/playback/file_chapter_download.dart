@@ -7,9 +7,9 @@ import 'screen_awake.dart';
 import 'synthesis_queue.dart';
 import 'tariffs.dart';
 
-/// Один потребитель общей очереди, независимый от сеанса прослушивания.
-/// Корень сборки даёт модели открытых книг: синхронный контракт экранов не делает I/O.
-/// Готовность каждый раз читается из AudioStore, собственного реестра «озвучена» нет.
+/// One consumer of the shared queue, independent of the listening session.
+/// The assembly root provides the models of open books: the screens' synchronous contract does no I/O.
+/// Readiness is read from AudioStore every time; there is no separate "narrated" registry.
 class FileChapterDownloads extends ChapterDownloads {
   FileChapterDownloads({
     required this.queue,
@@ -65,7 +65,7 @@ class FileChapterDownloads extends ChapterDownloads {
   List<SynthesisUnit> _missing(Book book, int chapter, VoiceProfile profile) {
     final unique = <String, SynthesisUnit>{};
     for (final segment in _segments(book, chapter)) {
-      // Идущие части определяют схему готовности, но пока ещё входят в цену остатка.
+      // Parts in flight determine the readiness scheme but still count toward the price of the remainder.
       for (final unit in _readiness(
         segment,
         book.id,
@@ -170,13 +170,13 @@ class FileChapterDownloads extends ChapterDownloads {
     notifyListeners();
   }
 
-  /// Корень сборки сообщает уход с экрана и возврат. Поздние ответы сохраняются,
-  /// но новых запросов и повторов в фоне нет. Намерение продолжить живёт до stop.
+  /// The assembly root reports leaving the screen and returning. Late responses are kept,
+  /// but there are no new requests or retries in the background. The intent to continue lives until stop.
   void setForeground(bool foreground) {
     if (_foreground == foreground) return;
     _foreground = foreground;
     if (!foreground) {
-      // Сохраняем интерес к постоянной ошибке уже начатого запроса, но не к повторам.
+      // Keep interest in a permanent error of an already started request, but not in retries.
       final t = _task;
       final book = _book;
       if (t != null && book != null) {
@@ -190,7 +190,7 @@ class FileChapterDownloads extends ChapterDownloads {
     _refresh();
   }
 
-  /// Тот же сигнал, что у подставной реализации; подписки покрывают настройки и голос книги.
+  /// The same signal as in the fake implementation; the subscriptions cover the settings and the book's voice.
   void profileChanged() {
     final t = _task;
     if (t != null && t.profile != profileFor(t.bookId)) {

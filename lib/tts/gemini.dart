@@ -13,10 +13,10 @@ const maximumRequestChars = 4000;
 const defaultSampleRate = 24000;
 const defaultBillingUrl = 'https://aistudio.google.com/billing';
 
-/// Транспорт принадлежит вызывающему коду. Повторов здесь нет: ими управляет очередь.
+/// The transport belongs to the calling code. There are no retries here: the queue manages them.
 class GeminiTtsEngine implements TtsEngine {
   GeminiTtsEngine({required String apiKey, required http.Client transport, this.timeout = ttsRequestTimeout})
-    // Именованные параметры публичны, поля с ключом и транспортом закрыты.
+    // Named parameters are public, the fields with the key and the transport are private.
     // ignore: prefer_initializing_formals
     : _apiKey = apiKey,
       // ignore: prefer_initializing_formals
@@ -45,7 +45,7 @@ class GeminiTtsEngine implements TtsEngine {
     for (final part in splitSpeech(text, maximumRequestChars)) {
       try {
         final result = await _request(part, profile);
-        // Все части одного дубля должны иметь один формат PCM.
+        // All parts of one take must have the same PCM format.
         if (rate != null && rate != result.sampleRate) {
           throw TtsError('Разная частота частей ответа', reason: TtsErrorReason.invalidResponse, usage: result.usage);
         }
@@ -109,7 +109,7 @@ class GeminiTtsEngine implements TtsEngine {
     } on TimeoutException catch (e) {
       throw TemporaryTtsError('Истекло время запроса (${e.runtimeType})', reason: TtsErrorReason.timeout);
     } on Exception catch (e) {
-      // post включает отправку и чтение тела. Чужой текст может содержать ключ, даже в экранированном виде.
+      // post covers sending and reading the body. Foreign text may contain the key, even in escaped form.
       throw TemporaryTtsError('Ошибка сети (${e.runtimeType})', reason: TtsErrorReason.network);
     }
     final body = utf8.decode(response.bodyBytes, allowMalformed: true);
@@ -118,7 +118,7 @@ class GeminiTtsEngine implements TtsEngine {
       final decoded = jsonDecode(body);
       if (decoded is Map<String, dynamic>) json = decoded;
     } on FormatException {
-      /* Текст HTTP-ошибки может быть не JSON. */
+      /* An HTTP error text may not be JSON. */
     }
     final rawUsage = json?['usage'];
     final usage = rawUsage is Map ? _usage(rawUsage) : null;
@@ -238,7 +238,7 @@ TtsUsage _usage(Map<dynamic, dynamic> raw, {double seconds = 0}) {
   while (at + 8 <= bytes.length) {
     var size = data.getUint32(at + 4, Endian.little);
     final start = at + 8;
-    // Потоковый WAV не знает длину data заранее: оба маркера означают звук до конца файла.
+    // A streaming WAV does not know the data length in advance: both markers mean audio to the end of the file.
     if (tag(at, 'data') && (size == 0 || size == 0xffffffff)) size = bytes.length - start;
     if (start + size > bytes.length) {
       throw const FormatException('Обрезанный WAV');

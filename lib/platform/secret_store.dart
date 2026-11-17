@@ -2,7 +2,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../library/secret_store.dart';
 
-/// Ключ Gemini в защищённом хранилище Android; пакет доступен только платформе.
+/// The Gemini key in the Android protected storage; the package is available only to the platform.
 class AndroidSecretStore implements SecretStore {
   static const _storage = FlutterSecureStorage();
   static const _key = 'gemini_api_key';

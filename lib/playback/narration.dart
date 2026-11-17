@@ -5,13 +5,13 @@ import '../library/library.dart';
 import '../tts/segments.dart';
 import '../tts/sentences.dart';
 
-/// Состояния прослушивания — ровно таблица А§6.6, других нет.
+/// The listening states are exactly the table of А§6.6, there are no others.
 enum NarrationState { idle, preparing, playing, waiting, paused, stopped }
 
 enum StopReason { error, endOfBook }
 
-/// Классы постоянных ошибок, которые экран показывает по-разному (FR-P6, FR-P7). [badKey] — отказ по ключу
-/// (400/403 «API key not valid» и подобные): распознанная причина с кнопкой «Изменить ключ».
+/// Classes of permanent errors that the screen shows differently (FR-P6, FR-P7). [badKey] — a key rejection
+/// (400/403 "API key not valid" and the like): a recognized cause with the "Change key" button.
 enum NarrationErrorKind { payment, modelNotFound, badKey, other }
 
 @immutable
@@ -20,14 +20,14 @@ class NarrationError {
 
   final NarrationErrorKind kind;
 
-  /// Текст Google как есть — не переводится.
+  /// Google's text as is — not translated.
   final String googleMessage;
 
-  /// Модель, на которой случилась ошибка (для 404): панель называет её, а не ту, что выбрана в настройках потом.
+  /// The model on which the error happened (for 404): the panel names it, not the one selected in settings afterwards.
   final String? modelId;
 }
 
-/// Видимая страница: от [start] (включительно) до [end] (не включая) — блок и смещение.
+/// The visible page: from [start] (inclusive) to [end] (exclusive) — a block and an offset.
 @immutable
 class PageRange {
   const PageRange(this.start, this.end);
@@ -40,7 +40,7 @@ class PageRange {
   bool contains(ReadingPosition p) => _le(start, p) && !_le(end, p);
 }
 
-/// Сохранённое место на странице, первое начинающееся на ней предложение или начало текущего.
+/// The saved place on the page, the first sentence starting on it, or the start of the current one.
 ReadingPosition listenStart(Book book, PageRange page, ReadingPosition? saved) {
   if (saved != null && page.contains(saved)) return saved;
   for (var i = page.start.block; i <= page.end.block && i < book.blocks.length; i++) {
@@ -55,7 +55,7 @@ ReadingPosition listenStart(Book book, PageRange page, ReadingPosition? saved) {
   return ReadingPosition(block.index, blockSentenceStartAt(block, page.start.offset));
 }
 
-/// Те же правила пригодности текста, что у синтеза, включая сноски и блоки из одних знаков.
+/// The same text suitability rules as in synthesis, including footnotes and blocks of nothing but marks.
 int? spokenBlockFrom(Book book, int from, {required bool forward}) {
   var i = from;
   while (i >= 0 && i < book.blocks.length) {
@@ -67,7 +67,7 @@ int? spokenBlockFrom(Book book, int from, {required bool forward}) {
 
 enum SleepKind { minutes, endOfChapter }
 
-/// Таймер сна принадлежит контроллеру, а не сеансу (А§6.6); минуты — по настенным часам с момента установки.
+/// The sleep timer belongs to the controller, not the session (А§6.6); minutes — by the wall clock since it was set.
 @immutable
 class SleepTimer {
   const SleepTimer.minutes(this.minutes, this.setAt) : kind = SleepKind.minutes;
@@ -85,95 +85,96 @@ class SleepTimer {
   }
 }
 
-/// Единственное место, где сходятся очередь, плеер, сеанс и позиция (А§6.6). Экран подписан на него и ничего
-/// не решает сам: каждое действие пользователя — одна команда, а не последовательность вызовов.
+/// The single place where the queue, player, session and position meet (А§6.6). The screen subscribes to it and decides
+/// nothing itself: every user action is one command, not a sequence of calls.
 ///
-/// Подставная реализация прототипа и настоящая (А§6.3–6.6) выполняют один и тот же контракт.
+/// The prototype's fake implementation and the real one (А§6.3–6.6) fulfill the same contract.
 abstract class NarrationController extends ChangeNotifier {
   NarrationState get state;
   StopReason? get stopReason;
   NarrationError? get error;
 
-  /// Книга текущего прослушивания.
+  /// The book of the current listening.
   String? get bookId;
 
-  /// Звучащий блок и доля проигранного в нём (для подсветки и следования за голосом, А§5).
+  /// The voiced block and the fraction played in it (for highlighting and following the voice, А§5).
   int? get block;
   double get blockProgress;
 
-  /// Точное звучащее место: блок и смещение в нём.
+  /// The exact voiced place: a block and an offset in it.
   ReadingPosition? get sounding;
 
-  /// Начало звучащей единицы (отрезка; в прототипе — блока или его части от выбранного предложения). Это и есть
-  /// место прослушивания, которое контроллер сохраняет (А§4, А§5).
+  /// The start of the voiced unit (a segment; in the prototype — a block or its part from the chosen sentence). This is
+  /// the listening place that the controller saves (А§4, А§5).
   ReadingPosition? get unitStart;
 
   double get speed;
   SleepTimer? get sleepTimer;
   DateTime now();
 
-  /// «Активно» в смысле А§5: позицию пишет контроллер.
+  /// "Active" in the sense of А§5: the controller writes the position.
   bool get isActive => state != NarrationState.idle && state != NarrationState.stopped;
 
-  /// Счётчик явных команд пользователя, которые запускают звук или меняют его место: «Слушать» (из `idle`, паузы,
-  /// остановки), «Читать отсюда», «назад», «вперёд», выбор главы — откуда бы они ни пришли: с экрана, из
-  /// уведомления, с гарнитуры. Экран включает следование за голосом, когда счётчик изменился (А§5, А§6.6).
-  /// Автоматические переходы (следующий отрезок, конец главы, смена голоса или модели) его не меняют.
+  /// A counter of explicit user commands that start audio or change its place: "Listen" (from `idle`, a pause,
+  /// a stop), "Read from here", "back", "forward", chapter selection — wherever they come from: the screen, the
+  /// notification, the headset. The screen turns following the voice on when the counter changed (А§5, А§6.6).
+  /// Automatic transitions (the next segment, end of chapter, a voice or model change) do not change it.
   int get commandRevision;
 
-  /// «Слушать» без сеанса (`idle`), FR-P3. Экран только сообщает видимую страницу [page]; место выбирает
-  /// контроллер (замечание владельца 2026-11-14):
-  /// 1. сохранённое место прослушивания стоит на этой странице — с него;
-  /// 2. иначе — с первого предложения, которое начинается на странице (хвост предложения с прошлой страницы не
-  ///    читается);
-  /// 3. если на странице не начинается ни одно предложение — с начала того, внутри которого она лежит.
-  /// Без ключа экран сюда не приходит (FR-P7).
+  /// "Listen" without a session (`idle`), FR-P3. The screen only reports the visible page [page]; the place is chosen
+  /// by the controller (owner's remark 2026-11-14):
+  /// 1. the saved listening place is on this page — from it;
+  /// 2. otherwise — from the first sentence that starts on the page (the tail of a sentence from the previous page
+  ///    is not read);
+  /// 3. if no sentence starts on the page — from the start of the one inside which it lies.
+  /// Without a key the screen does not come here (FR-P7).
   void listen(Book book, PageRange page);
 
-  /// «Слушать» в панели плеера: из `paused` — с места паузы; из `stopped` — новый сеанс с актуальной сохранённой
-  /// позиции (её мог переписать экран после явного перемещения, А§5).
+  /// "Listen" in the player panel: from `paused` — from the pause place; from `stopped` — a new session from the
+  /// current saved position (the screen may have rewritten it after an explicit move, А§5).
   void resume();
 
   void pause();
 
-  /// «Читать отсюда» (FR-P3): смена места с прежним намерением. Из `paused` — пауза на новом месте; из
-  /// `preparing`/`playing`/`waiting` — звучит с нового места; без сеанса или из `stopped` — новый сеанс. Перед
-  /// каждым явным стартом истёкший таймер сна снимается (FR-D1).
+  /// "Read from here" (FR-P3): a place change with the previous intent. From `paused` — paused at the new place; from
+  /// `preparing`/`playing`/`waiting` — plays from the new place; without a session or from `stopped` — a new session.
+  /// Before every explicit start an expired sleep timer is cleared (FR-D1).
   void readFrom(Book book, int block);
 
-  /// Переход по оглавлению: если идёт сеанс этой книги — смена места с прежним намерением (А§5, А§6.6);
-  /// без сеанса ничего не делает.
+  /// Navigation via the table of contents: if a session of this book is running — a place change with the previous
+  /// intent (А§5, А§6.6); without a session it does nothing.
   void moveIfListening(Book book, int block);
 
-  /// «Назад» и «вперёд» плеера — по абзацам (А§6.6): к началу следующего читаемого блока; к началу текущего,
-  /// а из его начала — предыдущего. Намерение сохраняется.
+  /// The player's "Back" and "forward" — by paragraphs (А§6.6): to the start of the next readable block; to the start
+  /// of the current one, and from its start — of the previous one. The intent is kept.
   void next();
   void previous();
 
-  /// «Закрыть» (FR-P8) или закрытие книги: сеанс завершается (`idle`), таймер сна снимается, затем
-  /// [screenPosition] — место на экране — передаётся писателю позиции чтения; с этого момента её пишет экран (А§5).
-  /// Место прослушивания при этом не забывается: с него продолжит следующее «Слушать», если оно на экране.
+  /// "Close" (FR-P8) or closing the book: the session ends (`idle`), the sleep timer is cleared, then
+  /// [screenPosition] — the place on the screen — is passed to the reading-position writer; from then on the screen
+  /// writes it (А§5). The listening place is not forgotten in this: the next "Listen" continues from it if it is on the
+  /// screen.
   void close({ReadingPosition? screenPosition});
 
   void setSpeed(double speed);
 
-  /// Таймер сна (FR-D1). Снимается при срабатывании, «Закрыть», закрытии книги и смене книги; смена места, главы
-  /// и голоса в той же книге его не снимает. Срок, истёкший без звука: на паузе — таймер просто снят; в
-  /// `preparing`/`waiting` — пауза, и таймер снят.
+  /// The sleep timer (FR-D1). Cleared when it fires, on "Close", on closing the book and on changing the book; a change
+  /// of place, chapter and voice in the same book does not clear it. A deadline that expired without audio: on a pause
+  /// — the timer is simply cleared; in `preparing`/`waiting` — a pause, and the timer is cleared.
   void setSleepTimer(SleepTimer? timer);
 
-  /// Голос или модель действительно сменились: новый сеанс с начала текущего отрезка — в том числе стартового,
-  /// начатого с предложения внутри блока, — с прежним намерением (FR-V2). Касание уже выбранного голоса или модели
-  /// сюда не приходит (правило j).
+  /// The voice or model actually changed: a new session from the start of the current segment — including a start one
+  /// begun from a sentence inside a block — with the previous intent (FR-V2). Touching the already chosen voice or
+  /// model does not come here (rule j).
   void restartSession();
 
-  /// «Очистить озвучку» (FR-M3, А§4): сеанс завершается, «Скачать главу» останавливается, готовность глав и
-  /// пробы сбрасываются, звук всех книг и проб удаляется. Одна операция.
+  /// "Clear narration" (FR-M3, А§4): the session ends, "Download chapter" stops, chapter readiness and
+  /// probes are reset, the audio of all books and probes is deleted. One operation.
   void clearAllNarration();
 
-  /// «Удалить озвучку» книги (FR-D3, А§4).
+  /// "Delete narration" of a book (FR-D3, А§4).
   void deleteBookNarration(String bookId);
 
-  /// Удаление книги (FR-L5, А§4): то же, что [deleteBookNarration], и папка книги с полки.
+  /// Deleting a book (FR-L5, А§4): the same as [deleteBookNarration], plus the book folder from the shelf.
   void deleteBook(String bookId);
 }

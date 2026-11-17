@@ -20,8 +20,8 @@ VoiceProfile bookVoiceProfile(Book book, Library library, AppSettings settings) 
 
 enum DownloadStatus { running, failed }
 
-/// Задача «Скачать главу» (А§6.7, FR-D2): одна на приложение. Принадлежит главе и профилю голоса, с которыми её
-/// начали; смена голоса или модели её останавливает (готовое сохраняется).
+/// The "Download chapter" task (А§6.7, FR-D2): one per app. Belongs to the chapter and the voice profile it was
+/// started with; changing the voice or model stops it (what is ready is kept).
 class ChapterDownloadTask {
   ChapterDownloadTask({
     required this.bookId,
@@ -38,16 +38,17 @@ class ChapterDownloadTask {
   double readySeconds;
   DownloadStatus status = DownloadStatus.running;
 
-  /// Текст Google как есть.
+  /// Google's text as is.
   String? googleMessage;
 
-  /// Причина постоянной ошибки, включая модель и ссылку на оплату; текст — в googleMessage.
+  /// The reason for a permanent error, including the model and the payment link; the text is in googleMessage.
   TtsError? error;
 
   double get fraction => totalSeconds == 0 ? 1 : (readySeconds / totalSeconds).clamp(0.0, 1.0);
 }
 
-/// Оценка перед началом: секунды звука ещё не озвученного текста главы (остатка) и цена по тарифу на сегодня.
+/// Estimate before starting: seconds of audio of the chapter's not-yet-narrated text (the remainder) and the price at
+/// today's tariff.
 @immutable
 class DownloadEstimate {
   const DownloadEstimate(this.seconds, this.dollars);
@@ -59,28 +60,29 @@ class DownloadEstimate {
 abstract class ChapterDownloads extends ChangeNotifier {
   ChapterDownloadTask? get task;
 
-  /// Действующий профиль книги: её свой голос или голос приложения, модель из настроек (FR-V2, А§6.2).
+  /// The book's effective profile: its own voice or the app voice, the model from settings (FR-V2, А§6.2).
   VoiceProfile profileFor(String bookId);
 
-  /// Глава готова для [profile] по правилу готовности А§6.1: звук другим голосом или моделью не в счёт.
+  /// The chapter is ready for [profile] by the readiness rule of А§6.1: audio in another voice or model does not count.
   bool isVoiced(String bookId, int chapter, VoiceProfile profile);
 
-  /// Готовая оценка остатка: только то, чего для [profile] ещё нет (после «Остановить» и после ошибки — не цена
-  /// всей главы). Тариф — на сегодня по модели профиля. Экран ничего не считает (FR-D2, FR-M1).
+  /// A ready estimate of the remainder: only what [profile] does not have yet (after "Stop" and after an error — not
+  /// the price of the whole chapter). The tariff is today's, by the profile's model. The screen computes nothing
+  /// (FR-D2, FR-M1).
   DownloadEstimate estimate(Book book, int chapter, VoiceProfile profile);
 
-  /// Начинает задачу; прежняя (остановленная или с ошибкой) заменяется — задача одна.
+  /// Starts the task; the previous one (stopped or failed) is replaced — there is only one task.
   void start(Book book, int chapter, VoiceProfile profile);
 
-  /// «Стоп» / «Остановить». Готовое сохраняется.
+  /// "Stop". What is ready is kept.
   void stop();
 
-  /// Звук удалён (А§4): задача затронутой книги остановлена, готовность глав сброшена. `null` — все книги.
-  /// Зовёт только `NarrationController` как часть одной операции удаления.
+  /// Audio deleted (А§4): the task of the affected book is stopped, chapter readiness is reset. `null` — all books.
+  /// Called only by `NarrationController` as part of a single delete operation.
   void forget({String? bookId});
 }
 
-/// Подставная реализация: доля готового растёт по таймеру, сети нет.
+/// The fake implementation: the ready fraction grows on a timer, no network.
 class FakeChapterDownloads extends ChapterDownloads {
   FakeChapterDownloads({
     required this.settings,
@@ -99,25 +101,25 @@ class FakeChapterDownloads extends ChapterDownloads {
   final AppSettings settings;
   final Tariffs tariffs;
 
-  /// Свой голос книги (`null` — как в настройках); даёт корень сборки из библиотеки.
+  /// The book's own voice (`null` — as in settings); provided by the assembly root from the library.
   final String? Function(String bookId)? bookVoice;
 
-  /// Подставное хранилище: готовый звук занимает место, иначе после «Очистить озвучку» новая озвучка не видна
-  /// ни в «Удалить озвучку», ни в настройках.
+  /// The fake storage: ready audio takes up space, otherwise after "Clear narration" the new narration is visible
+  /// neither in "Delete narration" nor in settings.
   final FakeAudioStore? audio;
 
-  /// Байт сжатого звука на секунду (≈ 32 кбит/с).
+  /// Bytes of compressed audio per second (≈ 32 kbit/s).
   static const bytesPerSecond = 4000;
   final Duration tick;
 
-  /// За сколько секунд прототип «озвучивает» главу.
+  /// In how many seconds the prototype "narrates" the chapter.
   final double demoSeconds;
 
   ChapterDownloadTask? _task;
   Timer? _timer;
   final Set<String> _voiced = {};
 
-  /// Готовые секунды звука по главе и профилю: то, что уже лежит в хранилище.
+  /// Ready seconds of audio by chapter and profile: what is already in the storage.
   final Map<String, double> _ready = {};
 
   static String _key(String bookId, int chapter, VoiceProfile profile) => '$bookId#$chapter#${profile.key}';
@@ -129,8 +131,8 @@ class FakeChapterDownloads extends ChapterDownloads {
   VoiceProfile profileFor(String bookId) =>
       VoiceProfile(voiceId: bookVoice?.call(bookId) ?? settings.voice, model: settings.modelId);
 
-  /// Голос книги или модель могли смениться: задача чужого теперь профиля останавливается, готовое остаётся
-  /// (правило g, принято владельцем 2026-11-14; FR-D2).
+  /// The book's voice or model may have changed: the task of the now-foreign profile is stopped, what is ready stays
+  /// (rule g, accepted by the owner 2026-11-14; FR-D2).
   void profileChanged() {
     final t = _task;
     if (t != null && t.profile != profileFor(t.bookId)) stop();
@@ -207,7 +209,7 @@ class FakeChapterDownloads extends ChapterDownloads {
     notifyListeners();
   }
 
-  /// Только для показа: задача на заданной доле или с постоянной ошибкой.
+  /// For display only: a task at a given fraction or with a permanent error.
   void demoShow(Book book, int chapter, {required bool failed}) {
     final profile = profileFor(book.id);
     start(book, chapter, profile);

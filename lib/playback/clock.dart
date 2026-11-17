@@ -1,6 +1,6 @@
 import 'dart:async';
 
-/// Одни часы для таймера сна, задержек очереди и подставного звука.
+/// One clock for the sleep timer, queue delays and fake audio.
 abstract interface class PlaybackClock {
   DateTime now();
   Timer schedule(Duration delay, void Function() callback);
@@ -15,7 +15,7 @@ class SystemPlaybackClock implements PlaybackClock {
       Timer(delay, callback);
 }
 
-/// Продвигает время по срокам, включая таймеры, созданные внутри обработчиков.
+/// Advances time through the deadlines, including timers created inside handlers.
 class ManualPlaybackClock implements PlaybackClock {
   ManualPlaybackClock([DateTime? start])
     : _now = start ?? DateTime(2026, 11, 15);

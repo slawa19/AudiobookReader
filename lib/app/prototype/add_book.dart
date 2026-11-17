@@ -5,8 +5,8 @@ import '../../screens/common.dart';
 import '../../screens/reader_screen.dart';
 import '../app.dart';
 
-/// Только прототип: вместо системного окна выбора файла — лист с несколькими «файлами», каждый из которых
-/// показывает свой исход добавления (FR-L2, FR-L3, FR-B2, FR-B6).
+/// Prototype only: instead of the system file picker, a sheet with several "files", each of which
+/// shows its own add outcome (FR-L2, FR-L3, FR-B2, FR-B6).
 Future<void> showDemoFilePicker(BuildContext context, Prototype p) async {
   final picked = await showScrollableSheet<({String name, String kind})>(context, (context) {
     final theme = Theme.of(context);
@@ -34,7 +34,7 @@ Future<void> showDemoFilePicker(BuildContext context, Prototype p) async {
   if (picked == null || !context.mounted) return;
   final existing = p.library.addDemoFile(picked.name, picked.kind);
   if (existing != null) {
-    // Тот же файл уже на полке — открывается имеющаяся книга (FR-L3).
+    // The same file is already on the shelf — the existing book opens (FR-L3).
     final book = await p.library.loadBook(existing);
     p.library.markOpened(existing);
     if (!context.mounted) return;

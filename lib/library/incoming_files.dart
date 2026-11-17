@@ -1,24 +1,24 @@
-/// Принятый файл: уже скопирован во временную папку приложения, исходный URI не нужен.
+/// An accepted file: already copied into the app's temporary folder, the source URI is not needed.
 class IncomingFile {
   const IncomingFile({required this.path, required this.name});
 
   final String path;
 
-  /// Имя из DISPLAY_NAME или последнего сегмента URI, для строки «Добавляется».
+  /// The name from DISPLAY_NAME or the last URI segment, for the "Adding" row.
   final String name;
 }
 
-/// Приём файлов без знания Android (А§2, А§7).
+/// Receiving files without knowing Android (А§2, А§7).
 ///
-/// Получатель владеет каждой выданной копией: после добавления (в том числе отказа
-/// или обнаружения повтора) удаляет файл [IncomingFile.path] в `finally`.
-/// Android чистит оставшиеся копии один раз при старте процесса, до первого копирования.
+/// The receiver owns every copy it is handed: after adding (including a failure
+/// or a detected duplicate) it deletes the file [IncomingFile.path] in `finally`.
+/// Android cleans up the remaining copies once at process start, before the first copy.
 abstract interface class IncomingFiles {
-  /// Системный выбор файла; отмена возвращает `null`, ошибка копирования — ошибку Future.
+  /// The system file picker; cancelling returns `null`, a copy error — a Future error.
   Future<IncomingFile?> pickFile();
 
-  /// Файлы из «Открыть с помощью» и «Поделиться», включая холодный запуск.
-  /// Одна подписка на всё время работы приложения; очередь до подписки не теряется.
-  /// Ошибка копирования приходит как ошибка потока, следующие файлы продолжают поступать.
+  /// Files from "Open with" and "Share", including a cold start.
+  /// One subscription for the whole lifetime of the app; the queue is not lost before the subscription.
+  /// A copy error arrives as a stream error, the following files keep arriving.
   Stream<IncomingFile> get incomingFiles;
 }

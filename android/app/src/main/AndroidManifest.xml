@@ -27,15 +27,15 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
-            <!-- content-URI принимает наш канал, а не маршрутизатор Flutter. -->
+            <!-- The content URI is accepted by our channel, not by the Flutter router. -->
             <meta-data android:name="flutter_deeplinking_enabled" android:value="false" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Книжный MIME и octet-stream принимаются с любым content-URI:
-                 MediaStore отдаёт FB2 как двоичный файл с непрозрачным путём.
-                 Формат проверяется по содержимому; посторонний файл даёт отказ на полке. -->
+            <!-- The book MIME types and octet-stream are accepted with any content URI:
+                 MediaStore serves FB2 as a binary file with an opaque path.
+                 The format is checked by content; a foreign file is rejected on the shelf. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -49,8 +49,8 @@
                 <data android:mimeType="application/octet-stream" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
-            <!-- Архивы и XML принимаются только с книжным суффиксом пути (API 31+).
-                 DISPLAY_NAME в сопоставлении Android не участвует. -->
+            <!-- Archives and XML are accepted only with a book path suffix (API 31+).
+                 DISPLAY_NAME does not take part in Android's matching. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -63,9 +63,9 @@
                 <data android:mimeType="application/xml" />
                 <data android:mimeType="text/xml" />
             </intent-filter>
-            <!-- У SEND файл в EXTRA_STREAM, а не в data: фильтр расширений невозможен.
-                 octet-stream нужен для FB2 из MediaStore; содержимое проверяет разборщик.
-                 Общие MIME архивов и XML здесь не принимаются. -->
+            <!-- With SEND the file is in EXTRA_STREAM, not in data: an extension filter is impossible.
+                 octet-stream is needed for FB2 from MediaStore; the parser checks the content.
+                 Generic archive and XML MIME types are not accepted here. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />

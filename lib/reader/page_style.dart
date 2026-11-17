@@ -6,10 +6,10 @@ import '../book/model.dart';
 
 const bookFontFamily = 'Merriweather';
 
-/// Типографика страницы для одной ступени размера и одного системного масштаба шрифта.
+/// Page typography for one size step and one system font scale.
 ///
-/// Размер текста книги = ступень × системный масштаб (решение владельца 2026-11-14, FR-R6): масштаб применён
-/// прямо к кеглю и интерлиньяжу здесь, поэтому дальше текст рисуется с [TextScaler.noScaling].
+/// Book text size = step × system scale (owner's decision 2026-11-14, FR-R6): the scale is applied
+/// directly to the font size and line height here, so the text is further drawn with [TextScaler.noScaling].
 class PageStyle {
   PageStyle({required double fontSize, required double lineHeight, required TextScaler textScaler})
       : fontSize = textScaler.scale(fontSize),
@@ -18,13 +18,13 @@ class PageStyle {
   final double fontSize;
   final double lineHeight;
 
-  /// Красная строка (NOTES: 24 при кегле 16).
+  /// First-line indent (NOTES: 24 at font size 16).
   double get indent => fontSize * 1.5;
 
-  /// Отступ стихов и цитат слева.
+  /// Left indent of verse and quotes.
   double get insetVerse => fontSize * 2;
 
-  /// Где стоит вертикальная линия цитаты внутри отступа.
+  /// Where the vertical quote line stands inside the indent.
   double get citeRuleX => fontSize * 0.6;
 
   double get verseSize => fontSize * 0.92;
@@ -45,8 +45,8 @@ class PageStyle {
         forceStrutHeight: true,
       );
 
-  /// Правило оформления (README прототипа, FR-R3): стихи — курсив с отступом; цитата — прямое начертание с тем
-  /// же отступом и тонкой линией слева. Кегль у обоих 0,92 основного.
+  /// The styling rule (prototype README, FR-R3): verse — italic with an indent; a quote — upright with the same
+  /// indent and a thin line on the left. The font size of both is 0.92 of the main one.
   TextStyle get verse => body.copyWith(fontSize: verseSize, height: verseLineHeight / verseSize, fontStyle: FontStyle.italic);
 
   TextStyle get cite => body.copyWith(fontSize: verseSize, height: verseLineHeight / verseSize);
@@ -77,8 +77,8 @@ class PageStyle {
       };
   StrutStyle strutFor(BlockKind k) => isVerseLike(k) ? verseStrut : bodyStrut;
 
-  /// Строит отрезок текста блока [start, end) с начертаниями. Цвет знака сноски — [noteColor]; на измерение
-  /// цвет не влияет, поэтому разбивка и отрисовка зовут одну и ту же функцию.
+  /// Builds a text span of block [start, end) with styles. The footnote mark color is [noteColor]; the color does not
+  /// affect measurement, so pagination and painting call the same function.
   List<InlineSpan> spans(Block block, int start, int end, {Color? noteColor}) {
     final cuts = <int>{start, end};
     for (final s in block.spans) {
@@ -103,7 +103,8 @@ class PageStyle {
               style = style.copyWith(fontWeight: FontWeight.w700);
             case SpanStyle.noteRef:
             case SpanStyle.sup:
-              // Надстрочный знак даёт сам шрифт (функция `sups` у Merriweather есть); кегль не уменьшаем.
+              // The font itself provides the superscript mark (Merriweather has the `sups` feature); we do not reduce
+              // the font size.
               style = style.copyWith(
                 fontWeight: FontWeight.w700,
                 color: s.style == SpanStyle.noteRef ? noteColor : null,

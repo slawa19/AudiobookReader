@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#F8F4EC",
     "theme_color": "#A8431F",
-    "description": "Читалка с озвучкой Gemini — кликабельный прототип интерфейса",
+    "description": "Reader with Gemini narration — a clickable interface prototype",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

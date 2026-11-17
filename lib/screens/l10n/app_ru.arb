@@ -5,7 +5,7 @@
   "@@locale": "ru",
   "shelfTitle": "Книги",
   "@shelfTitle": {
-    "description": "Заголовок полки"
+    "description": "Shelf title"
   },
   "settings": "Настройки",
   "fakeVoice": "Подставной голос",
@@ -13,7 +13,7 @@
   "continueReading": "Продолжить",
   "progressNew": "новая",
   "@progressNew": {
-    "description": "Книгу ещё не открывали"
+    "description": "The book has not been opened yet"
   },
   "adding": "Добавляется…",
   "dismiss": "Убрать",
@@ -60,7 +60,7 @@
   "toReadingPlace": "К месту чтения",
   "percent": "{value}",
   "@percent": {
-    "description": "Доля книги, формат по локали",
+    "description": "Fraction of the book, formatted by locale",
     "placeholders": {
       "value": {
         "type": "double",
@@ -104,7 +104,7 @@
   "voice": "Голос",
   "minutesShort": "{count} мин",
   "@minutesShort": {
-    "description": "Сокращение «минут» — без склонения",
+    "description": "Abbreviation of \"minutes\" — without declension",
     "placeholders": {
       "count": {
         "type": "int",
@@ -127,7 +127,7 @@
   "error402Title": "На счёте Gemini закончились деньги",
   "error402Body": "Пополните счёт и нажмите «Слушать» — продолжим с этого абзаца.",
   "@error402Body": {
-    "description": "Автопродолжения нет (FR-P6): только «нажмите Слушать»"
+    "description": "No auto-resume (FR-P6): only \"press Listen\""
   },
   "error404Title": "Модель {model} больше недоступна",
   "@error404Title": {
@@ -144,7 +144,7 @@
   "errorOtherTitle": "Google отказал в озвучке",
   "google": "Google: «{message}»",
   "@google": {
-    "description": "Текст Google — как есть, без перевода",
+    "description": "Google's text — as is, not translated",
     "placeholders": {
       "message": {
         "type": "String"
@@ -191,11 +191,11 @@
   "sleepActiveChapter": "Пауза в конце главы",
   "voiced": "озвучена",
   "@voiced": {
-    "description": "Глава полностью озвучена"
+    "description": "The chapter is fully narrated"
   },
   "notVoicedEstimate": "Не озвучено: ≈ {minutes} мин звука, ≈ {price}",
   "@notVoicedEstimate": {
-    "description": "Оценка перед «Скачать главу» (FR-D2)",
+    "description": "Estimate before \"Download chapter\" (FR-D2)",
     "placeholders": {
       "minutes": {
         "type": "int",
@@ -331,7 +331,7 @@
   "spent": "Потрачено",
   "money": "{amount}",
   "@money": {
-    "description": "Сумма в долларах, формат по локали",
+    "description": "Amount in dollars, formatted by locale",
     "placeholders": {
       "amount": {
         "type": "double",
@@ -384,94 +384,94 @@
   "langUk": "Українська",
   "voiceCharSoft": "мягкий",
   "@voiceCharSoft": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharBreezy": "лёгкий, непринуждённый",
   "@voiceCharBreezy": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharBright": "яркий",
   "@voiceCharBright": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharCalm": "спокойный",
   "@voiceCharCalm": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharSmooth": "плавный",
   "@voiceCharSmooth": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharClear": "чёткий",
   "@voiceCharClear": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharMature": "зрелый",
   "@voiceCharMature": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharFirm": "твёрдый",
   "@voiceCharFirm": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharUpbeat": "бодрый",
   "@voiceCharUpbeat": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharYouthful": "молодой",
   "@voiceCharYouthful": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharForward": "напористый",
   "@voiceCharForward": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharWarm": "тёплый",
   "@voiceCharWarm": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharGentle": "нежный",
   "@voiceCharGentle": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharFriendly": "дружелюбный",
   "@voiceCharFriendly": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharGravelly": "с хрипотцой",
   "@voiceCharGravelly": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharInformative": "деловой",
   "@voiceCharInformative": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharBreathy": "с придыханием",
   "@voiceCharBreathy": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharExcitable": "возбуждённый",
   "@voiceCharExcitable": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharLively": "живой",
   "@voiceCharLively": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharKnowledgeable": "знающий",
   "@voiceCharKnowledgeable": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharEven": "ровный",
   "@voiceCharEven": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharEasygoing": "непринуждённый",
   "@voiceCharEasygoing": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   },
   "voiceCharConversational": "разговорный",
   "@voiceCharConversational": {
-    "description": "Характер голоса"
+    "description": "Voice character"
   }
 }
