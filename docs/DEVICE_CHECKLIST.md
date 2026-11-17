@@ -41,6 +41,12 @@ signed with the permanent key.
   Expected: the text is outside the camera cutout, the bottom buttons are above the system bar and can be tapped;
   nothing is cut off. Build: fake. Money: no.
 
+- [ ] **License page.** Settings → the last row, "Open-source licenses". Expected: the app is listed once, as "Book
+  AudioReader"; the other entries include "Demo texts", "Merriweather" and "Roboto"; there is no `audiobook_reader`
+  entry. Build: both. Money: no.
+  *Result, 2026-11-17 (SM-S948B, by an agent over adb): as expected in both the fake and the real app. Not checked: a
+  large system font on this page.*
+
 ## Fake audio: background, service and card
 
 - [ ] **Waiting for the first file in the background.** At a place that has not been narrated press "Listen" and turn
@@ -65,6 +71,11 @@ signed with the permanent key.
   "Don't allow": the card is still in the shade with working buttons, App info shows notifications blocked, its switch
   can be turned on; the next "Listen", also after a restart, does not ask again. After "Allow": App info shows
   notifications allowed. Build: fake. Money: no.
+  *Result, 2026-11-17 (SM-S948B, by an agent over adb, fake build): the dialog appeared on the first "Listen" while
+  narration was already playing; after "Allow" App info showed notifications allowed; the media card in the shade had
+  working pause and play; later listens showed no second dialog. Not checked: the lock-screen card and the dialog in
+  the real app (the owner will see it on the next "Listen"); the "Don't allow" branch and the restart case are not
+  recorded in this run.*
 - [ ] **Card contents.** Listen to a book with a cover and without one, change the chapter, check the notification and
   the lock screen. Expected: the correct book and chapter titles, for an unnamed chapter — the start of its text; the
   cover or a placeholder with the first letter, as on the shelf; no paragraph and no rewind by seconds.

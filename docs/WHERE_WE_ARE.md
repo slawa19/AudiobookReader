@@ -26,9 +26,13 @@ Since 2026-11-17 the repository has been prepared for open-source publication un
 language; documentation, code comments, test names and technical messages in English; the `LICENSE`, the in-app
 "Open-source licenses" page and the demo-text attribution; English README screenshots; the tag-triggered release
 workflow with the pinned toolchain ([RELEASING.md](RELEASING.md)). The four signing secrets and the variable
-`SIGNING_CERT_SHA256` are set in GitHub. The dry run of the release workflow passed on 2026-11-17 (run 44035431681);
-its attestation and release steps are skipped in a dry run and have never run. The repository was switched to public and
-renamed to `slawa19/BookAudioReader` on 2026-11-17 (owner decisions); the first release is cut from the tag `v0.1.0`. The independent Codex
+`SIGNING_CERT_SHA256` are set in GitHub. The repository was switched to public and renamed to
+`slawa19/BookAudioReader` on 2026-11-17 (owner decisions), and **the first release, v0.1.0, was published the same day**
+from the tag `v0.1.0` on `main` commit `12edfaa` (release run 44066806437: every step passed, including the attestation).
+Verified on a download of the published files with the commands of [RELEASING.md](RELEASING.md): the checksum is OK,
+`gh attestation verify` succeeds, `apksigner` shows one signer with the published fingerprint. The one thing not
+exercised on GitHub is the rejecting side of the guard "the tagged commit is on `main`". The APK on the owner's phone is
+a local build of the same commit, not the published file. The independent Codex
 review of spec 003 (REWORK, nine findings) has been landed
 ([reviews/CODEX_REVIEW_003_2026-11-17.md](reviews/CODEX_REVIEW_003_2026-11-17.md)); one finding, the keystore path with
 the Windows user account in two old commits, stays in the history by the owner's decision (spec 003, R7).
@@ -41,27 +45,28 @@ Two defects seen on the owner's phone on 2026-11-17 are fixed: the license page 
 AudioReader" and as "audiobook_reader"; the app's entries now live in the root `NOTICES` file), and App info showed
 the app's notifications as "Blocked" with a switch that could not be turned on (the app now declares
 `POST_NOTIFICATIONS` and asks once, the first time listening starts; the media card worked without it and still does).
-On the phone, the fake debug build showed the cause of the second defect (the card works, the switch is disabled); the
-fixed builds' permission dialog and license page are not yet looked at on the phone. After the update the real app
-asks on its next "Listen".
+On the phone (checked by an agent over adb on 2026-11-17), the fake build shows the notification permission dialog on the
+first "Listen" while narration already plays, after "Allow" App info shows notifications allowed, the media card in the
+shade has working pause and play, and later listens do not ask again; the license page lists the app once, as "Book
+AudioReader", with "Demo texts", "Merriweather" and "Roboto" and no `audiobook_reader`, in both the fake and the real
+app. Not checked: the lock-screen card, the permission dialog in the real app (the owner will see it on the next
+"Listen"), a large system font, Polish and German.
 
 **What is next, on the phone** — all with the owner, none of it can be verified from a computer:
 
 1. listening with the real voice: speech by ear, "back/forward", page return;
-2. the remaining items of [DEVICE_CHECKLIST.md](DEVICE_CHECKLIST.md): screen off and lock screen, headphones, a phone
-   call, another app's sound, airplane mode, a large system font;
+2. the remaining items of [DEVICE_CHECKLIST.md](DEVICE_CHECKLIST.md): screen off and lock screen (including the
+   notification card on the lock screen), headphones, a phone call, another app's sound, airplane mode, a large system
+   font; the notification permission dialog in the real app on the next "Listen"; the interface in Polish and German;
 3. EPUB, FB2.ZIP and TXT books on the phone;
 4. the FR-E6 measurement on a mobile network — the computer is connected through the phone's hotspot;
 5. acceptance of SC-2 and SC-3, the outcome of the experiment with Codex agents.
 
-**What is next, publication** — the owner's steps, in this order:
+**What is next, publication** — the public repository and the first release are done (spec 003). What is left is the
+owner's:
 
 1. have the Ukrainian strings (`lib/screens/l10n/app_uk.arb`) read by a native speaker; they were written by an agent;
-2. look at Settings → "Open-source licenses" on the phone: the app should be listed once;
-3. confirm the rule of spec 003 (Changelog) that technical text, as distinct from interface strings, is in English;
-4. switch the GitHub repository to public;
-5. cut the first release: bump `version:` in `pubspec.yaml` if needed, push the tag `v0.1.0` (or the bumped version),
-   verify the published APK as in [RELEASING.md](RELEASING.md), "For users".
+2. confirm the rule of spec 003 (Changelog) that technical text, as distinct from interface strings, is in English.
 
 The owner's phone has one build installed — the real one, signed with the permanent key. The build with the fake voice
 (`build-apk.sh --fake`) is installed alongside only for the duration of a check. The web prototype: its tests pass; on

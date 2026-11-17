@@ -213,8 +213,11 @@ refused unless the tagged commit is on `main`, but a dry run on any branch also 
 scripts of that branch run with the key. Keep the list of collaborators short.
 
 Artifact attestations work only in public repositories (or on GitHub Enterprise). In a private repository the
-attestation step fails and no release is created, so the first real release has to wait until the repository is public;
-the dry run works at any time.
+attestation step fails and no release is created; the dry run works at any time. The repository is public, and the
+first release, v0.1.0, was cut on 2026-11-17 and verified from the published files with the commands in
+[For users](#for-users): the checksum, `gh attestation verify` and `apksigner verify --print-certs`. The guard "the
+tagged commit is on `main`" has so far run only on its passing side; its rejecting side has not been exercised on
+GitHub.
 
 ### Cut a release
 
@@ -242,7 +245,7 @@ Actions → Release → Run workflow, keep `dry_run` ticked (or
 The workflow runs everything up to and including the signature check and uploads the APK and `SHA256SUMS` as a workflow
 artifact (kept 7 days). It creates no release and no attestation, and it does not require the tag to exist or the
 commit to be on `main`; if the chosen ref is a tag, the tag-versus-`pubspec.yaml` check still applies. Use it after any change to `release.yml`, the
-build scripts or the secrets, and before the first release.
+build scripts or the secrets, and before any release.
 
 Running the workflow manually with `dry_run` off works only on a tag ref (`--ref v0.1.0`); it does the same as the tag
 push.
