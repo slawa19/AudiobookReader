@@ -51,11 +51,11 @@ class IncomingFilesChannel(private val context: Context, messenger: BinaryMessen
     private fun pickFile(result: MethodChannel.Result) {
         val activity = activity
         if (activity == null) {
-            result.error("no_activity", "Приложение не открыто", null)
+            result.error("no_activity", "The app is not open", null)
             return
         }
         if (picker != null) {
-            result.error("picker_busy", "Выбор файла уже открыт", null)
+            result.error("picker_busy", "A file picker is already open", null)
             return
         }
         picker = result
@@ -126,7 +126,7 @@ class IncomingFilesChannel(private val context: Context, messenger: BinaryMessen
     }
 
     private fun copyFile(uri: Uri?): Map<String, String> {
-        if (uri == null || uri.scheme != "content") throw IOException("Не передан content-URI файла")
+        if (uri == null || uri.scheme != "content") throw IOException("No content URI of the file was passed")
         val resolver = context.contentResolver
         val name = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
             val column = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
@@ -134,11 +134,11 @@ class IncomingFilesChannel(private val context: Context, messenger: BinaryMessen
         }?.takeIf { it.isNotBlank() } ?: uri.lastPathSegment ?: uri.toString()
         prepareCache()
         val directory = File(context.cacheDir, "incoming_books")
-        if (!directory.isDirectory && !directory.mkdirs()) throw IOException("Не удалось создать временную папку")
+        if (!directory.isDirectory && !directory.mkdirs()) throw IOException("Could not create the temporary folder")
         // The name from the provider is metadata only, never part of the path to our copy.
         val target = File.createTempFile("book-", ".tmp", directory)
         try {
-            val input = resolver.openInputStream(uri) ?: throw IOException("Не удалось открыть файл")
+            val input = resolver.openInputStream(uri) ?: throw IOException("Could not open the file")
             input.use { source -> target.outputStream().use { source.copyTo(it) } }
             return mapOf("path" to target.absolutePath, "name" to name)
         } catch (error: Exception) {
@@ -152,7 +152,7 @@ class IncomingFilesChannel(private val context: Context, messenger: BinaryMessen
             if (cachePrepared) return
             val directory = File(context.cacheDir, "incoming_books")
             if (directory.exists() && !directory.deleteRecursively()) {
-                throw IOException("Не удалось удалить временные копии входящих книг")
+                throw IOException("Could not delete the temporary copies of incoming books")
             }
             // Once per process: recreating the Activity does not erase copies still being processed.
             cachePrepared = true

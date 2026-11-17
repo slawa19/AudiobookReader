@@ -84,7 +84,7 @@ class FileVoiceSampler extends VoiceSampler {
         if (session == _session && !_disposed) {
           _task?.dispose();
           _state = SampleState.failed;
-          _error = 'Не удалось прочитать звуковой файл';
+          _error = 'Could not read the audio file';
           notifyListeners();
         }
         return;

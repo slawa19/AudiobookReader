@@ -43,7 +43,7 @@ class MediaServiceChannel(private val context: Context, messenger: BinaryMesseng
                 if (service != null) serviceClass.getMethod("stop").invoke(service)
                 result.success(null)
             } else if (closed || SystemClock.elapsedRealtime() - started >= 5000) {
-                result.error("media_service_not_idle", "Служба воспроизведения не остановилась", null)
+                result.error("media_service_not_idle", "The playback service did not stop", null)
             } else {
                 main.postDelayed({ stopForeground(result, started) }, 10)
             }
@@ -62,7 +62,7 @@ class MediaServiceChannel(private val context: Context, messenger: BinaryMesseng
         if (foreground) {
             result.success(null)
         } else if (closed || SystemClock.elapsedRealtime() - started >= 5000) {
-            result.error("media_service_not_ready", "Служба воспроизведения не запустилась", null)
+            result.error("media_service_not_ready", "The playback service did not start", null)
         } else {
             main.postDelayed({ awaitForeground(result, started) }, 10)
         }

@@ -15,7 +15,7 @@ class JustAudioPlayer extends QueuedPlayer {
     final probe = audio.AudioPlayer(handleInterruptions: false, handleAudioSessionActivation: false);
     try {
       final duration = await probe.setFilePath(file.path);
-      if (duration == null || duration <= Duration.zero) throw const FormatException('Нет длительности звука');
+      if (duration == null || duration <= Duration.zero) throw const FormatException('The audio has no duration');
       return duration;
     } finally {
       await probe.dispose();

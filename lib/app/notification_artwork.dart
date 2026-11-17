@@ -37,7 +37,7 @@ Future<Uri> notificationArtwork(Directory root, ShelfEntry entry, Palette palett
   final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
   image.dispose();
   if (bytes == null) {
-    throw const FileSystemException('Не удалось создать обложку уведомления');
+    throw const FileSystemException('Could not create the notification artwork');
   }
   await file.parent.create(recursive: true);
   await file.writeAsBytes(bytes.buffer.asUint8List());

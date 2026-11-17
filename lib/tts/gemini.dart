@@ -34,10 +34,10 @@ class GeminiTtsEngine implements TtsEngine {
   Future<TtsResult> synthesize(String text, VoiceProfile profile) async {
     text = text.replaceAll('\u0301', '');
     if (text.isEmpty || _apiKey.isEmpty) {
-      throw const TtsError('Пустой текст или ключ', reason: TtsErrorReason.invalidRequest);
+      throw const TtsError('Empty text or key', reason: TtsErrorReason.invalidRequest);
     }
     if (!RegExp(r'^[\x20-\x7e]+$').hasMatch(_apiKey)) {
-      throw const TtsError('Недопустимые знаки в ключе', reason: TtsErrorReason.invalidKey);
+      throw const TtsError('Invalid characters in the key', reason: TtsErrorReason.invalidKey);
     }
     final bytes = BytesBuilder(copy: false);
     TtsUsage? usage;
@@ -47,7 +47,7 @@ class GeminiTtsEngine implements TtsEngine {
         final result = await _request(part, profile);
         // All parts of one take must have the same PCM format.
         if (rate != null && rate != result.sampleRate) {
-          throw TtsError('Разная частота частей ответа', reason: TtsErrorReason.invalidResponse, usage: result.usage);
+          throw TtsError('Parts of the response have different sample rates', reason: TtsErrorReason.invalidResponse, usage: result.usage);
         }
         rate = result.sampleRate;
         bytes.add(result.pcm);
@@ -107,10 +107,10 @@ class GeminiTtsEngine implements TtsEngine {
           )
           .timeout(timeout);
     } on TimeoutException catch (e) {
-      throw TemporaryTtsError('Истекло время запроса (${e.runtimeType})', reason: TtsErrorReason.timeout);
+      throw TemporaryTtsError('Request timed out (${e.runtimeType})', reason: TtsErrorReason.timeout);
     } on Exception catch (e) {
       // post covers sending and reading the body. Foreign text may contain the key, even in escaped form.
-      throw TemporaryTtsError('Ошибка сети (${e.runtimeType})', reason: TtsErrorReason.network);
+      throw TemporaryTtsError('Network error (${e.runtimeType})', reason: TtsErrorReason.network);
     }
     final body = utf8.decode(response.bodyBytes, allowMalformed: true);
     Map<String, dynamic>? json;
@@ -153,14 +153,14 @@ class GeminiTtsEngine implements TtsEngine {
     }
     try {
       if (json == null) {
-        throw const FormatException('Ответ Gemini не является объектом JSON');
+        throw const FormatException('The Gemini response is not a JSON object');
       }
       if (json.containsKey('status') && json['status'] != 'completed') {
         final error = json['error'];
         throw FormatException(
           error is Map && error['message'] is String
               ? error['message'] as String
-              : 'Неполный ответ Gemini: ${json['status']}',
+              : 'Incomplete Gemini response: ${json['status']}',
         );
       }
       final pcm = BytesBuilder(copy: false);
@@ -171,7 +171,7 @@ class GeminiTtsEngine implements TtsEngine {
           if (item is! Map || item['type'] != 'audio') continue;
           final decoded = _decodeAudio(base64Decode(item['data'] as String), item['mime_type'] as String? ?? '');
           if (rate != null && rate != decoded.$2) {
-            throw const FormatException('Разная частота звука');
+            throw const FormatException('Audio chunks have different sample rates');
           }
           rate = decoded.$2;
           pcm.add(decoded.$1);
@@ -179,7 +179,7 @@ class GeminiTtsEngine implements TtsEngine {
       }
       final bytes = pcm.takeBytes();
       if (rate == null || bytes.isEmpty || bytes.length.isOdd) {
-        throw const FormatException('В ответе нет PCM16 моно');
+        throw const FormatException('The response has no mono PCM16 audio');
       }
       return TtsResult(
         pcm: bytes,
@@ -191,9 +191,9 @@ class GeminiTtsEngine implements TtsEngine {
     } on FormatException catch (e) {
       throw TtsError(_clean(e.message), reason: TtsErrorReason.invalidResponse, usage: usage);
     } on TypeError {
-      throw TtsError('Неверная структура ответа Gemini', reason: TtsErrorReason.invalidResponse, usage: usage);
+      throw TtsError('Unexpected structure of the Gemini response', reason: TtsErrorReason.invalidResponse, usage: usage);
     } on RangeError {
-      throw TtsError('Повреждённый звук Gemini', reason: TtsErrorReason.invalidResponse, usage: usage);
+      throw TtsError('Corrupted Gemini audio', reason: TtsErrorReason.invalidResponse, usage: usage);
     }
   }
 }
@@ -222,15 +222,15 @@ TtsUsage _usage(Map<dynamic, dynamic> raw, {double seconds = 0}) {
       at + value.length <= bytes.length && String.fromCharCodes(bytes.sublist(at, at + value.length)) == value;
   if (!tag(0, 'RIFF')) {
     if (mime.toLowerCase().contains('wav')) {
-      throw const FormatException('Повреждённый WAV');
+      throw const FormatException('Corrupted WAV');
     }
     final rate =
         int.tryParse(RegExp(r'rate\s*=\s*(\d+)', caseSensitive: false).firstMatch(mime)?.group(1) ?? '') ??
         defaultSampleRate;
-    if (rate <= 0) throw const FormatException('Неверная частота PCM');
+    if (rate <= 0) throw const FormatException('Invalid PCM sample rate');
     return (bytes, rate);
   }
-  if (!tag(8, 'WAVE')) throw const FormatException('Повреждённый WAV');
+  if (!tag(8, 'WAVE')) throw const FormatException('Corrupted WAV');
   final data = ByteData.sublistView(bytes);
   int? rate;
   Uint8List? pcm;
@@ -241,14 +241,14 @@ TtsUsage _usage(Map<dynamic, dynamic> raw, {double seconds = 0}) {
     // A streaming WAV does not know the data length in advance: both markers mean audio to the end of the file.
     if (tag(at, 'data') && (size == 0 || size == 0xffffffff)) size = bytes.length - start;
     if (start + size > bytes.length) {
-      throw const FormatException('Обрезанный WAV');
+      throw const FormatException('Truncated WAV');
     }
     if (tag(at, 'fmt ')) {
       if (size < 16 ||
           data.getUint16(start, Endian.little) != 1 ||
           data.getUint16(start + 2, Endian.little) != 1 ||
           data.getUint16(start + 14, Endian.little) != 16) {
-        throw const FormatException('Требуется WAV PCM16 моно');
+        throw const FormatException('Mono PCM16 WAV is required');
       }
       rate = data.getUint32(start + 4, Endian.little);
     } else if (tag(at, 'data')) {
@@ -257,7 +257,7 @@ TtsUsage _usage(Map<dynamic, dynamic> raw, {double seconds = 0}) {
     at = start + size + (size % 2);
   }
   if (rate == null || rate <= 0 || pcm == null) {
-    throw const FormatException('В WAV нет fmt/data');
+    throw const FormatException('The WAV has no fmt/data chunk');
   }
   return (pcm, rate);
 }
