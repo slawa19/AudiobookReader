@@ -118,11 +118,25 @@ If a document and the code disagree, the code is right.
 
 ## License
 
-AudiobookReader is free software: you can redistribute it and modify it under the terms of the GNU General Public
-License, version 3 or (at your option) any later version (GPL-3.0-or-later); see the `LICENSE` file.
+Copyright (C) 2026 Slawa Gorobets
 
-The fonts Merriweather and Roboto in `assets/fonts/` are distributed under the SIL Open Font License 1.1 (the license
-texts are next to them). The demo texts are public-domain works from Wikisource.
+AudiobookReader is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+version (GPL-3.0-or-later). It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+details. The full text is in the [`LICENSE`](LICENSE) file; if you did not receive it, see
+<https://www.gnu.org/licenses/>.
+
+All source files in this repository are under this license unless stated otherwise. The exceptions:
+
+- The fonts Merriweather and Roboto in `assets/fonts/` are under the SIL Open Font License 1.1 (the license texts are
+  next to them, the sources are in `assets/fonts/SOURCES.txt`).
+- The demo texts in `assets/demo/` are public-domain works (Pushkin, Chekhov) taken from Wikisource; three short
+  editorial notes in the Pushkin text are (c) Wikisource contributors, CC BY-SA 4.0. The sources and revisions are in
+  `assets/demo/SOURCES.txt`. The demo covers and the illustration are drawn by a script and are under the project
+  license.
+
+The app shows these notices, and those of the libraries it uses, in Settings, "Open-source licenses".
 
 The author's related projects: DocxAICorrector (translating and preparing books) and AudiobookStudio (narrating a book
 to mp3 by chapters).

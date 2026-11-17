@@ -1,0 +1,29 @@
+Demo books (dama.json, kapitanskaya.json). Built 2026-11-14 by scripts/prototype-texts.py from ru.wikisource.org.
+They are used by the interface prototype and by tests; the app's own parser does not depend on them.
+
+The texts are public-domain works (Wikisource template PD-old-70: the authors died more than 70 years ago):
+  A. S. Pushkin, "Kapitanskaya dochka" (The Captain's Daughter), 1836, chapters I-III
+  A. P. Chekhov, "Ionych", 1898, and "Dama s sobachkoy" (The Lady with the Dog), 1899
+
+Source pages on Wikisource (https://ru.wikisource.org/) and the revision ids the texts were taken from. A revision
+opens at https://ru.wikisource.org/w/index.php?oldid=<id>.
+  kapitanskaya.json
+    Капитанская дочка (Пушкин)/1960 (СО)/Глава I     revision 5755302
+    Капитанская дочка (Пушкин)/1960 (СО)/Глава II    revision 5755303
+    Капитанская дочка (Пушкин)/1960 (СО)/Глава III   revision 5753695
+  dama.json
+    Ионыч (Чехов)                                    revision 5321162
+    Дама с собачкой (Чехов)                          revision 5736015
+The same ids are stored in the "sources" field of each JSON file.
+
+Footnotes
+  kapitanskaya.json: three short notes (an epigraph source, a translation of a French phrase, a quotation source)
+  are taken as they are from the Wikisource pages above. They are editorial notes, not the author's text:
+  (c) Wikisource contributors, licensed under CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/
+  The page histories on ru.wikisource.org list the contributors.
+  dama.json: only the author's own notes ("прим. автора") are kept; the one note about the Verne confectionery is
+  written anew for this project (original work, project license).
+
+Covers (covers/*.png) and the illustration (images/steppe.png, "the steppe before the blizzard") are drawn by
+scripts/prototype-texts.py: original work, under the project license (GPL-3.0-or-later, see LICENSE). They are not
+taken from any book edition.
