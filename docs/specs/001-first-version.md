@@ -1,662 +1,706 @@
-# Спека 001. Первая версия читалки
+# Spec 001. First version of the reader
 
-Статус: после ревью Codex 2026-11-14 — спеки ([CODEX_REVIEW_SPEC_2026-11-14.md](../reviews/CODEX_REVIEW_SPEC_2026-11-14.md))
-и макета ([CODEX_REVIEW_MOCKUP_2026-11-14.md](../reviews/CODEX_REVIEW_MOCKUP_2026-11-14.md)); реализация идёт с 2026-11-15: этап 0 сделан, этап 1 написан и ждёт
-приёмки SC-1 на телефоне и на книгах владельца.
+Status: after the Codex reviews of 2026-11-14, of the spec ([CODEX_REVIEW_SPEC_2026-11-14.md](../reviews/CODEX_REVIEW_SPEC_2026-11-14.md))
+and of the mock-up ([CODEX_REVIEW_MOCKUP_2026-11-14.md](../reviews/CODEX_REVIEW_MOCKUP_2026-11-14.md)); implementation
+has been under way since 2026-11-15: stage 0 is done, stage 1 is written and awaits acceptance SC-1 on the phone and on
+the owner's books.
 
-Что строим — [CONCEPT.md](../CONCEPT.md). Как устроено — [ARCHITECTURE.md](../ARCHITECTURE.md) версии 3; спека её
-не пересказывает, а ссылается на разделы («А§6.3»). Факты о Gemini — [GEMINI_TTS.md](../GEMINI_TTS.md). Вид
-экранов — макет в `docs/mockup/`, ступени шрифта, гарнитура и проверяемые размеры экрана — `docs/mockup/NOTES.md`;
-где спека и макет расходятся в расположении и подписях, прав макет, где в поведении — спека.
+What we are building: [CONCEPT.md](../CONCEPT.md). How it is built: [ARCHITECTURE.md](../ARCHITECTURE.md) version 3; the
+spec does not retell it but refers to its sections ("А§6.3"). Facts about Gemini: [GEMINI_TTS.md](../GEMINI_TTS.md). The
+look of the screens: the mock-up in `docs/mockup/`; font steps, typeface and the screen sizes to check are in
+`docs/mockup/NOTES.md`; where the spec and the mock-up differ in layout and labels, the mock-up is right; in behavior,
+the spec is.
 
-## 1. Решения
+## 1. Decisions
 
-| № | Решение | Кто и когда |
+| No. | Decision | Who and when |
 |---|---|---|
-| Р1 | Flutter, только Android, установка файлом APK | владелец, 2026-11-14 |
-| Р2 | Форматы: FB2, FB2.ZIP, EPUB, TXT. MOBI и AZW3 — отдельная спека после этой | владелец, 2026-11-14 |
-| Р3 | Голос только Gemini; системного голоса Android нет | владелец, 2026-11-14 |
-| Р4 | Листание страницами; режима прокрутки нет | владелец, 2026-11-14 |
-| Р5 | Книги, озвученные в AudiobookStudio, — отдельная спека после этой | владелец, 2026-11-14 |
-| Р6 | Модель по умолчанию `gemini-3.8-flash-tts`, голос Aoede | перенесено из студии |
-| Р7 | Потоковый ответ Gemini не воспроизводится; старт — через стартовый отрезок (А§6.1, А§10) | оркестратор по замеру 2026-11-14 |
-| Р8 | Работа идёт четырьмя этапами (раздел 2); каждый заканчивается своей приёмкой и слиянием в `main` | оркестратор |
-| Р9 | Прерывание (звонок, чужой звук, вынутые наушники) ставит паузу; продолжает пользователь сам | оркестратор по ревью 2026-11-14 |
-| Р10 | Только портретная ориентация: закреплена в манифесте и в коде; альбомной в первой версии нет (А§7) | оркестратор по проверке жестов 2026-11-14 |
-| Р11 | Системная «Назад» в чтении: снять выбор абзаца → закрыть лист, диалог, сноску → показать скрытые панели → закрыть книгу; стрелка «Назад» в шапке закрывает книгу сразу. Причина — краевой жест Android: смахивание от края в иммерсивном чтении — это «Назад» (А§8.1) | оркестратор по проверке жестов 2026-11-14 |
-| Р12 | Защита от касания вдогонку: после смены слоя под пальцем элементы управления и страница 350 мс не принимают касаний (А§8.1) | оркестратор по проверке жестов 2026-11-14 |
+| Р1 | Flutter, Android only, installed from an APK file | owner, 2026-11-14 |
+| Р2 | Formats: FB2, FB2.ZIP, EPUB, TXT. MOBI and AZW3 are a separate spec after this one | owner, 2026-11-14 |
+| Р3 | Gemini voice only; there is no Android system voice | owner, 2026-11-14 |
+| Р4 | Turning pages; there is no scroll mode | owner, 2026-11-14 |
+| Р5 | Books narrated in AudiobookStudio are a separate spec after this one | owner, 2026-11-14 |
+| Р6 | Default model `gemini-3.8-flash-tts`, voice Aoede | carried over from the studio |
+| Р7 | Gemini's streaming response is not played; the start goes through the start segment (А§6.1, А§10) | orchestrator, from the 2026-11-14 measurement |
+| Р8 | The work goes in four stages (section 2); each ends with its own acceptance and a merge into `main` | orchestrator |
+| Р9 | An interruption (a call, foreign audio, unplugged headphones) pauses; the user resumes by themselves | orchestrator, from the 2026-11-14 review |
+| Р10 | Portrait orientation only: fixed in the manifest and in code; no landscape in the first version (А§7) | orchestrator, from the 2026-11-14 gesture audit |
+| Р11 | System "Back" in reading: clear the paragraph selection → close a sheet, dialog, footnote → show hidden panels → close the book; the "Back" arrow in the header closes the book at once. Reason: the Android edge gesture: a swipe from the edge in immersive reading is "Back" (А§8.1) | orchestrator, from the 2026-11-14 gesture audit |
+| Р12 | Protection against a follow-up tap: after a layer change under the finger, the controls and the page do not accept taps for 350 ms (А§8.1) | orchestrator, from the 2026-11-14 gesture audit |
 
-Телефон владельца — Samsung Galaxy S26 Ultra (назван 2026-11-14; версию Android на нём исполнитель читает с
-устройства на этапе 0, а не берёт по памяти). Минимальная версия Android — 12 (`minSdk 31`): владелец просил исходить
-из реалий 2026 года, приложение ставится на один современный телефон, и ветки совместимости со старыми версиями
-(уведомления, службы переднего плана, заставка) не нужны. `targetSdk` и `compileSdk` — последние, которые
-поддерживает закреплённая версия Flutter.
+The owner's phone is a Samsung Galaxy S26 Ultra (named 2026-11-14; the implementer reads the Android version from the
+device at stage 0 rather than taking it from memory). The minimum Android version is 12 (`minSdk 31`): the owner asked
+to proceed from the realities of 2026, the app is installed on one modern phone, and compatibility branches for older
+versions (notifications, foreground services, splash screen) are not needed. `targetSdk` and `compileSdk` are the
+latest that the pinned Flutter version supports.
 
-Решено по ревью макета 2026-11-14: «Скачать главу» — только текущая глава; ползунок по книге доступен и во время
-прослушивания (FR-R5).
+Decided from the mock-up review of 2026-11-14: "Download chapter" covers only the current chapter; the book slider is
+available during listening too (FR-R5).
 
-Решено владельцем 2026-11-14: ход «Скачать главу» виден и на экране чтения (FR-D2); размер текста книги
-умножается на системный масштаб шрифта (FR-R6); дочитанная книга на полке помечена «100 %» (FR-L4).
+Decided by the owner on 2026-11-14: the progress of "Download chapter" is also visible on the reading screen (FR-D2);
+the book text size is multiplied by the system font scale (FR-R6); a finished book on the shelf is marked "100 %"
+(FR-L4).
 
-Решено владельцем 2026-11-14: интерфейс на ru, en, pl, de; язык телефона по умолчанию, принудительный выбор в
-настройках (FR-I1). Вид экранов задаёт Flutter-прототип (`docs/prototype/`): макет FigCraft отклонён по элементам
-интерфейса, его палитра и шрифты оставлены.
+Decided by the owner on 2026-11-14: the interface in ru, en, pl, de; the phone's language by default, a forced choice
+in the settings (FR-I1). The look of the screens is set by the Flutter prototype (`docs/prototype/`): the FigCraft
+mock-up was rejected on its interface elements, its palette and fonts were kept. Ukrainian (uk) was added as the fifth
+interface language by the owner's decision of 2026-11-17 (FR-I1).
 
-Решено владельцем 2026-11-15: прототип принят, реализация начата; постоянный ключ подписи APK создаёт исполнитель
-вне репозитория, путь и пароли — в `.env` (FR-E2). Телефон подключён в тот же день: SM-S948B, Android 17 (API 37),
-экран 1440 × 3120, навигация тремя кнопками, а не жестами. SC-0 на телефоне пройден: APK установлен, вторая сборка
-встала поверх первой без удаления приложения.
+Decided by the owner on 2026-11-15: the prototype is accepted and implementation has begun; the permanent APK signing
+key is created by the implementer outside the repository, the path and passwords are in `.env` (FR-E2). The phone was
+connected the same day: SM-S948B, Android 17 (API 37), screen 1440 × 3120, three-button navigation rather than gestures.
+SC-0 on the phone passed: the APK was installed, and a second build went on top of the first without uninstalling the
+app.
 
-## 2. Этапы
+## 2. Stages
 
-| Этап | Что появляется | Приёмка |
+| Stage | What appears | Acceptance |
 |---|---|---|
-| 0. Окружение | проект Flutter, скрипты, CI, пустое приложение на телефоне, замеры этапа 0 из А§11 | SC-0 |
-| 1. Читалка | полка, добавление FB2, FB2.ZIP и EPUB, удаление книги, чтение, позиция | SC-1 |
-| 2. Озвучка | клиент Gemini, очередь, плеер, фон, голос и проба, расход, «Очистить озвучку», `docs/DEVICE_CHECKLIST.md` | SC-2 |
-| 3. Доводка | TXT (разбор и приём файла), таймер сна, «Скачать главу», «Удалить озвучку» книги | SC-3 |
+| 0. Environment | a Flutter project, scripts, CI, an empty app on the phone, the stage 0 measurements from А§11 | SC-0 |
+| 1. Reader | shelf, adding FB2, FB2.ZIP and EPUB, deleting a book, reading, position | SC-1 |
+| 2. Narration | Gemini client, queue, player, background, voice and probe, spending, "Clear narration", `docs/DEVICE_CHECKLIST.md` | SC-2 |
+| 3. Polish | TXT (parsing and accepting the file), sleep timer, "Download chapter", a book's "Delete narration" | SC-3 |
 
-Макет делается до этапа 1 и в эту спеку не входит. Этапы идут по порядку; внутри этапа работы делятся между
-агентами по владению файлами (модули А§2).
+The mock-up is made before stage 1 and is not part of this spec. The stages go in order; within a stage, the work is
+divided between agents by file ownership (modules of А§2).
 
-## 3. Требования
+## 3. Requirements
 
-### Окружение (этап 0)
+### Environment (stage 0)
 
-- **FR-E1.** `scripts/setup-wsl.sh` ставит в WSL Debian Flutter и средства сборки Android нужных версий; версии
-  записаны в скрипте и в `pubspec.yaml`, а не «последние». Повторный запуск ничего не ломает.
-- **FR-E2.** `scripts/test.sh [селектор] [опции]` запускает анализатор и тесты; `scripts/build-apk.sh` собирает
-  APK, подписанный постоянным ключом. Ключ и его пароли лежат вне репозитория; путь к ним — в `.env`. Ключ — условие
-  до начала этапа: его создаёт владелец или исполнитель с согласия владельца.
-- **FR-E3.** CI на каждый коммит в `main` и на каждый запрос слияния: анализатор, тесты, сборка APK отладочным
-  ключом.
-- **FR-E4.** Раздел «Стек и runtime» в `AGENTS.md` заменён фактическими командами — после того как каждая запущена
-  и отработала.
-- **FR-E5.** Структура каталогов `lib/` соответствует модулям А§2. Тест проверяет прямые импорты: файл модуля
-  импортирует только модули из списка А§2.
-- **FR-E6.** Замеры этапа 0 из таблицы А§11 сделаны и записаны в GEMINI_TTS.md с датой. Платные — по правилу
-  `AGENTS.md`, «Деньги»: мелкий замер без вопроса, крупнее — с согласия владельца.
+- **FR-E1.** `scripts/setup-wsl.sh` installs Flutter and the Android build tools of the required versions in WSL
+  Debian; the versions are recorded in the script and in `pubspec.yaml`, not "latest". Running it again breaks
+  nothing.
+- **FR-E2.** `scripts/test.sh [selector] [options]` runs the analyzer and the tests; `scripts/build-apk.sh` builds an
+  APK signed with the permanent key. The key and its passwords are kept outside the repository; the path to them is in
+  `.env`. The key is a precondition of the stage: it is created by the owner, or by the implementer with the owner's
+  consent.
+- **FR-E3.** CI on every commit to `main` and on every pull request: analyzer, tests, an APK build with the debug key.
+- **FR-E4.** The "Stack and runtime" section in `AGENTS.md` is replaced with the actual commands, after each of them has
+  been run and has worked.
+- **FR-E5.** The directory structure of `lib/` matches the modules of А§2. A test checks direct imports: a module's file
+  imports only the modules from the list in А§2.
+- **FR-E6.** The stage 0 measurements from the table in А§11 are done and recorded in GEMINI_TTS.md with a date. The paid
+  ones follow the `AGENTS.md` rule, "Money": a small measurement without asking, a larger one with the owner's consent.
 
-### Книга и разбор (этап 1; TXT — этап 3)
+### Book and parsing (stage 1; TXT is stage 3)
 
-- **FR-B1.** Модель книги — А§3, включая единицу смещений и `speechText`.
-- **FR-B2.** Формат определяется по содержимому, по порядку А§3; распознанные неподдерживаемые контейнеры и двоичные
-  данные отклоняются до ветки TXT. Отказ — «Этот формат не поддерживается»; EPUB с зашифрованным документом из
-  `spine` — «Книга защищена от копирования, открыть её нельзя». Обфусцированные шрифты отказа не вызывают. Любой
-  отказ, в том числе для защищённой книги, виден на полке той же строкой ошибки добавления, что и остальные.
-- **FR-B3. FB2.** Из файла берутся: название, автор, язык, обложка; разделы тела как главы по правилам линейного
-  разбиения; заголовки, абзацы, стихи, цитаты, эпиграфы, пустые строки-разделители, картинки (`binary`), сноски
-  (`body` с именем `notes` и ссылки на него), начертания. Кодировка — из объявления XML. `.fb2.zip` — то же после
-  распаковки.
-- **FR-B4. EPUB 2 и 3.** Порядок чтения, границы, названия и уровни глав — по правилам А§3 для EPUB. Из XHTML
-  берутся те же виды блоков, что из FB2; сноски, оглавление в теле и подписи — только по структурным признакам
-  А§3, без них — обычный текст. Обложка — по метаданным пакета. Стили CSS не применяются, кроме различения курсива
-  и полужирного по тегам.
-- **FR-B5. TXT** (этап 3). Кодировка — А§3. Абзац — текст между пустыми строками; если пустых строк нет, абзац —
-  строка. Глав нет: книга — одна глава без названия.
-- **FR-B6.** Разбор терпит ровно три повреждения А§3: незакрытый тег, неизвестную сущность, файл, объявленный UTF-8
-  с недопустимыми последовательностями. Другая ошибка XML и файл, из которого не получилось ни одного блока текста, —
-  отказ «Не удалось прочитать книгу» с технической причиной мелким шрифтом. Ссылка на несуществующую сноску — обычный
-  текст без `noteRef`.
-- **FR-B7.** На каждое правило разбора и каждое повреждение — свой маленький образец с точным ожидаемым текстом
-  блоков, главами и сносками. Дополнительно инварианты, проверяемые на каждом образце и на каждой книге из
-  `test/local_books/`: номера блоков идут подряд; главы покрывают все блоки без пропусков и пересечений; каждый
-  `noteRef` указывает на существующую сноску; `totalChars` равно сумме длин текстов блоков; смещения диапазонов лежат
-  внутри текста.
+- **FR-B1.** The book model is А§3, including the offset unit and `speechText`.
+- **FR-B2.** The format is determined by content, in the order of А§3; recognized unsupported containers and binary data
+  are rejected before the TXT branch. The refusal is "This format is not supported"; an EPUB with an encrypted document
+  from `spine`: "The book is copy-protected and can’t be opened". Obfuscated fonts do not cause a refusal. Any refusal,
+  including for a protected book, is visible on the shelf as the same adding-error row as the others.
+- **FR-B3. FB2.** From the file are taken: title, author, language, cover; body sections as chapters by the rules of
+  linear splitting; headings, paragraphs, verse, quotes, epigraphs, empty separator lines, pictures (`binary`),
+  footnotes (a `body` named `notes` and references to it), emphasis styles. The encoding is from the XML declaration.
+  `.fb2.zip` is the same after unpacking.
+- **FR-B4. EPUB 2 and 3.** Reading order, boundaries, titles and levels of chapters follow the EPUB rules of А§3. From
+  XHTML the same kinds of blocks are taken as from FB2; footnotes, an in-body table of contents and captions are
+  recognized only by the structural signs of А§3, and without them are plain text. The cover is from the package
+  metadata. CSS styles are not applied, except for distinguishing italic and bold by tags.
+- **FR-B5. TXT** (stage 3). The encoding is per А§3. A paragraph is the text between empty lines; if there are no empty
+  lines, a paragraph is a line. There are no chapters: the book is one chapter without a title.
+- **FR-B6.** Parsing tolerates exactly three kinds of damage listed in А§3: an unclosed tag, an unknown entity, a file
+  declared UTF-8 with invalid sequences. Any other XML error, and a file from which not a single block of text could be
+  obtained, is a refusal "Couldn’t read the book" with the technical reason in small print. A reference to a
+  nonexistent footnote is plain text without `noteRef`.
+- **FR-B7.** For each parsing rule and each kind of damage there is its own small sample with the exact expected text of
+  blocks, chapters and footnotes. In addition, invariants checked on every sample and on every book from
+  `test/local_books/`: block numbers run consecutively; chapters cover all blocks with no gaps or overlaps; every
+  `noteRef` points to an existing footnote; `totalChars` equals the sum of the lengths of the block texts; range
+  offsets lie inside the text.
 
-### Полка и хранение (этап 1)
+### Shelf and storage (stage 1)
 
-- **FR-L1.** Хранение на этапе 1 — из А§4: папка книги, добавление через `tmp/` и переименование, писатель позиции
-  (`state.json`), резервное копирование выключено. Расход (`usage.json`), ключ и согласование удаления с озвучкой —
-  этап 2 (FR-M2, FR-T2, FR-Q4).
-- **FR-L2.** Добавление: кнопка «+» открывает системный выбор файла; приложение принимает файл от других
-  приложений («Открыть с помощью», «Поделиться») для расширений `.fb2`, `.fb2.zip`, `.epub` и соответствующих типов
-  содержимого; `.txt` — на этапе 3 вместе с FR-B5. Разбор идёт вне главного изолята; на полке в это время видна
-  строка книги с признаком «Добавляется».
-- **FR-L3.** Файл, уже стоящий на полке (тот же `bookId`), не добавляется второй раз: открывается имеющаяся книга.
-- **FR-L4.** Полка: карточка «Продолжить» — только у книги, которую открывали, последней открытой. Ни разу не
-  открытые книги стоят в списке под карточкой первыми, новые сверху, с пометкой «новая»; остальные — по убыванию
-  времени последнего открытия. У каждой обложка (или заглушка с первой буквой названия), название, автор, доля
-  прочитанного и у карточки — глава места чтения (та, где позиция, кто бы её ни записал). **Дочитанная** — «100 %»:
-  это отдельный факт в `state.json`, а не производная от записанной позиции. Его ставят показ последней страницы
-  (в том числе первая раскладка одностраничной книги) и конец прослушивания; снимает только показ страницы раньше
-  последней. Перераскладка (шрифт, панель) и повторное прослушивание на последней странице его не снимают. Внизу
-  последней страницы и на ползунке — тоже «100 %». В остальных случаях доля — по позиции. Пустая полка —
-  приглашение добавить книгу.
-- **FR-L5.** Удаление: долгое нажатие → «Удалить» → подтверждение с названием и объёмом, который освободится.
-  Удаляется папка книги целиком, вместе с её озвучкой.
-- **FR-L6.** Незавершённое в `tmp/` удаляется при запуске.
+- **FR-L1.** Storage at stage 1 is per А§4: the book folder, adding through `tmp/` and renaming, the position writer
+  (`state.json`), backup disabled. Spending (`usage.json`), the key and the coordination of deletion with narration are
+  stage 2 (FR-M2, FR-T2, FR-Q4).
+- **FR-L2.** Adding: the "+" button opens the system file picker; the app accepts a file from other apps ("Open with",
+  "Share") for the extensions `.fb2`, `.fb2.zip`, `.epub` and the corresponding content types; `.txt` is stage 3
+  together with FR-B5. Parsing runs outside the main isolate; meanwhile the shelf shows the book's row marked
+  "Adding…".
+- **FR-L3.** A file already on the shelf (the same `bookId`) is not added a second time: the existing book is opened.
+- **FR-L4.** Shelf: the "Continue" card exists only for a book that has been opened, the last one opened. Never-opened
+  books stand first in the list below the card, new ones on top, marked "new"; the rest are in descending order of last
+  opening time. Each has a cover (or a placeholder with the first letter of the title), title, author, fraction read
+  and, for the card, the chapter of the reading place (the one where the position is, whoever recorded it).
+  **Finished** is "100 %": this is a separate fact in `state.json`, not derived from the recorded position. It is set
+  by showing the last page (including the first layout of a one-page book) and by the end of listening; it is cleared
+  only by showing a page earlier than the last. A re-layout (font, panel) and re-listening on the last page do not
+  clear it. At the bottom of the last page and on the slider it is also "100 %". In other cases the fraction is by
+  position. An empty shelf is an invitation to add a book.
+- **FR-L5.** Deletion: long press → "Delete" → a confirmation with the title and the amount that will be freed. The
+  book's folder is deleted entirely, together with its narration.
+- **FR-L6.** Unfinished leftovers in `tmp/` are deleted at startup.
 
-### Чтение (этап 1)
+### Reading (stage 1)
 
-- **FR-R1.** Разбивка на страницы и показ — А§5: порциями от текущей позиции, первая страница сразу.
-- **FR-R2.** Листание: касание правой трети и смахивание влево — вперёд; левой трети и вправо — назад; касание
-  центра показывает и прячет панели. Переход через границу главы — тем же жестом. Второе касание (или смахивание)
-  во время анимации первого не теряется: первый переход доводится мгновенно, второй выполняется от него. Листает
-  только жест, в котором горизонтальный сдвиг больше вертикального на момент распознавания (угол к горизонтали меньше
-  45°); преимущественно вертикальный жест не делает ничего. После смены слоя под пальцем — нижняя панель чтения ↔
-  панель плеера, вид панели плеера, строка скачивания, закрытый лист, диалог или экран — страница и элементы
-  управления 350 мс не принимают касаний (защита от касания вдогонку, Р12, А§8.1); два осмысленных нажатия с
-  промежутком больше 350 мс работают как обычно.
-- **FR-R3.** Заголовки, абзацы с красной строкой, стихи, цитаты, разделители и картинки различимы на странице.
-  Цитата оформлена отлично от стихов — по правилу `docs/prototype/README.md`, «Оформление текста книги»: стихи —
-  курсив с отступом слева, без линии; цитата — прямое начертание с тем же отступом и тонкой вертикальной линией
-  цвета `line` вдоль блока. Правило одно для измерения и для отрисовки. Картинка вписывается в ширину и высоту
-  страницы вместе с первой строкой подписи; длинная подпись и заголовок длиннее страницы продолжаются на следующей. Ссылка на сноску открывает её текст поверх страницы; у знака сноски расширенная область касания, и
-  касание в ней важнее листания и показа панелей. Области соседних знаков перекрываются — открывается знак,
-  ближайший к точке касания.
-- **FR-R4.** Оглавление: список глав с отступом по уровню, текущая отмечена; выбор открывает начало главы.
-- **FR-R5.** Ползунок по книге: перемещение по доле знаков; при отпускании открывается страница с этим местом. Из
-  положения в книге показывается только доля; номеров страниц нет. Ползунок доступен и во время прослушивания:
-  касание центра показывает шапку и ползунок над панелью плеера. Тогда он листает только экран, как листание рукой
-  (А§5): голос места не меняет, следование отключается — если ползунок отпущен на другой странице. Касание бегунка
-  без сдвига ничего не меняет.
-- **FR-R6.** Размер шрифта (ступени — `docs/mockup/NOTES.md`) и тема (как в системе, светлая, сепия, тёмная).
-  Настройка общая для всех книг. Шрифт текста книги встроен в приложение; гарнитура — из `docs/mockup/NOTES.md`.
-  Размер текста книги — ступень, умноженная на системный масштаб шрифта (в `NOTES.md` записано обратное; действует
-  спека). Вид листа «Вид текста» и остальных экранов — по Flutter-прототипу (`docs/prototype/`), не по макету.
-- **FR-R7.** Позиция — А§5: сохраняется сама, переживает смену шрифта и размера окна, перезапуск и переразбор
-  (поворота в первой версии нет — только портретная ориентация, Р10). При
-  перераскладке (шрифт, изменение высоты панели плеера; смена темы перераскладки не вызывает) якорь — место голоса
-  (звучащее, место паузы, место остановки), если экран следует за голосом; иначе — начало видимой страницы. Важнее
-  обоих — удержанный выбор абзаца для «Читать отсюда»: выбранный абзац и кнопка остаются на экране. Пока раскладка
-  пересчитывается, экран не листает: страница не дёргается назад и вперёд.
-- **FR-R8.** Узкий экран и крупный системный шрифт (комбинация из `docs/mockup/NOTES.md`) ничего не ломают на всех
-  экранах: высоты — по содержимому; текст переносится, а не обрезается (многоточие — только для названия и автора
-  книги); кнопки, стоящие в ряд, при нехватке ширины встают столбцом; область касания каждого элемента управления
-  не меньше 48 dp независимо от видимого размера; фиксированные панели, шапки и листы учитывают системные области
-  (вырез, жестовая панель). Проверочная комбинация и перечень мест — `docs/mockup/NOTES.md`; вид — по
-  Flutter-прототипу. Условие выполняется на всех четырёх языках интерфейса (FR-I1). Область касания — прямоугольник
-  48 × 48, не срезанный скруглением формы (строка скачивания, шапка). Ориентация — только портретная (Р10).
-- **FR-R9.** Переходы между экранами — А§8.1: что открывается поверх чтения и не закрывает книгу, что ставит паузу,
-  что закрывает книгу, откуда открываются настройки и куда из них возвращаются. Переходы к экранам озвучки — с
-  этапа 2. Системная «Назад» на экране чтения (Р11): 1) снимает выбор абзаца; 2) закрывает лист, диалог, сноску;
-  3) если панели чтения скрыты — показывает их, книга не закрывается; 4) если панели показаны — закрывает книгу. При
-  прослушивании так же: первая «Назад» показывает шапку и ползунок. Причина — краевой жест Android: смахивание от
-  края экрана при жестовой навигации — это «Назад», и читатель, листающий от края, не должен закрывать книгу.
-  Стрелка «Назад» в шапке чтения закрывает книгу сразу. Это заменяет правило f проверки путей пользователя
-  («сначала спрятать панели»).
+- **FR-R1.** Pagination and display are А§5: in portions from the current position, the first page at once.
+- **FR-R2.** Turning: a tap on the right third and a swipe left go forward; the left third and a swipe right go back; a
+  tap on the center shows and hides the panels. Crossing a chapter boundary uses the same gesture. A second tap (or
+  swipe) during the animation of the first is not lost: the first transition is completed instantly, and the second is
+  performed from it. Only a gesture whose horizontal shift exceeds the vertical one at the moment of recognition turns
+  pages (the angle to the horizontal is less than 45°); a predominantly vertical gesture does nothing. After a layer
+  change under the finger (reading bottom panel ↔ player panel, the player panel's view, the download row, a closed
+  sheet, dialog or screen), the page and the controls do not accept taps for 350 ms (protection against a follow-up
+  tap, Р12, А§8.1); two deliberate presses more than 350 ms apart work as usual.
+- **FR-R3.** Headings, paragraphs with a first-line indent, verse, quotes, separators and pictures are distinguishable
+  on the page. A quote is styled differently from verse, by the rule in `docs/prototype/README.md`, "Book text
+  styling": verse is italic with a left indent and no line; a quote is upright with the same indent and a thin vertical
+  line of the `line` color along the block. There is one rule for measuring and for drawing. A picture is fitted to the
+  page width and height together with the first line of the caption; a long caption and a heading longer than a page
+  continue on the next one. A footnote reference opens its text over the page; a footnote mark has an enlarged touch
+  area, and a tap in it takes priority over turning and showing the panels. The areas of adjacent marks overlap: the
+  mark nearest the touch point opens.
+- **FR-R4.** Table of contents: a list of chapters indented by level, the current one marked; choosing opens the start
+  of the chapter.
+- **FR-R5.** The book slider: moving by the fraction of characters; on release the page with that spot opens. Of the
+  position in the book only the fraction is shown; there are no page numbers. The slider is available during listening
+  too: a tap on the center shows the header and the slider above the player panel. It then turns only the screen, like
+  turning by hand (А§5): the voice's place does not change, and following is switched off if the slider is released on
+  another page. Touching the thumb without moving changes nothing.
+- **FR-R6.** Font size (steps in `docs/mockup/NOTES.md`) and theme (system default, light, sepia, dark). The setting is
+  shared by all books. The book text font is bundled in the app; the typeface is from `docs/mockup/NOTES.md`. The book
+  text size is the step multiplied by the system font scale (`NOTES.md` records the opposite; the spec governs). The
+  look of the "Text appearance" sheet and of the other screens follows the Flutter prototype (`docs/prototype/`), not
+  the mock-up.
+- **FR-R7.** The position is А§5: saved automatically, survives a change of font and window size, a restart and
+  re-parsing (there is no rotation in the first version, only portrait orientation, Р10). On a re-layout (font, a change
+  of the player panel's height; a theme change does not cause a re-layout) the anchor is the voice's place (sounding,
+  pause place, stop place) if the screen follows the voice; otherwise the start of the visible page. More important than
+  both is a held paragraph selection for "Read from here": the selected paragraph and the button stay on the screen.
+  While the layout is being recomputed, the screen does not turn pages: the page does not jerk back and forth.
+- **FR-R8.** A narrow screen and a large system font (the combination from `docs/mockup/NOTES.md`) break nothing on any
+  screen: heights follow the content; text wraps rather than being cut off (an ellipsis only for a book's title and
+  author); buttons standing in a row stack into a column when the width runs out; the touch target of every control is
+  at least 48 dp regardless of the visible size; fixed panels, headers and sheets take the system areas into account
+  (notch, gesture bar). The test combination and the list of places are in `docs/mockup/NOTES.md`; the look follows the
+  Flutter prototype. The condition holds in all five interface languages (FR-I1). The touch target is a 48 × 48
+  rectangle not cut off by the rounding of the shape (the download row, the header). Orientation is portrait only
+  (Р10).
+- **FR-R9.** Transitions between screens are А§8.1: what opens over reading without closing the book, what pauses, what
+  closes the book, where the settings open from and where they return to. Transitions to the narration screens come
+  with stage 2. The system "Back" on the reading screen (Р11): 1) clears the paragraph selection; 2) closes a sheet,
+  dialog, footnote; 3) if the reading panels are hidden, shows them, and the book is not closed; 4) if the panels are
+  shown, closes the book. During listening it is the same: the first "Back" shows the header and the slider. The
+  reason is the Android edge gesture: a swipe from the screen edge with gesture navigation is "Back", and a reader who
+  turns pages from the edge must not close the book. The "Back" arrow in the reading header closes the book at once.
+  This replaces rule f of the user-journey audit ("first hide the panels").
 
-### Язык интерфейса (этап 1)
+### Interface language (stage 1)
 
-- **FR-I1.** Интерфейс на четырёх языках: русский, английский, польский, немецкий. По умолчанию — язык телефона;
-  если он не из четырёх — английский. В настройках пункт «Язык»: «Как в системе» и четыре языка, каждый назван на
-  самом себе; выбор применяется сразу и запоминается. Строки — в ARB (`lib/screens/l10n/`), во всех четырёх файлах
-  одни и те же ключи; множественные формы — ICU plural; числа, проценты и деньги — форматом по локали с неразрывным
-  пробелом. Системные подписи Material — на выбранном языке. Описания характера голосов — строки интерфейса,
-  переводятся. Тексты ошибок Google показываются как есть, без перевода. Язык книги от языка интерфейса не зависит.
+- **FR-I1.** The interface in five languages: Russian, English, Polish, German, Ukrainian (Ukrainian added by the
+  owner's decision of 2026-11-17). By default the phone's language; if it is not one of the five, English. In the
+  settings a "Language" item: "System default" and the five languages, each named in itself; the choice applies at once
+  and is remembered. The strings are in ARB (`lib/screens/l10n/`), with the same keys in all five files; plural forms
+  are ICU plural; numbers, percentages and money use the locale's format with a non-breaking space. The system Material
+  labels are in the chosen language. The descriptions of the voices' character are interface strings and are
+  translated. Google's error texts are shown as they are, untranslated. The book's language does not depend on the
+  interface language.
 
-### Клиент Gemini (этап 2)
+### Gemini client (stage 2)
 
-- **FR-T1.** Запрос, разбор ответа, пределы, классы ошибок — GEMINI_TTS.md, разделы «Запрос», «Пределы», «Ошибки»;
-  интерфейс — А§6.2. Ошибка несёт `usage`, если он был в ответе. Клиент не повторяет запросы сам.
-- **FR-T2.** Ключ уходит только заголовком; из любого текста ошибки, показанного или записанного, ключ вычищен.
-- **FR-T3.** Профиль голоса и отпечаток — А§6.2. Формат звука входит в отпечаток.
-- **FR-T7.** Текст стиля чтения и фраза «Пробы» зависят от языка **книги**, а не интерфейса и не голоса: таблица
-  по языку в модуле `tts` рядом с голосами (`lib/tts/book_language.dart`) — ru, en, pl, de; для прочих языков —
-  английские. Стиль не называет пол чтеца (голос может быть женским и мужским). Стиль входит в профиль, поэтому
-  звук книги на другом языке не путается с прежним. Фраза пробы для голоса приложения (без книги) — на языке
-  интерфейса.
-- **FR-T4.** Деление на отрезки — А§6.1: правила 1–4, пропуск блоков без текста для речи, список соответствий,
-  правило готовности, части и стартовый отрезок, хвост группы. `L` и `Lmin` — именованные константы.
-- **FR-T5.** `FakeTtsEngine` с управляемыми задержкой и ошибками. Сборка с подставным синтезом включается
-  параметром сборки, имеет отдельный `applicationId` (А§6.2) и видна в настройках строкой «Подставной голос».
-- **FR-T6.** В тестах запрещён настоящий сетевой транспорт. Настоящий класс клиента с фиктивным ключом и
-  подставным HTTP разрешён и нужен: им проверяются FR-T1, FR-T2, FR-P7.
+- **FR-T1.** The request, response parsing, limits, error classes: GEMINI_TTS.md, sections "Request", "Limits",
+  "Errors"; the interface is А§6.2. An error carries `usage` if it was in the response. The client does not retry
+  requests itself.
+- **FR-T2.** The key goes only in a header; from any error text, shown or recorded, the key is scrubbed.
+- **FR-T3.** The voice profile and the fingerprint are А§6.2. The audio format is part of the fingerprint.
+- **FR-T7.** The reading-style text and the voice-probe phrase depend on the **book's** language, not on the
+  interface's or the voice's: a per-language table in the `tts` module next to the voices
+  (`lib/tts/book_language.dart`): ru, en, pl, de, uk; English for other languages. The style does not name the
+  reader's gender (the voice may be female or male). The style is part of the profile, so the audio of a book in
+  another language is not confused with the earlier one. The probe phrase for the app's voice (no book) is in the
+  interface language.
+- **FR-T4.** Splitting into segments is А§6.1: rules 1–4, skipping blocks with no speech text, the correspondence list,
+  the readiness rule, parts and the start segment, the group tail. `L` and `Lmin` are named constants.
+- **FR-T5.** `FakeTtsEngine` with controllable delay and errors. A build with fake synthesis is switched on by a build
+  parameter, has a separate `applicationId` (А§6.2) and is visible in the settings by the "Fake voice" row.
+- **FR-T6.** A real network transport is forbidden in the tests. The real client class with a dummy key and a fake HTTP
+  is allowed and needed: it is used to check FR-T1, FR-T2, FR-P7.
 
-### Очередь, сеанс, плеер (этап 2)
+### Queue, session, player (stage 2)
 
-- **FR-Q1.** Очередь — А§6.3 целиком: непрерывный запас во времени прослушивания, приоритет ближайшего отрезка и
-  запрет новых дальних запросов, пока он ждёт повтора, конечная граница, до двух запросов в общем счёте, реестр идущих
-  запросов у очереди и один запрос на отпечаток, пауза, повторы, постоянная ошибка, расход.
-- **FR-Q2.** Сеанс — А§6.4: результат прежнего сеанса сохраняется и учитывается, но не меняет плеер, позицию и
-  состояние; потребитель текущего сеанса, ждавший чужой запрос, продолжает после появления файла.
-- **FR-Q3.** Хранилище звука — А§6.5: файл виден только готовым; повтор записи не вызывает нового запроса.
-- **FR-Q4.** Удаление книги и «Очистить озвучку» во время синтеза — А§4: сетевых запросов не ждут; ответ,
-  пришедший потом, записывает расход, звук отбрасывается, папка не восстанавливается.
-- **FR-P1.** Состояния и переходы `NarrationController` — А§6.6: таблица, диаграмма и пункты под ней. Других
-  состояний нет.
-- **FR-P2.** Медиасессия: уведомление с названием книги и главы, пауза/продолжение, назад/вперёд; то же с экрана
-  блокировки и кнопок гарнитуры. Звонок, чужой звук, вынутые наушники ставят паузу; продолжает пользователь сам. В
-  `paused` уведомление не снимается и служба остаётся службой переднего плана (А§6.6). «Слушать», «назад» и
-  «вперёд» из уведомления, с экрана блокировки и гарнитуры включают следование за голосом так же, как с панели
-  плеера: это команды контроллера, и экран узнаёт о них по его счётчику явных команд (FR-P4, А§5). Карточка плеера
-  в уведомлении и на экране блокировки показывает обложку книги; у книги без обложки — та же заглушка с первой
-  буквой, что на полке (решение владельца 2026-11-14). Текста абзаца и перемотки по секундам на карточке нет.
-- **FR-P3.** Место старта — правило А§5 «Слушать из `idle`» (по замечанию владельца 2026-11-14):
-  - место прослушивания — начало звучавшего отрезка — хранится в `state.json` отдельно от позиции чтения и не
-    забывается при паузе, остановке, «Закрыть» и перезапуске;
-  - «Слушать» из `idle`: (1) место прослушивания на текущей странице — продолжать с него; (2) иначе — с первого
-    предложения, которое начинается на текущей странице, хвост предложения с прошлой страницы не читается; (3) если на
-    странице не начинается ни одно предложение — с начала этого предложения, и только тогда страница переходит туда.
-    Границы предложений — А§6.1, правило 2 с уточнениями (i) и (ii), по тексту для речи (знак сноски после точки
-    начала следующего предложения не прячет). Принятое ограничение: сокращение длиннее одной буквы («см. рис.»)
-    считается концом предложения — старт выходит чуть раньше или чуть позже, текст не теряется;
-  - после «Слушать» страница назад не перелистывается (кроме случая 3), следование включено, кнопки «К месту
-    чтения» сразу после старта нет;
-  - долгое нажатие на абзац → «Читать отсюда» — с начала абзаца. Старт с блока в середине группы — хвост группы,
-    с предложения внутри блока — стартовый отрезок от этого предложения (А§6.1). После паузы ▶ продолжает с места
-    паузы.
-- **FR-P4.** Следование за голосом и подсветка — А§5; следование приблизительное. Следование **включается** любым
-  действием, которым пользователь сам запускает или меняет место звука: «Слушать» (в том числе после паузы и из
-  панели ошибки), «Читать отсюда», «назад» и «вперёд» плеера, выбор главы в оглавлении, «К месту чтения» — откуда бы
-  команда ни пришла: с экрана, из уведомления, с гарнитуры (контроллер ведёт счётчик явных команд, экран включает
-  следование при его изменении; автоматические переходы — следующий отрезок, конец главы — счётчик не меняют).
-  **Выключают** его только ручное листание и ползунок, в том числе при открытой панели `stopped` (ошибка или конец
-  книги), и только когда жест действительно сменил страницу или ползунок отпущен на другой странице: малое
-  перетаскивание с возвратом на ту же страницу, отменённый жест и касание бегунка без сдвига ничего не меняют.
-  Исключение — палец, схвативший страницу во время автоматического переворота за голосом: он выключает следование,
-  даже если страница вернулась на прежнюю (читатель удержал дочитываемую страницу). Выбор в оглавлении во время
-  прослушивания всегда переводит голос к началу выбранной главы, в том числе текущей. Пока выбран абзац для «Читать
-  отсюда», страница за голосом не уходит и перераскладка его не уводит; выбор снят — экран догоняет голос. Выбор
-  абзаца снимается при любой смене страницы — жестом, касанием, ползунком, оглавлением, голосом: невидимого выбора не
-  бывает. Кнопка «К месту чтения» видна, когда
-  следование отключено, в панели управления — в `preparing`, `playing`, `waiting`, `paused`. В `stopped` её нет: в
-  панели ошибки к месту голоса возвращает «Слушать», в панели «Книга закончилась» — только «Закрыть». Ползунок во
-  время прослушивания — FR-R5.
-- **FR-P5.** Скорость: 0,75; 1; 1,25; 1,5; 1,75; 2. Запоминается; каждое прослушивание сразу звучит с сохранённой
-  скоростью — и в подписи, и в движении голоса (источник скорости один). Смена скорости не делает запросов.
-- **FR-P6.** Состояние на экране чтения всегда названо словами, когда звука нет: «Готовлю голос…» (`preparing`),
-  «Жду связь…» (`waiting`), текст ошибки (`stopped` по ошибке), «Книга закончилась» (`stopped` по концу книги).
-  В `preparing` и `waiting` подпись состояния — в верхней строке панели, рядом с чипом голоса и значком «К месту
-  чтения»; высота панели от состояния не зависит (А§5, решение 2026-11-15).
-  Пояснение своими словами даётся только для распознанных причин: 402, 404 на модель, неверный ключ (400/403 с
-  отказом по ключу), нет сети; для прочих ошибок — ответ Google как есть. Из `stopped` новый сеанс начинается только
-  явной командой пользователя — «Слушать» или «Читать отсюда»; сам он не начинается, «назад» и «вперёд» из
-  уведомления в `stopped` ничего не делают; ни один текст не обещает автоматического продолжения, в том числе после
-  пополнения счёта.
-  Панель «Книга закончилась» — только «Закрыть»: ни «назад» и «вперёд», ни «Слушать».
-- **FR-P7.** Нет ключа: «Слушать» ведёт в настройки на поле ключа. «Вставить» сразу сохраняет ключ из буфера
-  обмена; поле показывает сохранённый ключ скрытым; непустое значение в поле сохраняется при любом уходе с поля и с
-  экрана — «Готово» клавиатуры, «Назад» экранная и системная, потеря фокуса; пустое поле ключ не трогает (удаления
-  ключа в интерфейсе нет); «Назад» возвращает туда, откуда пришли; озвучка после возврата сама не запускается. Ответ 402:
-  остановка с кнопкой «Пополнить», открывающей адрес из GEMINI_TTS.md. Ответ 404 на модель: остановка с кнопкой
-  «Выбрать модель»; панель называет модель, на которой случилась ошибка, а не выбранную после; из настроек «Назад»
-  возвращает в ту же книгу. Неверный ключ: пояснение своими словами и кнопка «Изменить ключ», ведущая к открытому
-  полю ключа в настройках; «Назад» возвращает в книгу.
-- **FR-P8.** «Закрыть» (крестик на панели плеера) завершает прослушивание: `idle`, таймер сна снят, позиция
-  чтения — место на экране (звучавшее место, если экран следовал за голосом; иначе начало страницы, которую
-  пользователь листал сам, в том числе после остановки), дальше её пишет экран (А§5). «Дочитана» при этом не
-  меняется (FR-L4).
-  Место прослушивания остаётся (FR-P3). При переходе в `stopped` позиция передаётся экрану по правилу А§5.
-- **FR-P9.** До приёмки SC-2 создан `docs/DEVICE_CHECKLIST.md` — список ручной проверки А§9, по пункту на каждую
-  строку «телефон владельца»; в нём в том числе: пауза при погашенном экране и через 10 минут «Слушать» с экрана
-  блокировки; вторая локальная сборка поверх первой без потери данных. Жесты (проверка жестов 2026-11-14) — **уже на
-  этапе 1, при первой установке на телефон**, а не только к SC-2:
-  - 20 перелистываний смахиванием от самого края экрана в обе стороны — в чтении и при прослушивании, в том числе
-    в чехле: книга не закрывается (краевой жест «Назад» только показывает панели, Р11);
-  - медленно потянуть от края и вернуть: книга не закрывается, страница на месте;
-  - 20 вертикальных движений большим пальцем по странице: страница не листается;
-  - текст страницы не под вырезом камеры; нижний ряд панели плеера не в зоне жеста «домой».
+- **FR-Q1.** The queue is А§6.3 in full: a continuous reserve in listening time, priority of the nearest segment and a
+  ban on new far requests while it waits for a retry, the finite boundary, up to two requests in the common count, the
+  registry of in-flight requests held by the queue and one request per fingerprint, pause, retries, a permanent error,
+  spending.
+- **FR-Q2.** The session is А§6.4: the result of a previous session is saved and accounted for but does not change the
+  player, position or state; a consumer of the current session that was waiting for someone else's request continues
+  once the file appears.
+- **FR-Q3.** The audio storage is А§6.5: a file is visible only when ready; a repeated write does not cause a new
+  request.
+- **FR-Q4.** Deleting a book and "Clear narration" during synthesis are А§4: they do not wait for network requests; a
+  response that arrives later records the spending, the audio is discarded, the folder is not restored.
+- **FR-P1.** The states and transitions of `NarrationController` are А§6.6: the table, the diagram and the items under
+  it. There are no other states.
+- **FR-P2.** Media session: a notification with the book and chapter title, pause/resume, previous/next; the same from
+  the lock screen and the headset buttons. A call, foreign audio, unplugged headphones pause; the user resumes by
+  themselves. In `paused` the notification is not removed and the service remains a foreground service (А§6.6).
+  "Listen", "previous" and "next" from the notification, the lock screen and the headset turn on following the voice in
+  the same way as from the player panel: these are controller commands, and the screen learns about them from its
+  explicit-command counter (FR-P4, А§5). The player card in the notification and on the lock screen shows the book's
+  cover; for a book without a cover, the same placeholder with the first letter as on the shelf (the owner's decision
+  2026-11-14). There is no paragraph text and no seeking by seconds on the card.
+- **FR-P3.** The start place is the rule of А§5 "Listen from `idle`" (from the owner's remark of 2026-11-14):
+  - the listening place, the start of the segment that was sounding, is stored in `state.json` separately from the
+    reading position and is not forgotten on pause, stop, "Close" and restart;
+  - "Listen" from `idle`: (1) a listening place on the current page: continue from it; (2) otherwise from the first
+    sentence that begins on the current page, the tail of a sentence from the previous page is not read; (3) if no
+    sentence begins on the page, from the beginning of that sentence, and only then does the page move there.
+    Sentence boundaries are А§6.1, rule 2 with clarifications (i) and (ii), over the speech text (a footnote mark after
+    the period that begins the next sentence does not hide it). An accepted limitation: an abbreviation longer than one
+    letter ("см. рис.", the Russian "see fig.") counts as the end of a sentence: the start comes slightly earlier or
+    later, no text is lost;
+  - after "Listen" the page is not turned back (except in case 3), following is on, and there is no "To current spot"
+    button right after the start;
+  - a long press on a paragraph → "Read from here" starts from the beginning of the paragraph. A start from a block in
+    the middle of a group is the group tail; from a sentence inside a block, the start segment from that sentence
+    (А§6.1). After a pause, ▶ continues from the pause place.
+- **FR-P4.** Following the voice and highlighting are А§5; following is approximate. Following is **turned on** by any
+  action with which the user themselves starts or changes the sound's place: "Listen" (including after a pause and from
+  the error panel), "Read from here", the player's "previous" and "next", choosing a chapter in the table of contents,
+  "To current spot", wherever the command comes from: the screen, the notification, the headset (the controller keeps
+  a counter of explicit commands, and the screen turns following on when it changes; automatic transitions, the next
+  segment or the end of a chapter, do not change the counter). It is **turned off** only by manual turning and the
+  slider, including with the `stopped` panel open (an error or the end of the book), and only when the gesture really
+  changed the page or the slider was released on another page: a small drag with a return to the same page, a
+  cancelled gesture and touching the thumb without moving change nothing. The exception is a finger that grabbed the
+  page during an automatic turn after the voice: it turns following off even if the page returned to the previous one
+  (the reader held the page they were finishing). Choosing in the table of contents during listening always moves the
+  voice to the start of the chosen chapter, including the current one. While a paragraph is selected for "Read from
+  here", the page does not move away after the voice and a re-layout does not move it away; once the selection is
+  cleared, the screen catches up with the voice. A paragraph selection is cleared on any page change: by a gesture, a
+  tap, the slider, the table of contents, the voice; there is no invisible selection. The "To current spot" button is
+  visible when following is off, in the control panel, in `preparing`, `playing`, `waiting`, `paused`. In `stopped` it
+  is absent: in the error panel, "Listen" returns to the voice's place; in the "End of the book" panel there is only
+  "Close". The slider during listening is FR-R5.
+- **FR-P5.** Speed: 0.75; 1; 1.25; 1.5; 1.75; 2. It is remembered; every listening immediately sounds at the saved
+  speed, both in the caption and in the voice's movement (there is one source of speed). A speed change makes no
+  requests.
+- **FR-P6.** The state on the reading screen is always named in words when there is no sound: "Preparing the voice…"
+  (`preparing`), "Waiting for connection…" (`waiting`), the error text (`stopped` by error), "End of the book"
+  (`stopped` by the end of the book). In `preparing` and `waiting` the state caption is in the top row of the panel,
+  next to the voice chip and the "To current spot" icon; the panel's height does not depend on the state (А§5, the
+  2026-11-15 decision). An explanation in our own words is given only for recognized causes: 402, 404 on the model, an
+  invalid key (400/403 with a key refusal), no network; for other errors, Google's response as it is. From `stopped` a
+  new session starts only by an explicit user command, "Listen" or "Read from here"; it does not start by itself,
+  "previous" and "next" from the notification do nothing in `stopped`; no text promises an automatic continuation,
+  including after topping up the balance. The "End of the book" panel has only "Close": neither "previous" and "next"
+  nor "Listen".
+- **FR-P7.** No key: "Listen" leads to the settings, to the key field. "Paste" saves the key from the clipboard at once;
+  the field shows the saved key masked; a non-empty value in the field is saved on any departure from the field and
+  from the screen, the keyboard's "Done", on-screen and system "Back", loss of focus; an empty field does not touch the
+  key (there is no key deletion in the interface); "Back" returns to where the user came from; narration does not
+  start by itself after the return. Response 402: a stop with a "Top up" button that opens the address from
+  GEMINI_TTS.md. Response 404 on the model: a stop with a "Choose model" button; the panel names the model on which
+  the error happened, not the one chosen afterwards; from the settings "Back" returns to the same book. An invalid key:
+  an explanation in our own words and a "Change key" button leading to the open key field in the settings; "Back"
+  returns to the book.
+- **FR-P8.** "Close" (the cross on the player panel) ends listening: `idle`, the sleep timer cleared, the reading
+  position is the place on the screen (the sounding place if the screen followed the voice; otherwise the start of the
+  page the user turned to themselves, including after a stop), and then the screen writes it (А§5). "Finished" does not
+  change at that (FR-L4). The listening place remains (FR-P3). On the transition to `stopped` the position is handed to
+  the screen by the rule of А§5.
+- **FR-P9.** Before acceptance SC-2, `docs/DEVICE_CHECKLIST.md` is created: the list of manual checks of А§9, one item
+  for each "owner's phone" row; it includes: a pause with the screen off and, 10 minutes later, "Listen" from the lock
+  screen; a second local build on top of the first without data loss. The gestures (the 2026-11-14 gesture audit) are
+  **already at stage 1, on the first installation on the phone**, not only at SC-2:
+  - 20 swipe-turns from the very edge of the screen in both directions, in reading and during listening, including
+    with a phone case on: the book does not close (the edge "Back" gesture only shows the panels, Р11);
+  - slowly pull from the edge and return: the book does not close, the page stays in place;
+  - 20 vertical thumb movements over the page: the page does not turn;
+  - the page text is not under the camera cutout; the bottom row of the player panel is not in the "home" gesture zone.
 
-### Голос и деньги (этап 2)
+### Voice and money (stage 2)
 
-- **FR-V1.** Выбор голоса: 30 голосов двумя группами с описанием характера; текущий отмечен. Открытие экрана ставит
-  прослушивание на паузу. Экран существует в двух вариантах: голос книги — с названием книги и строкой «Как в
-  настройках» (своего голоса у книги нет, действует общий); общий голос из настроек — без этой строки. «Проба» —
-  А§6.8: фраза и стиль — по языку книги (FR-T7), озвучивается полным действующим профилем (голос, модель, стиль),
-  отдельный плеер, звук в `samples/`; второй раз бесплатно только для того же профиля — после смены модели проба
-  озвучивается заново; у строки голоса три видимых состояния пробы: ожидание, звучит, ошибка с текстом Google.
-- **FR-V2.** Голос приложения — в настройках; у книги может быть свой, и он важнее голоса приложения. Вход «Голос»
-  для книги есть и в нижней панели чтения, и на панели плеера: голос книги выбирается и до первого прослушивания.
-  Смена во время прослушивания — новый сеанс с начала текущего отрезка (в том числе стартового, начатого с
-  предложения внутри блока) с прежним намерением (А§6.4). Касание уже выбранного
-  голоса или модели ничего не меняет и сеанс не перезапускает; выбор другой строки с тем же действующим голосом
-  («Как в настройках» и он же явно) — тоже.
-- **FR-V3.** Модель: 3.8 Flash или Flash-Lite, в настройках, с ценой за час звука по тарифу на сегодняшнюю дату.
-- **FR-M1.** Тарифы — константы с датой проверки и датой смены (01.01.2027), как в GEMINI_TTS.md.
-- **FR-M2.** `usage.json` копит аудио- и входные токены по месяцам и моделям из `usage` ответов и ошибок, каждый
-  ответ один раз. Настройки показывают сумму за текущий и прошлый месяц в долларах, каждый месяц — по тарифу своего
-  периода.
-- **FR-M3.** Настройки показывают место, занятое озвучкой, и кнопку «Очистить озвучку» (все книги и пробы) с
-  подтверждением; порядок — А§4.
+- **FR-V1.** Voice selection: 30 voices in two groups with a description of character; the current one is marked.
+  Opening the screen pauses listening. The screen exists in two variants: a book's voice, with the book's title and a
+  "Same as in Settings" row (the book has no voice of its own, the shared one applies); the shared voice from the
+  settings, without this row. "Sample" is А§6.8: the phrase and the style follow the book's language (FR-T7), narrated
+  with the full current profile (voice, model, style), a separate player, audio in `samples/`; a second time is free
+  only for the same profile: after a model change the sample is narrated again; a voice row has three visible sample
+  states: waiting, sounding, an error with Google's text.
+- **FR-V2.** The app's voice is in the settings; a book may have its own, and it takes priority over the app's voice.
+  The "Voice" entry for a book is both in the reading bottom panel and on the player panel: a book's voice is chosen
+  even before the first listening. A change during listening is a new session from the start of the current segment
+  (including a start one, begun from a sentence inside a block) with the previous intent (А§6.4). Touching the already
+  chosen voice or model changes nothing and does not restart the session; choosing another row with the same effective
+  voice ("Same as in Settings" and the same voice explicitly) does not either.
+- **FR-V3.** Model: 3.8 Flash or Flash-Lite, in the settings, with the price per hour of audio by the tariff on today's
+  date.
+- **FR-M1.** Tariffs are constants with a check date and a change date (01.01.2027), as in GEMINI_TTS.md.
+- **FR-M2.** `usage.json` accumulates audio and input tokens by month and model from the `usage` of responses and
+  errors, each response once. The settings show the sum for the current and the previous month in dollars, each month
+  at the tariff of its own period.
+- **FR-M3.** The settings show the space taken by narration and a "Clear narration" button (all books and samples) with
+  a confirmation; the order is А§4.
 
-### Доводка (этап 3)
+### Polish (stage 3)
 
-- **FR-D1.** Таймер сна: 15, 30, 60 минут, «до конца главы», «выключить». Таймер принадлежит контроллеру: смена
-  места, главы и голоса в той же книге его не сбрасывает, минуты идут по настенным часам с момента установки
-  (А§6.6). Таймер снимается при срабатывании, при «Закрыть», при закрытии книги и при смене книги. Срок, истёкший
-  не во время звука: на паузе таймер просто снимается (следующее «Слушать» звучит); в `preparing` и `waiting` —
-  пауза, и таймер снят. Перед каждым явным стартом («Слушать», «Читать отсюда», «назад», «вперёд», выбор главы)
-  истёкший срок снимается — в том числе после остановки по ошибке. «До конца главы» — конец той главы, которая
-  звучит в момент срабатывания; конец последней главы (конец книги) — тоже срабатывание. Конечная граница
-  очереди учитывает таймер (А§6.3). Включённый таймер виден на панели плеера: минутный — оставшимися минутами, «до
-  конца главы» — текстовым признаком, а не только цветом.
-- **FR-D2.** «Скачать главу» — А§6.7. Задача одна на приложение. Предложение скачать — в блоке текущей главы в
-  оглавлении и только когда никакая задача не идёт; блок с ходом или ошибкой — у той главы, которой принадлежит
-  задача, даже если читатель уже в другой. Перед кнопкой отдельной строкой — оценка: сумма знаков уникальных
-  отсутствующих отпечатков главы × 0,069 с × цена секунды, то есть после «Остановить» и после ошибки — только
-  неготовый остаток. В процессе — доля готового и кнопка «Остановить». Постоянная ошибка показывается в том же
-  блоке: причина, ответ Google и «Скачать снова» с оценкой остатка; панель плеера при этом не открывается. Готовность
-  главы («озвучена») — правило готовности А§6.1 для действующего профиля голоса: контракт готовности и оценки
-  принимает профиль. Смена голоса или модели останавливает задачу (готовое сохраняется), и у текущей главы
-  появляется предложение с оценкой для нового профиля. Пока скачивание идёт, на экране чтения видна короткая строка
-  с долей готового и кнопкой «Стоп»; она исчезает, когда задача завершена, остановлена или упала (ошибка — в
-  оглавлении). Область касания «Стоп» — прямоугольник 48 × 48, не срезанный скруглением строки; второе касание
-  «Стоп» вдогонку, когда строка уже исчезла, ничего не нажимает (Р12).
-- **FR-D3.** У книги в меню полки — «Удалить озвучку» с объёмом; порядок — А§4. Объём считается по тому, что
-  лежит в хранилище сейчас: после «Очистить озвучку» новое скачивание и новые пробы снова занимают место, и пункт
-  удаления и очистка снова доступны.
+- **FR-D1.** Sleep timer: 15, 30, 60 minutes, "until the end of the chapter", "turn off". The timer belongs to the
+  controller: a change of place, chapter and voice in the same book does not reset it; minutes run by wall clock from
+  the moment it was set (А§6.6). The timer is cleared when it fires, on "Close", on closing the book and on changing the
+  book. A deadline that expired when no sound was playing: on pause the timer is simply cleared (the next "Listen"
+  sounds); in `preparing` and `waiting`, a pause, and the timer is cleared. Before every explicit start ("Listen",
+  "Read from here", "previous", "next", choosing a chapter) an expired deadline is cleared, including after a stop by
+  error. "Until the end of the chapter" is the end of the chapter that is sounding at the moment of firing; the end of
+  the last chapter (the end of the book) is also a firing. The queue's finite boundary accounts for the timer (А§6.3).
+  An enabled timer is visible on the player panel: a minute one by the remaining minutes, "until the end of the
+  chapter" by a text marker, not only by color.
+- **FR-D2.** "Download chapter" is А§6.7. There is one task per app. The offer to download is in the current chapter's
+  block in the table of contents and only when no task is running; the block with progress or an error belongs to the
+  chapter the task belongs to, even if the reader is already in another. Before the button, on a separate line, an
+  estimate: the sum of characters of the chapter's unique missing fingerprints × 0.069 s × the price per second, that
+  is, after "Stop" and after an error only the unready remainder. In progress: the fraction ready and a "Stop" button.
+  A permanent error is shown in the same block: the cause, Google's response and "Download again" with an estimate of
+  the remainder; the player panel does not open. A chapter's readiness ("narrated") is the readiness rule of А§6.1 for
+  the current voice profile: the readiness and estimate contract takes a profile. A change of voice or model stops the
+  task (what is ready is kept), and the current chapter gets an offer with an estimate for the new profile. While the
+  download is running, a short row with the fraction ready and a "Stop" button is visible on the reading screen; it
+  disappears when the task has finished, been stopped or failed (the error is in the table of contents). The touch
+  target of "Stop" is a 48 × 48 rectangle not cut off by the rounding of the row; a second follow-up tap on "Stop" when
+  the row has already disappeared presses nothing (Р12).
+- **FR-D3.** A book has "Delete narration" in the shelf menu, with the amount; the order is А§4. The amount is computed
+  from what is in the storage now: after "Clear narration", a new download and new probes take space again, and the
+  deletion item and the clearing are available again.
 
-## 4. Приёмка
+## 4. Acceptance
 
-Перед каждой приёмкой: полный `scripts/test.sh` зелёный в главном дереве, `git status --porcelain` пуст, ревью
-Codex по затронутым модулям проведено и находки приземлены (`AGENTS.md`, «Спеки и приёмка»). Каждый SC включает
-все проверки своего этапа из таблицы ниже.
+Before each acceptance: the full `scripts/test.sh` is green in the main tree, `git status --porcelain` is empty, the
+Codex review of the affected modules is done and its findings landed (`AGENTS.md`, "Specs and acceptance"). Each SC
+includes all the checks of its stage from the table below.
 
-- **SC-0.** Чистый WSL после `setup-wsl.sh` проходит `test.sh` и `build-apk.sh`. CI зелёный. Приложение с пустой
-  полкой установлено на телефон владельца из APK; вторая локальная сборка ставится поверх первой без удаления
-  приложения. Замеры FR-E6 записаны.
-- **SC-1.** Автоматически: образцы FR-B7 с точным ожидаемым текстом и инварианты; разбивка главы в 300 тысяч знаков
-  показывает первую страницу, не дожидаясь конца расчёта; убитое добавление не оставляет книги на полке; снимки
-  экранов совпадают с эталоном (А§9: владелец утвердил экраны этапа на телефоне, после этого снимки записаны
-  эталоном). На телефоне: владелец добавляет три своих книги (FB2, FB2.ZIP, EPUB) из мессенджера и из загрузок,
-  читает, меняет шрифт и тему, поворачивает телефон, закрывает приложение — каждая открывается на своём месте.
-- **SC-2.** Автоматически, на подставном синтезе: сценарии А§9 и дополнительно:
-  1. отрезок, озвученный двумя частями при старте, при непрерывном чтении не запрашивается заново; при одной готовой
-     части запрашивается только недостающая; «Читать отсюда» из середины уже озвученной группы запрашивает только
-     хвост группы;
-  2. ближайший отрезок ждёт повтора — новых запросов дальних отрезков нет, начатые доводятся;
-  3. возврат к отпечатку, запрос которого начат прежним сеансом: запрос один, текущий сеанс продолжает после
-     появления файла;
-  4. удаление книги и «Очистить озвучку» во время идущего запроса: удаление сразу, поздний ответ записывает расход,
-     файла и папки после него нет;
-  5. сборка с подставным синтезом и настоящая стоят на телефоне рядом; настоящая не видит книг и звука подставной.
+- **SC-0.** A clean WSL after `setup-wsl.sh` passes `test.sh` and `build-apk.sh`. CI is green. The app with an empty
+  shelf is installed on the owner's phone from the APK; a second local build goes on top of the first without
+  uninstalling the app. The FR-E6 measurements are recorded.
+- **SC-1.** Automatically: the FR-B7 samples with exact expected text and the invariants; the pagination of a
+  300-thousand-character chapter shows the first page without waiting for the end of the computation; a killed adding
+  leaves no book on the shelf; the screen screenshots match the golden (А§9: the owner approved the stage's screens on
+  the phone, after which the screenshots were recorded as the golden). On the phone: the owner adds three of their own
+  books (FB2, FB2.ZIP, EPUB) from a messenger and from downloads, reads, changes the font and theme, rotates the phone,
+  closes the app; each opens at its own place.
+- **SC-2.** Automatically, on fake synthesis: the scenarios of А§9 and in addition:
+  1. a segment narrated in two parts at the start is not requested again in continuous reading; with one part ready,
+     only the missing one is requested; "Read from here" from the middle of an already narrated group requests only
+     the group tail;
+  2. the nearest segment waits for a retry: no new requests for far segments, those begun are completed;
+  3. a return to a fingerprint whose request was begun by a previous session: one request, the current session
+     continues once the file appears;
+  4. deleting a book and "Clear narration" during an in-flight request: deletion at once, the late response records
+     the spending, no file or folder is left after it;
+  5. the fake-synthesis build and the real one stand on the phone side by side; the real one does not see the fake
+     one's books and audio.
 
-  На телефоне: `docs/DEVICE_CHECKLIST.md` пройден на подставном синтезе. Платно, с согласия владельца и названной
-  заранее оценкой: одна глава одной книги прослушана с погашенным экраном; сумма в настройках сходится с расчётом по
-  `usage` ответов; повторное прослушивание той же главы с начала не делает ни одного запроса; стартовая пара при
-  скорости 2× — пауза между частями допустима, её длина записана в отчёт; крупным шрифтом, на отрезке в несколько
-  страниц, страницы перелистываются вслед за настоящим голосом.
-- **SC-3.** Автоматически: таймеры 15/30/60 минут на подставных часах, в том числе через смену сеанса; таймер «до
-  конца главы» не запрашивает отрезков следующей главы; «Скачать главу» после ухода и возврата продолжает с первого
-  неготового отрезка, а после ручного «Остановить» — нет; оценка считает одинаковый текст один раз; «Удалить
-  озвучку» книги во время идущего запроса. На телефоне: книга в TXT открывается; глава скачана и прослушана в режиме
-  полёта.
+  On the phone: `docs/DEVICE_CHECKLIST.md` passed on fake synthesis. Paid, with the owner's consent and an estimate
+  named in advance: one chapter of one book listened to with the screen off; the sum in the settings matches the
+  calculation from the responses' `usage`; re-listening to the same chapter from the start makes no request at all;
+  the start pair at 2× speed: a pause between the parts is acceptable, its length is written into the report; with a
+  large font, on a segment of several pages, the pages turn after the real voice.
+- **SC-3.** Automatically: the 15/30/60 minute timers on a fake clock, including across a session change; the "until
+  the end of the chapter" timer does not request segments of the next chapter; "Download chapter" after leaving and
+  returning continues from the first unready segment, and after a manual "Stop" does not; the estimate counts identical
+  text once; a book's "Delete narration" during an in-flight request. On the phone: a TXT book opens; a chapter is
+  downloaded and listened to in airplane mode.
 
-### Требование → чем проверяется
+### Requirement → how it is verified
 
-«Тест» — автоматический тест в `scripts/test.sh`; «телефон» — пункт SC на телефоне владельца.
+"Test" is an automated test in `scripts/test.sh`; "phone" is an SC item on the owner's phone.
 
-| Требование | Чем проверяется | SC |
+| Requirement | Verified by | SC |
 |---|---|---|
-| FR-E1–E3 | чистый WSL, сборка, CI | 0 |
-| FR-E4 | команды раздела выполнены из чистого WSL | 0 |
-| FR-E5 | тест прямых импортов | 0 |
-| FR-E6 | числа записаны в GEMINI_TTS.md | 0 |
-| FR-B1 | тест `speechText` и соответствия смещений | 1 |
-| FR-B2 | тест на образцах: EPUB, FB2, FB2.ZIP, посторонний ZIP, PDF, двоичный файл, EPUB с обфусцированным шрифтом, EPUB с зашифрованным документом; снимок строки отказа на полке для защищённой книги | 1 |
-| FR-B3, FR-B4 | образцы с точным текстом блоков, глав и сносок; EPUB — на каждое правило границ и каждый структурный признак А§3 | 1 |
-| FR-B5 | образцы TXT: UTF-8, UTF-8 с BOM, windows-1251, с пустыми строками и без | 3 |
-| FR-B6 | три образца повреждений, образец с другой ошибкой XML, образец без текста, ссылка на несуществующую сноску | 1 |
-| FR-B7 | инварианты на образцах и `test/local_books/` | 1 |
-| FR-L1 | тесты: убитое добавление, последнее изменение позиции записано; манифест: `allowBackup="false"` и правила извлечения | 1 |
-| FR-L2 | телефон: выбор файла и «Открыть с помощью»; тест строки «Добавляется» | 1 |
-| FR-L3 | тест: повторное добавление открывает имеющуюся книгу; тот же файл дважды подряд — одна книга; удалённая книга добавляется заново | 1 |
-| FR-L4 | тест порядка полки (карточка — у последней открытой, неоткрытые первыми под ней, новые сверху; новая книга карточку не забирает), главы на карточке после смены главы при прослушивании, «100 %» после последней страницы (в том числе одностраничной книги при первом открытии) и после конца прослушивания, «Закрыть» в конце и повторное прослушивание последнего абзаца на последней странице его не откатывают, уход на страницу раньше — откатывает; заглушки обложки, пустой полки | 1 |
-| FR-L5 | тест: подтверждение с объёмом, папка удалена | 1 |
-| FR-L6 | тест очистки `tmp/` при запуске | 1 |
-| FR-R1 | тест: первая страница главы в 300 тыс. знаков до конца расчёта | 1 |
-| FR-R2, FR-R3 | тесты жестов настоящими событиями указателя (`test/gesture_*_test.dart`): границы третей, смахивание медленное и быстрое, два смахивания и смахивание с касанием подряд — +2 страницы, второе касание через 40 мс — +2 страницы; смахивание под 10°, 30°, 44° к горизонтали листает, под 46°, 60°, 80° — нет; второй палец во время смахивания — не больше одной страницы; двойное касание «Слушать», «Закрыть», «Стоп», выбора в листе скорости и таймера — второе касание ничего не нажимает, а через 400 мс нажатие работает; два знака сносок рядом — открывается ближайший; касание рядом со знаком сноски открывает сноску, а не листает и не показывает панели; снимки, в том числе цитаты и стихов; телефон: краевые и вертикальные жесты (FR-P9) | 1 |
-| FR-R4 | тест оглавления EPUB-образца: уровни, текущая глава, переход | 1 |
-| FR-R5 | тест: ползунок открывает страницу с выбранным местом; перетаскивание за край — первая и последняя страница; во время прослушивания — листает только экран, голос места не меняет; касание бегунка без сдвига следование не выключает | 1; 2 |
-| FR-R6, FR-R8 | снимки на ступенях шрифта и в комбинации из `NOTES.md`, во всех темах, с системными областями; тест: область касания каждого элемента управления не меньше 48 dp — попаданием в углы области 48 × 48, в том числе «Стоп» строки скачивания, — и соседние области не перекрываются; тест: приложение просит только портретную ориентацию, манифест — `screenOrientation="portrait"` | 1 |
-| FR-R9 | тест каждого перехода А§8.1: оглавление не останавливает звук, экран «Голос» ставит паузу, «Назад» на полку — `idle`, возврат из настроек в ту же книгу; системная «Назад»: снимает выбор абзаца, закрывает лист и диалог, при скрытых панелях показывает их (в том числе при прослушивании, звук идёт), при показанных — закрывает книгу; стрелка в шапке закрывает сразу; телефон: краевой жест (FR-P9) | 1; 2 |
-| FR-R7 | тесты: позиция после смены шрифта, перезапуска, переразбора; перераскладка при паузе у низа страницы (шрифт, панель ошибки, «Готовлю голос…») оставляет на экране место голоса, а после ручного листания (в том числе после ошибки и конца книги) — начало видимой страницы; выбранный абзац переживает изменение высоты панели; смена размера окна туда и обратно — то же место; телефон: альбомная ориентация не включается | 1 |
-| FR-I1 | тест: во всех четырёх ARB одни и те же ключи и заполнители; язык телефона по умолчанию, не из четырёх — английский; выбор в настройках меняет подписи сразу, в том числе системные Material; множественные формы ru/pl; снимки полки, чтения, плеера, настроек на en, pl, de и узкие на de и pl | 1 |
-| FR-T1–T3 | тесты настоящего клиента с фиктивным ключом и подставным HTTP: форма запроса, классы ошибок, `usage` в ошибке, ключ вычищен, отпечаток меняется от каждого поля профиля и формата | 2 |
-| FR-T4 | тесты деления, соответствий, готовности, частей, хвоста группы | 2 |
-| FR-T7 | тест таблицы стиля и фразы пробы: четыре языка, прочие — английский, стиль без рода; отпечаток меняется от языка стиля | 2 |
-| FR-T5 | телефон: SC-2, пункт 5 | 2 |
-| FR-T6 | ревью перед SC-2: в `test/` нет настоящего транспорта | 2 |
-| FR-Q1–Q4 | тесты очереди и сеанса: сценарии А§9 и SC-2, пункты 1–4 | 2 |
-| FR-P1 | тест каждого перехода А§6.6 на подставном плеере | 2 |
-| FR-P2 | телефон: `DEVICE_CHECKLIST.md`, в том числе обложка (или заглушка с буквой) на карточке уведомления и экрана блокировки; тест: «Слушать» и «вперёд» вызовом контроллера в обход экрана включают следование | 2 |
-| FR-P3 | тесты места старта по правилу А§5: сценарий владельца (пауза на абзаце в середине страницы → «Закрыть» → «Слушать»: тот же абзац, та же страница, следование включено); место прослушивания не на странице → первое предложение страницы, страница та же; хвост предложения с прошлой страницы не читается; страница внутри одного предложения → его начало; сразу после «Слушать» нет «К месту чтения»; «Закрыть» не стирает место прослушивания; «Читать отсюда» — с начала абзаца; продолжение после паузы; знак сноски после точки не прячет начало предложения; пары «срабатывает / молчит» на правила (i) и (ii); ожидаемое начало предложения в тестах страницы — независимой проверкой, не той же функцией — в прототипе уже есть: `test/listen_owner_scenario_test.dart`, `test/listen_rule_test.dart`, `test/logic_review_test.dart`. Место прослушивания в `state.json` после перезапуска — тест настоящей `Library` | 2 |
-| FR-P4 | тест подсветки по списку соответствий; тесты: следование включают «Слушать» из паузы и из панели ошибки, «назад», «вперёд», оглавление (в том числе та же глава — голос к её началу), «К месту чтения»; выключают только листание и ползунок, в том числе после ошибки и конца книги; малое перетаскивание с возвратом, отменённый жест и жест во время появления панели следование не выключают; автоматический переход к следующему абзацу его не включает; палец, схвативший страницу во время автопереворота и вернувший её, следование выключает; выбранный абзац не уезжает за голосом и снимается сменой страницы; «К месту чтения» и чип голоса в `preparing` и `waiting`; телефон: следование крупным шрифтом | 2 |
-| FR-P5 | тест: смена скорости — ноль запросов, скорость сохранена; сохранённая скорость действует с первого звука — и в подписи, и в продвижении голоса за секунду | 2 |
-| FR-P6 | тест подписи для каждого состояния без звука и обеих причин `stopped`; нераспознанная ошибка показывается ответом Google без пояснения; неверный ключ — пояснение; «Книга закончилась» — только «Закрыть»; из `stopped` звук не начинается без «Слушать» или «Читать отсюда» | 2 |
-| FR-P7 | тесты: нет ключа, «Вставить» сохраняет, введённый ключ сохраняется при системной «Назад», стрелке «Назад» и потере фокуса, «Готово» и «Назад» на пустом поле ключ не стирают, «Назад» возвращает в книгу без запуска озвучки; 402, 404 на подставном HTTP; после 404 и выбора другой модели панель называет прежнюю; неверный ключ → «Изменить ключ» → поле ключа → «Назад» в книгу | 2 |
-| FR-P8 | тест «Закрыть» (при следовании и после ручного листания) и передачи позиции при `stopped`; «Закрыть» снимает таймер сна | 2 |
-| FR-P9 | файл есть и пройден; пункты о жестах пройдены уже при первой установке на этапе 1 | 1 (жесты); 2 |
-| FR-V1 | тест: экран голоса ставит паузу; вторая проба без запроса; после смены модели проба того же голоса озвучивается заново; проба в общем лимите; три состояния строки пробы; снимки обоих вариантов экрана | 2 |
-| FR-V2 | тест: голос книги важнее голоса приложения; выбор голоса книги в `idle` из нижней панели; смена из `paused` сохраняет паузу; смена профиля после старта с предложения внутри блока начинает с того же предложения; касание уже выбранного голоса или модели не сбрасывает место паузы | 2 |
-| FR-V3, FR-M1 | тест цены на подставной дате до и после 01.01.2027 | 2 |
-| FR-M2 | тест сумм за текущий и прошлый месяц на границе тарифов; ошибка с `usage` учтена один раз | 2 |
-| FR-M3 | тест: место показано, после очистки `audio/` и `samples/` пусты; очистка во время запроса | 2 |
-| FR-D1 | тесты таймеров на подставных часах: «Закрыть», выход на полку и смена книги снимают таймер, смена места — нет; срок истёк на паузе — «Слушать» звучит; срок истёк в `preparing` и `waiting` — пауза; срок истёк после ошибки — «Читать отсюда» звучит; «до конца главы» из листа — пауза на начале следующей главы; конец последней главы снимает таймер; снимок панели с таймером «до конца главы» | 3 |
-| FR-D2 | тесты оценки, доли готового, «Остановить», ухода и возврата; оценка после «Остановить» — ровно неготовый остаток и пропорциональная цена; блок задачи у её главы, когда читатель в другой, и нет второго предложения; смена голоса книги — «озвучена» снимается, задача остановлена, оценка для нового профиля; блок главы при постоянной ошибке, после завершения и после остановки, панель плеера не открывается; телефон: режим полёта | 3 |
-| FR-D3 | тест удаления озвучки книги, в том числе во время запроса; после «Очистить озвучку» скачанная заново глава снова занимает место | 3 |
+| FR-E1–E3 | clean WSL, build, CI | 0 |
+| FR-E4 | the section's commands run from a clean WSL | 0 |
+| FR-E5 | the direct-imports test | 0 |
+| FR-E6 | the numbers are recorded in GEMINI_TTS.md | 0 |
+| FR-B1 | a test of `speechText` and of the offset correspondences | 1 |
+| FR-B2 | a test on samples: EPUB, FB2, FB2.ZIP, a foreign ZIP, PDF, a binary file, an EPUB with an obfuscated font, an EPUB with an encrypted document; a screenshot of the refusal row on the shelf for a protected book | 1 |
+| FR-B3, FR-B4 | samples with the exact text of blocks, chapters and footnotes; for EPUB, one for each boundary rule and each structural sign of А§3 | 1 |
+| FR-B5 | TXT samples: UTF-8, UTF-8 with BOM, windows-1251, with and without empty lines | 3 |
+| FR-B6 | three samples of damage, a sample with another XML error, a sample with no text, a reference to a nonexistent footnote | 1 |
+| FR-B7 | invariants on the samples and on `test/local_books/` | 1 |
+| FR-L1 | tests: a killed adding, the last position change is recorded; manifest: `allowBackup="false"` and the extraction rules | 1 |
+| FR-L2 | phone: the file picker and "Open with"; a test of the "Adding…" row | 1 |
+| FR-L3 | test: adding again opens the existing book; the same file twice in a row is one book; a deleted book is added anew | 1 |
+| FR-L4 | a shelf-order test (the card on the last opened one, unopened ones first below it, new ones on top; a new book does not take the card), the chapter on the card after a chapter change during listening, "100 %" after the last page (including a one-page book on first opening) and after the end of listening, "Close" at the end and re-listening to the last paragraph on the last page do not roll it back, moving to an earlier page does; cover placeholders, empty shelf | 1 |
+| FR-L5 | test: a confirmation with the amount, the folder deleted | 1 |
+| FR-L6 | a test of `tmp/` cleanup at startup | 1 |
+| FR-R1 | test: the first page of a 300-thousand-character chapter before the computation ends | 1 |
+| FR-R2, FR-R3 | gesture tests with real pointer events (`test/gesture_*_test.dart`): the boundaries of the thirds, slow and fast swipes, two swipes and a swipe with a tap in a row give +2 pages, a second tap after 40 ms gives +2 pages; a swipe at 10°, 30°, 44° to the horizontal turns, at 46°, 60°, 80° does not; a second finger during a swipe gives at most one page; a double tap on "Listen", "Close", "Stop", a choice in the speed and timer sheet: the second tap presses nothing, and after 400 ms the press works; two footnote marks side by side: the nearest opens; a tap near a footnote mark opens the footnote rather than turning or showing the panels; screenshots, including quotes and verse; phone: edge and vertical gestures (FR-P9) | 1 |
+| FR-R4 | a table-of-contents test on an EPUB sample: levels, current chapter, navigation | 1 |
+| FR-R5 | test: the slider opens the page with the chosen place; dragging past the edge gives the first and last page; during listening it turns only the screen and does not change the voice's place; touching the thumb without moving does not switch following off | 1; 2 |
+| FR-R6, FR-R8 | screenshots at the font steps and in the `NOTES.md` combination, in all themes, with system areas; test: the touch target of every control is at least 48 dp, by hitting the corners of the 48 × 48 area, including "Stop" of the download row, and adjacent areas do not overlap; test: the app requests only portrait orientation, the manifest has `screenOrientation="portrait"` | 1 |
+| FR-R9 | a test of each transition of А§8.1: the table of contents does not stop the sound, the "Voice" screen pauses, "Back" to the shelf is `idle`, return from the settings to the same book; system "Back": clears the paragraph selection, closes a sheet and dialog, with hidden panels shows them (including during listening, the sound goes on), with shown ones closes the book; the arrow in the header closes at once; phone: the edge gesture (FR-P9) | 1; 2 |
+| FR-R7 | tests: the position after a font change, restart, re-parsing; a re-layout on pause near the bottom of the page (font, error panel, "Preparing the voice…") leaves the voice's place on the screen, and after manual turning (including after an error and the end of the book) the start of the visible page; a selected paragraph survives a change of the panel's height; a window-size change there and back gives the same place; phone: landscape orientation does not turn on | 1 |
+| FR-I1 | test: all five ARBs have the same keys and placeholders; the phone's language by default, one not among the five gives English; the choice in the settings changes the labels at once, including the system Material ones; plural forms ru/pl; screenshots of the shelf, reading, player, settings in en, pl, de, uk and narrow ones in de, pl and uk | 1 |
+| FR-T1–T3 | tests of the real client with a dummy key and a fake HTTP: the request shape, error classes, `usage` in an error, the key scrubbed, the fingerprint changes with each profile field and the format | 2 |
+| FR-T4 | tests of splitting, correspondences, readiness, parts, the group tail | 2 |
+| FR-T7 | a test of the style table and the probe phrase: five languages (ru, en, pl, de, uk), others give English, a style without gender; the fingerprint changes with the style's language | 2 |
+| FR-T5 | phone: SC-2, item 5 | 2 |
+| FR-T6 | review before SC-2: there is no real transport in `test/` | 2 |
+| FR-Q1–Q4 | queue and session tests: the scenarios of А§9 and SC-2, items 1–4 | 2 |
+| FR-P1 | a test of each transition of А§6.6 on a fake player | 2 |
+| FR-P2 | phone: `DEVICE_CHECKLIST.md`, including the cover (or the placeholder with a letter) on the notification and lock-screen card; test: "Listen" and "next" by a controller call bypassing the screen turn following on | 2 |
+| FR-P3 | tests of the start place by the rule of А§5: the owner's scenario (a pause on a paragraph in the middle of a page → "Close" → "Listen": the same paragraph, the same page, following on); the listening place not on the page → the first sentence of the page, the same page; the tail of a sentence from the previous page is not read; a page inside one sentence → its start; right after "Listen" there is no "To current spot"; "Close" does not erase the listening place; "Read from here" starts from the beginning of the paragraph; continuing after a pause; a footnote mark after a period does not hide the start of the sentence; "fires / stays silent" pairs for rules (i) and (ii); the expected start of a sentence in the page tests is an independent check, not the same function; already in the prototype: `test/listen_owner_scenario_test.dart`, `test/listen_rule_test.dart`, `test/logic_review_test.dart`. The listening place in `state.json` after a restart: a test of the real `Library` | 2 |
+| FR-P4 | a test of highlighting by the correspondence list; tests: following is turned on by "Listen" from pause and from the error panel, "previous", "next", the table of contents (including the same chapter: the voice goes to its start), "To current spot"; turned off only by turning and the slider, including after an error and the end of the book; a small drag with a return, a cancelled gesture and a gesture while the panel is appearing do not turn following off; an automatic transition to the next paragraph does not turn it on; a finger that grabbed the page during an automatic turn and returned it turns following off; a selected paragraph does not run away after the voice and is cleared by a page change; "To current spot" and the voice chip in `preparing` and `waiting`; phone: following with a large font | 2 |
+| FR-P5 | test: a speed change makes zero requests, the speed is saved; the saved speed applies from the first sound, both in the caption and in the voice's advance over a second | 2 |
+| FR-P6 | a test of the caption for each state without sound and both causes of `stopped`; an unrecognized error is shown as Google's response without an explanation; an invalid key gets an explanation; "End of the book" has only "Close"; from `stopped` the sound does not start without "Listen" or "Read from here" | 2 |
+| FR-P7 | tests: no key, "Paste" saves, an entered key is saved on system "Back", the "Back" arrow and loss of focus, "Done" and "Back" on an empty key field do not erase the key, "Back" returns to the book without starting narration; 402, 404 on a fake HTTP; after 404 and choosing another model the panel names the previous one; an invalid key → "Change key" → the key field → "Back" to the book | 2 |
+| FR-P8 | a test of "Close" (when following and after manual turning) and of handing over the position at `stopped`; "Close" clears the sleep timer | 2 |
+| FR-P9 | the file exists and has been passed; the gesture items were passed already at the first installation at stage 1 | 1 (gestures); 2 |
+| FR-V1 | test: the voice screen pauses; a second sample without a request; after a model change the same voice's sample is narrated again; the sample is within the common limit; three states of a sample row; screenshots of both screen variants | 2 |
+| FR-V2 | test: a book's voice takes priority over the app's; choosing a book's voice in `idle` from the bottom panel; a change from `paused` keeps the pause; a profile change after a start from a sentence inside a block starts from the same sentence; touching the already chosen voice or model does not reset the pause place | 2 |
+| FR-V3, FR-M1 | a price test on a fake date before and after 01.01.2027 | 2 |
+| FR-M2 | a test of the sums for the current and the previous month at the tariff boundary; an error with `usage` is counted once | 2 |
+| FR-M3 | test: the space is shown, after clearing `audio/` and `samples/` are empty; clearing during a request | 2 |
+| FR-D1 | timer tests on a fake clock: "Close", leaving for the shelf and changing the book clear the timer, a change of place does not; the deadline expired on pause: "Listen" sounds; expired in `preparing` and `waiting`: a pause; expired after an error: "Read from here" sounds; "until the end of the chapter" from the sheet: a pause at the start of the next chapter; the end of the last chapter clears the timer; a screenshot of the panel with the "until the end of the chapter" timer | 3 |
+| FR-D2 | tests of the estimate, the fraction ready, "Stop", leaving and returning; the estimate after "Stop" is exactly the unready remainder and a proportional price; the task's block at its chapter when the reader is in another, and no second offer; a change of the book's voice: "narrated" is cleared, the task stopped, an estimate for the new profile; the chapter's block on a permanent error, after completion and after a stop, the player panel does not open; phone: airplane mode | 3 |
+| FR-D3 | a test of deleting a book's narration, including during a request; after "Clear narration" a chapter downloaded anew takes space again | 3 |
 
-## 5. Не делаем
+## 5. Out of scope
 
-Всё из раздела 7 концепции и раздела 10 архитектуры. Отдельно, чтобы не возвращалось в ходе реализации:
+Everything from section 7 of the concept and section 10 of the architecture. Separately, so that it does not come back
+during implementation:
 
-- поиск по тексту, закладки, выделения, заметки;
-- переносы по слогам, выравнивание по ширине, выбор гарнитуры;
-- применение CSS из EPUB, таблицы как таблицы, формулы, аудио и видео внутри EPUB;
-- книжная полка с папками, сортировками и поиском;
-- воспроизведение потокового ответа, пословная подсветка;
-- номер страницы в главе или книге: только доля книги;
-- автопродолжение после звонка и других прерываний;
-- пауза между отрезками без подтверждённой на слух нужды; между частями одного блока — никогда;
-- восстановление любой неверно объявленной кодировки: только три повреждения А§3;
-- фоновая загрузка главы при закрытом приложении; скачивание любой главы, кроме текущей;
-- мини-плеер на полке: панель плеера есть только на экране чтения;
-- виджет на домашний экран; текст абзаца и перемотка по секундам на карточке уведомления (решение владельца
-  2026-11-14);
-- альбомная ориентация: первая версия только портретная (Р10);
-- редактирование стиля чтения пользователем: стиль один, подобран в коде;
-- экран статистики расхода подробнее двух сумм;
-- проверка обновлений приложения, отчёты о сбоях;
-- сохранение данных при удалении приложения (`hasFragileUserData`): при удалении Android стирает всё — книги,
-  позиции, озвучку, ключ; вопроса «сохранить данные?» нет (решение владельца 2026-11-15: штатное поведение
-  правильнее).
-- Отдельный цвет для абзаца, выбранного долгим нажатием: он подсвечен тем же цветом, что и звучащий (решение
-  владельца 2026-11-16).
-- Правка сдвига листа «Вид текста» при смене темы (решение владельца 2026-11-16: не чинить).
+- text search, bookmarks, highlights, notes;
+- hyphenation by syllables, justification, choice of typeface;
+- applying CSS from EPUB, tables as tables, formulas, audio and video inside EPUB;
+- a bookshelf with folders, sorting and search;
+- playing the streaming response, word-by-word highlighting;
+- a page number within a chapter or book: only the fraction of the book;
+- automatic resumption after a call and other interruptions;
+- a pause between segments without a need confirmed by ear; between parts of one block, never;
+- recovery from any wrongly declared encoding: only the three kinds of damage of А§3;
+- background chapter download while the app is closed; downloading any chapter except the current one;
+- a mini-player on the shelf: the player panel exists only on the reading screen;
+- a home-screen widget; paragraph text and seeking by seconds on the notification card (owner's decision 2026-11-14);
+- landscape orientation: the first version is portrait only (Р10);
+- user editing of the reading style: there is one style, chosen in code;
+- a spending statistics screen more detailed than two sums;
+- app update checks, crash reports;
+- keeping data when the app is uninstalled (`hasFragileUserData`): on uninstall Android erases everything: books,
+  positions, narration, the key; there is no "keep data?" question (owner's decision 2026-11-15: the standard behavior
+  is more correct).
+- A separate color for a paragraph selected by long press: it is highlighted in the same color as the sounding one
+  (owner's decision 2026-11-16).
+- Fixing the shift of the "Text appearance" sheet on a theme change (owner's decision 2026-11-16: do not fix).
 
-## 6. Анти-регрессия
+## 6. Anti-regression
 
-- Тесты не обращаются к Gemini: настоящего сетевого транспорта в тестах нет. Платные вызовы — по правилу
-  `AGENTS.md`, «Деньги»: мелкий замер без вопроса, приёмка SC-2 — с согласия владельца.
-- Правила разбора — общие, по структуре файла; ни один тест и ни одно правило не называет конкретную книгу.
-- Ключ не появляется в логах, текстах ошибок, снимках экранов и репозитории.
-- Чужие книги в репозиторий не попадают: образцы — свои, книги владельца — в `test/local_books/` вне git.
-- То, что видно только на телефоне, не объявляется проверенным по виджет-тестам.
-- Тон подставной сборки не попадает в хранилище настоящей.
+- The tests do not call Gemini: there is no real network transport in the tests. Paid calls follow the `AGENTS.md`
+  rule, "Money": a small measurement without asking, SC-2 acceptance with the owner's consent.
+- The parsing rules are general, by the structure of the file; no test and no rule names a particular book.
+- The key does not appear in logs, error texts, screen screenshots or the repository.
+- Other people's books do not enter the repository: the samples are our own, the owner's books are in
+  `test/local_books/` outside git.
+- What is visible only on the phone is not declared verified by widget tests.
+- The tone of the fake build does not enter the real one's storage.
 
 ## Changelog
 
-- 2026-11-14 — черновик по архитектуре версии 2.
-- 2026-11-14 — после ревью Codex ([CODEX_REVIEW_SPEC_2026-11-14.md](../reviews/CODEX_REVIEW_SPEC_2026-11-14.md)),
-  все 22 находки приняты, архитектура поднята до версии 3. Этапов четыре; FR-L1, FR-L2, FR-M3, FR-D3 разнесены по
-  этапам; добавлены FR-E6, FR-Q4, FR-P8, FR-P9; переписаны FR-B2, FR-B4, FR-B6, FR-B7, FR-T1, FR-T4–T6, FR-P2,
-  FR-P5, FR-P6, FR-V1, FR-M2, FR-D1, FR-D2; убраны автопродолжение после звонка и обещание про любую кодировку;
-  приёмка дополнена сценариями находок 1–5 и таблицей «требование → чем проверяется».
-- 2026-11-14 — после ревью макета Codex ([CODEX_REVIEW_MOCKUP_2026-11-14.md](../reviews/CODEX_REVIEW_MOCKUP_2026-11-14.md)):
-  открытые вопросы владельцу в разделе 1; добавлено FR-R9 (переходы, А§8.1); переписаны FR-R8 (узкий экран, области
-  касания, системные области); дополнены FR-B2, FR-R3, FR-R5, FR-P4, FR-P6, FR-P7, FR-V1, FR-V2, FR-D1, FR-D2 и
-  таблица проверок; в «Не делаем» — мини-плеер на полке и скачивание не текущей главы.
-- 2026-11-14 — по Flutter-прототипу и его ревью Codex
-  ([CODEX_REVIEW_PROTOTYPE_2026-11-14.md](../reviews/CODEX_REVIEW_PROTOTYPE_2026-11-14.md)) и решениям владельца:
-  вид экранов задаёт прототип (`docs/prototype/`), макет FigCraft — справка по составу; FR-R3 — правило
-  оформления цитаты и стихов из README прототипа, картинка вместе с первой строкой подписи, длинные заголовок и
-  подпись продолжаются; FR-R6, FR-R8 — ступени и проверочная комбинация по-прежнему из `NOTES.md`, вид — из
-  прототипа; добавлены FR-I1 (интерфейс на ru, en, pl, de) и FR-T7 (стиль и фраза пробы по языку книги) и строки
-  таблицы проверок.
-- 2026-11-14 — по замечанию владельца 2026-11-14 (прототип, «Ионыч», пауза на абзаце в середине страницы →
-  «Закрыть» → «Слушать»: страница перелистнулась назад, зазвучал предыдущий длинный абзац, видна «К месту чтения»):
-  FR-P3 переписан — место прослушивания хранится отдельно от позиции чтения и не забывается; «Слушать» из `idle`
-  продолжает с него, если оно на странице, иначе начинает с первого предложения, начинающегося на странице, назад не
-  листает и включает следование. Прежнее «с первого блока на экране» и решение по находке №11 ревью прототипа
-  («с видимого хвоста абзаца») заменены. FR-P8 уточнён: «Закрыть» при следовании пишет звучавшее место. Согласованы
-  А§4 (`state.json`), А§5, А§6.1 (стартовый отрезок от предложения внутри блока), строка таблицы проверок.
-- 2026-11-14 — по независимой проверке путей пользователя 2026-11-14
-  ([JOURNEY_AUDIT_2026-11-14.md](../reviews/JOURNEY_AUDIT_2026-11-14.md); внутренняя проверка агентом, не ревью
-  другим движком): 16 находок и правила a–k по пробелам (приняты владельцем 2026-11-14). Переписаны FR-L4 (карточка «Продолжить»
-  только у открывавшейся книги, неоткрытые первыми, глава карточки по позиции, «дочитанная»), FR-P4 (что включает
-  и что выключает следование; оглавление во время прослушивания — голос к началу главы; выбранный абзац не уезжает),
-  FR-P6 (подпись состояния отдельной строкой, неверный ключ — распознанная причина, «Книга закончилась» — только
-  «Закрыть»), FR-P7 (пустое «Готово» не стирает ключ, 404 называет модель ошибки, «Изменить ключ»), FR-D1 (когда
-  таймер снимается и что делает истёкший срок без звука), FR-D2 (одна задача, блок у её главы, остаток, профиль в
-  контракте готовности, смена голоса останавливает задачу). Дополнены FR-R2 (второе касание во время анимации),
-  FR-R7 (якорь перераскладки), FR-R9 (системная «Назад» сначала закрывает временное), FR-P2, FR-P5 (сохранённая
-  скорость с первого звука), FR-P8 (снимает таймер, не откатывает «дочитанную»), FR-V2 (касание выбранного), строки
-  таблицы проверок.
-- 2026-11-14 — после ревью логики поведения Codex
-  ([CODEX_REVIEW_LOGIC_2026-11-14.md](../reviews/CODEX_REVIEW_LOGIC_2026-11-14.md)), 10 находок приняты, и по
-  решениям владельца 2026-11-14. FR-L4: «дочитана» — отдельный факт (ставят последняя страница, в том числе первая
-  раскладка одностраничной книги, и конец прослушивания; снимает только показ страницы раньше последней) — снято
-  противоречие со старым «раньше места дочитывания» в А§5. FR-P4: следование включает счётчик явных команд
-  контроллера (в том числе из уведомления и с гарнитуры), выключает только жест, сменивший страницу, или ползунок, в
-  том числе в `stopped`; «К месту чтения» — только в панели управления, в `stopped` её нет (снято противоречие с
-  панелью «Книга закончилась»). FR-P6: из `stopped` новый сеанс — «Слушать» или «Читать отсюда» (снято противоречие
-  «только явным „Слушать“» с контрактом). FR-V1: фраза пробы — по языку книги (FR-T7), проба — по полному профилю
-  (снято противоречие с «одной фразой-константой»). FR-P3: границы предложений — правила (i) и (ii) А§6.1 по тексту
-  для речи, принятое ограничение записано. Дополнены FR-R7 (выбор абзаца важнее якоря перераскладки), FR-P2
-  (команды извне; обложка или заглушка на карточке уведомления — решение владельца), FR-P5 (один источник
-  скорости), FR-P8, FR-V2 (смена профиля — с начала стартового отрезка), FR-D1 (истёкший срок перед любым явным
-  стартом, конец последней главы), FR-D3 (объём по хранилищу после очистки), «Не делаем» (виджет на домашний экран,
-  текст абзаца и перемотка на карточке уведомления), строки таблицы проверок. Правила a–k проверки путей и толкования
-  исполнителя по ним приняты владельцем 2026-11-14.
-- 2026-11-14 — по проверке жестов 2026-11-14 ([GESTURE_AUDIT_2026-11-14.md](../reviews/GESTURE_AUDIT_2026-11-14.md);
-  внутренняя проверка изолированным агентом, не ревью другим движком): 9 находок, решения оркестратора A–K. Добавлены
-  решения Р10 (только портретная ориентация), Р11 (порядок системной «Назад» в чтении — показать панели, а не закрыть
-  книгу; причина — краевой жест Android; заменяет правило f), Р12 (защита от касания вдогонку, 350 мс). Дополнены
-  FR-R2 (что листает: угол меньше 45° к горизонтали; касание вдогонку), FR-R3 (ближайший знак сноски), FR-R5
-  (касание бегунка без сдвига ничего не меняет), FR-R7 (поворота нет), FR-R8 (область касания не срезана формой,
-  портретная), FR-R9 (новый порядок «Назад»), FR-P4 (палец во время автопереворота; выбор снимается сменой страницы),
-  FR-P7 (ключ сохраняется при любом уходе с поля и экрана), FR-P9 (жесты на телефоне — уже на этапе 1), FR-D2 («Стоп»),
-  «Не делаем» (альбомная ориентация), строки таблицы проверок.
-- 2026-11-15 — реализация этапов 0 и 1 (агенты Codex, эксперимент — [EXPERIMENT_CODEX_IMPL.md](../reviews/EXPERIMENT_CODEX_IMPL.md))
-  и внешнее ревью этапа 1 двумя агентами Fable 5.2 ([FABLE_REVIEW_001_STAGE1_2026-11-15.md](../reviews/FABLE_REVIEW_001_STAGE1_2026-11-15.md)):
-  21 группа находок, принятые исправлены с тестами, отказы записаны там же с причинами. Уточнена архитектура:
-  именованные сущности XHTML раскрываются; запись оглавления EPUB на документ без текста главы не создаёт;
-  повреждённые данные не роняют запуск, удаление книги идёт через `tmp/`; раскладка считается от места, старт — с
-  виденной строки или начала блока; перераскладка сохраняет начало показанной страницы. Решения исполнителей,
-  принятые оркестратором: файл книги больше 256 МиБ отклоняется как неподдерживаемый; книга, открытая из другого
-  приложения, после добавления открывается сразу, выбранная кнопкой «+» — остаётся на полке; системный «жирный
-  шрифт» на текст книги не действует (измерение и отрисовка одним стилем); `launchMode="singleTask"`. Пересняты 36
-  эталонных снимков: три — из-за нижнего отступа полки, 33 — из-за раскладки от места (страница сцены начинается с
-  начала абзаца); оформление не менялось. SC-0 пройден, кроме замеров FR-E6. SC-1 не пройден: телефон и книги
-  владельца.
-- 2026-11-15 — проверка этапа 1 на телефоне владельца (через `adb`, книги владельца в FB2) и на `test/local_books/`
-  (три FB2: разбор без отказов, инварианты FR-B7 выполняются). Работают: добавление кнопкой «+», «Открыть с помощью»
-  в живое приложение (один экземпляр), листание, оглавление, ползунок, шрифт и тема, место после убитого процесса,
-  системная «Назад», удаление, возврат из «Недавних» без повторного открытия файла. Найдено и исправлено пять
-  дефектов. Решения оркестратора: `VIEW` и `SEND` принимают `application/octet-stream` без условия на имя — иначе
-  FB2 из файлового менеджера (тип «двоичный файл», непрозрачный адрес) приложение не предлагает; цена — приложение
-  есть в «Открыть с помощью» и для посторонних двоичных файлов (FR-L2). Глава без названия показывается в
-  оглавлении, на карточке полки и в шапке началом своего текста (FR-R4). Доля недочитанной книги — не больше 99 %,
-  «100 %» только у дочитанной (FR-L4). Не проверено на телефоне: окно сноски, системный «жирный шрифт», EPUB и
-  FB2.ZIP (таких книг у владельца в наборе нет), жесты FR-P9 рукой владельца.
-- 2026-11-15 — повторная проверка на телефоне после исправлений: FB2 как «двоичный файл» с непрозрачным адресом
-  приложение принимает (а ZIP, PDF и картинку с таким адресом — нет), системные панели идут за темой, оглавление
-  кончается над панелью кнопок, глава без названия подписана началом текста, окно сноски открывается. По книге
-  владельца: `title` раздела сноски FB2 — её знак, в текст сноски не идёт (FR-B3); версия разбора — 3.
-- 2026-11-15 — **этап 1 принят владельцем (SC-1)**. Начат этап 2 «Озвучка». Замер на мобильной сети (FR-E6) владелец
-  включит, когда понадобится; `L`, `Lmin` и цель запаса до него — стартовые значения А§6.1, А§6.3.
-- 2026-11-15 — решение владельца по платной приёмке SC-2: целую главу читать не обязательно — владелец сам
-  выборочно слушает разные абзацы настоящим голосом. Пункты SC-2 «сумма в настройках сходится с расчётом по `usage`»,
-  «повтор того же места не делает запросов», «стартовая пара при 2×» и «страницы перелистываются вслед за голосом»
-  проверяются на этих же абзацах, без отдельной главы.
-- 2026-11-15 — вопрос владельца об очистке при удалении приложения. Проверено по коду: всё хранится во внутренней
-  папке приложения и его кеше (книги, звук, настройки, расход; временное — в `tmp/` и кеше, чистится при запуске),
-  ключ — в защищённом хранилище; в общую память приложение не пишет. Android удаляет это вместе с приложением.
-  Сохранять данные при удалении не будем — записано в «Не делаем». На телефоне не проверялось.
-- 2026-11-15 — первая проверка этапа 2 на телефоне, сборка с подставным голосом (`.fake`), через `adb`. Найдено и
-  исправлено: приложение падало при запуске — `MainActivity` обращалась к каналам платформы в `onCreate`, а
-  `FlutterFragmentActivity` настраивает движок позже; тесты этого показать не могли. После правки работают: приём
-  книги через «Открыть с помощью», «Слушать» (ожидание, затем звук), подсветка и следование страницы за голосом,
-  звук при свёрнутом приложении службой типа «воспроизведение медиа», системная карточка с обложкой, названием и
-  кнопками (перемотка не включена), пауза, продолжение и «вперёд» медиа-клавишами, уведомление на паузе остаётся,
-  «Закрыть» снимает сессию; кодировщик AAC пишет звук (≈ 1 МБ на несколько минут); подставная сборка стоит рядом с
-  настоящей. Владелец на слух: тон сплошной. Замечено: подставная сборка показывает в «Потрачено» сумму по
-  подставным токенам — денег за ней нет. Не проверено: настоящий голос, погашенный экран, экран блокировки,
-  гарнитура, звонок, «Скачать главу», удаление приложения.
-- 2026-11-15 — первое прослушивание настоящим голосом владельцем на телефоне. **Голос и скорость приняты:** «голос
-  звучит отлично, паузы только для подготовки аудиоотрезка, претензий к скорости и голосу нет». Найдено: после
-  «вперёд» — страница из одной строки и выключенное следование (исправляется). Решение владельца: «назад» и «вперёд»
-  переходят по абзацам, а не по отрезкам (А§6.6); платный запрос — только при переходе в середину группы коротких
-  абзацев.
-- 2026-11-15 — уточнение владельца на слух (настоящий голос, домашняя сеть): посреди ровного прослушивания пауз
-  нет, переходы между абзацами естественные; ожидание — только на новом старте. Стыки файлов AAC и запас в 120 с
-  на этой сети подтверждены; паузу между отрезками добавлять не нужно (А§6.6, А§11).
-- 2026-11-15 — замечание владельца: после паузы, листания и «продолжить» экран возвращался на страницу, заново
-  разложенную от места голоса (звучащий фрагмент сверху). Правило в А§5: возврат к месту, лежащему на уже
-  посчитанной странице, показывает эту страницу без изменения положения текста (FR-P4, FR-R7).
-- 2026-11-15 — по замечаниям владельца с телефона (ветка `s002-nav`): «вперёд» показывал страницу из одной строки —
-  целью выбиралась укороченная страница перед местом старта раскладки; после команды плеера выключалось следование —
-  его выключало завершение прежнего листания. Исправлено. «Назад/вперёд» переведены на абзацы, возврат к виденному
-  месту показывает ту же страницу (А§5, А§6.6). Название главы на карточке «Продолжить» и в шапке чтения — не больше
-  двух строк с многоточием (на телефоне длинное название занимало восемь строк); прежнее «переносится без
-  ограничения» отменено. На телефоне ещё не проверено.
-- 2026-11-15 — этап 3, книги в TXT (ветка `s003-txt`): разбор по FR-B5, приём `.txt` / `text/plain` кнопкой «+»,
-  «Открыть с помощью» и «Поделиться» файлом; текст без файла (`EXTRA_TEXT`) не принимается. Название книги — имя
-  файла без расширения. Уточнение FR-B5: правило «абзац — строка» включается, когда пустой строки нет между строками
-  текста; пустые строки только в начале и в конце файла не считаются. Оставлено по правилу, без эвристик: перенос
-  слова через дефис в конце строки становится «Пере- нос», заголовок без пустой строки склеивается с текстом. На
-  телефоне не проверено.
-- 2026-11-15 — проверка на телефоне (подставная сборка): «назад/вперёд» идут по абзацам, страницы полные, следование
-  после команд включено; книга TXT в windows-1251 открывается через «Открыть с помощью». Возврат на виденную страницу
-  на телефоне сначала не работал: кнопка «К месту чтения» меняет высоту панели, и раскладка пересчитывалась; экран
-  теперь хранит прежнюю раскладку (ветка `s002-nav3`), повторная проверка на телефоне прошла. Попутно добавлено:
-  следование включается само, когда голос дошёл до показанной страницы (А§5) — ждёт слова владельца.
-- 2026-11-15 — внешнее ревью пачки «переходы и TXT»
-  ([FABLE_REVIEW_001_NAV_TXT_2026-11-15.md](../reviews/FABLE_REVIEW_001_NAV_TXT_2026-11-15.md)): ДОРАБОТАТЬ, без
-  блокирующих. Исправлено (ветка `s003-revfix`): язык книги без языка в файле фиксируется при добавлении — язык
-  интерфейса на этот момент, уже лежащие на полке книги не меняются (решение владельца 2026-11-15: «ок, тем более что
-  txt вряд ли когда-то будут нужны»); «Поделиться» без файла молча игнорируется; у названия TXT срезается только
-  `.txt`; пустое название не роняет заглушку обложки. Находки по экрану чтения исправлены (ветка `s002-nav3`).
-- 2026-11-15 — замечание владельца: после «вперёд» листание назад показывает обрезанную страницу (половина экрана
-  или несколько строк); его же вопрос: «почему нельзя сохранять тот вид с тем текстом, который был до листания
-  назад?». Сделано оба (ветка `s002-nav5`, А§5): близкая цель продолжает прежнюю раскладку, а не начинает новую;
-  страницы перед местом старта дальней раскладки набираются назад и заполнены, с повтором нескольких строк только
-  между первой и второй страницей главы. Прежнее допущение «короткая страница перед местом старта» отменено.
-  На телефоне не проверено. Владелец попросил свой значок приложения и оставить на телефоне одно приложение:
-  значок сделан (`docs/logo.svg`), сборка с подставным голосом с телефона удалена.
-- 2026-11-15 — CI на GitHub был красным около пятнадцати отправок подряд: сборке APK не хватало места на диске
-  раннера с тех пор, как появились плеер и медиаслужба. Оркестратор этого не замечал — сверял только локальный
-  прогон. В CI добавлена очистка диска; прогон зелёный.
-- 2026-11-15 — решение владельца: следование включается само, когда голос дошёл до показанной страницы, — оставить
+- 2026-11-14 — a draft from architecture version 2.
+- 2026-11-14 — after the Codex review ([CODEX_REVIEW_SPEC_2026-11-14.md](../reviews/CODEX_REVIEW_SPEC_2026-11-14.md)),
+  all 22 findings accepted, the architecture raised to version 3. Four stages; FR-L1, FR-L2, FR-M3, FR-D3 distributed
+  across the stages; FR-E6, FR-Q4, FR-P8, FR-P9 added; FR-B2, FR-B4, FR-B6, FR-B7, FR-T1, FR-T4–T6, FR-P2, FR-P5,
+  FR-P6, FR-V1, FR-M2, FR-D1, FR-D2 rewritten; automatic resumption after a call and the promise about any encoding
+  removed; acceptance supplemented with the scenarios of findings 1–5 and the "requirement → how it is verified" table.
+- 2026-11-14 — after the Codex mock-up review ([CODEX_REVIEW_MOCKUP_2026-11-14.md](../reviews/CODEX_REVIEW_MOCKUP_2026-11-14.md)):
+  open questions to the owner in section 1; FR-R9 added (transitions, А§8.1); FR-R8 rewritten (narrow screen, touch
+  targets, system areas); FR-B2, FR-R3, FR-R5, FR-P4, FR-P6, FR-P7, FR-V1, FR-V2, FR-D1, FR-D2 and the table of checks
+  supplemented; in "Out of scope": a mini-player on the shelf and downloading a chapter other than the current one.
+- 2026-11-14 — after the Flutter prototype and its Codex review
+  ([CODEX_REVIEW_PROTOTYPE_2026-11-14.md](../reviews/CODEX_REVIEW_PROTOTYPE_2026-11-14.md)) and the owner's decisions:
+  the look of the screens is set by the prototype (`docs/prototype/`), the FigCraft mock-up is a reference for the set
+  of screens; FR-R3: the quote and verse styling rule from the prototype README, the picture together with the first
+  line of the caption, a long heading and caption continue; FR-R6, FR-R8: the steps and the test combination are still
+  from `NOTES.md`, the look from the prototype; FR-I1 (the interface in ru, en, pl, de) and FR-T7 (style and probe
+  phrase by the book's language) and rows of the checks table added.
+- 2026-11-14 — from the owner's remark of 2026-11-14 (prototype, "Ионыч" — "Ionych" — a pause on a paragraph in the
+  middle of a page → "Close" → "Listen": the page turned back, the previous long paragraph sounded, "To current spot"
+  is visible): FR-P3 rewritten: the listening place is stored separately from the reading position and is not
+  forgotten; "Listen" from `idle` continues from it if it is on the page, otherwise starts from the first sentence that
+  begins on the page, does not turn back and turns following on. The earlier "from the first block on the screen" and
+  the decision on finding No. 11 of the prototype review ("from the visible tail of a paragraph") are replaced. FR-P8
+  refined: "Close" when following writes the sounding place. А§4 (`state.json`), А§5, А§6.1 (the start segment from a
+  sentence inside a block) and a row of the checks table aligned.
+- 2026-11-14 — from the independent user-journey audit of 2026-11-14
+  ([JOURNEY_AUDIT_2026-11-14.md](../reviews/JOURNEY_AUDIT_2026-11-14.md); an internal audit by an agent, not a review by
+  another engine): 16 findings and rules a–k for the gaps (accepted by the owner 2026-11-14). Rewritten: FR-L4 (the
+  "Continue" card only for a book that has been opened, unopened ones first, the card's chapter by position,
+  "finished"), FR-P4 (what turns following on and what turns it off; the table of contents during listening moves the
+  voice to the start of the chapter; a selected paragraph does not run away), FR-P6 (the state caption on a separate
+  row, an invalid key is a recognized cause, "End of the book" only "Close"), FR-P7 (an empty "Done" does not erase the
+  key, 404 names the model of the error, "Change key"), FR-D1 (when the timer is cleared and what an expired deadline
+  does without sound), FR-D2 (one task, the block at its chapter, the remainder, the profile in the readiness contract,
+  a voice change stops the task). Supplemented: FR-R2 (a second tap during the animation), FR-R7 (the re-layout
+  anchor), FR-R9 (the system "Back" first closes the temporary), FR-P2, FR-P5 (the saved speed from the first sound),
+  FR-P8 (clears the timer, does not roll back "finished"), FR-V2 (touching the selected one), rows of the checks table.
+- 2026-11-14 — after the Codex behavior-logic review
+  ([CODEX_REVIEW_LOGIC_2026-11-14.md](../reviews/CODEX_REVIEW_LOGIC_2026-11-14.md)), 10 findings accepted, and by the
+  owner's decisions of 2026-11-14. FR-L4: "finished" is a separate fact (set by the last page, including the first
+  layout of a one-page book, and by the end of listening; cleared only by showing a page earlier than the last): the
+  contradiction with the old "earlier than the finishing place" in А§5 is removed. FR-P4: following is turned on by the
+  controller's explicit-command counter (including from the notification and the headset), turned off only by a gesture
+  that changed the page, or by the slider, including in `stopped`; "To current spot" only in the control panel, absent
+  in `stopped` (the contradiction with the "End of the book" panel is removed). FR-P6: from `stopped` a new session is
+  "Listen" or "Read from here" (the contradiction of "only an explicit 'Listen'" with the contract is removed). FR-V1:
+  the probe phrase follows the book's language (FR-T7), the probe uses the full profile (the contradiction with "one
+  constant phrase" is removed). FR-P3: sentence boundaries are rules (i) and (ii) of А§6.1 over the speech text, the
+  accepted limitation is recorded. Supplemented: FR-R7 (a paragraph selection beats the re-layout anchor), FR-P2
+  (commands from outside; a cover or placeholder on the notification card, the owner's decision), FR-P5 (one source of
+  speed), FR-P8, FR-V2 (a profile change starts from the start segment), FR-D1 (an expired deadline before any explicit
+  start, the end of the last chapter), FR-D3 (the amount by the storage after clearing), "Out of scope" (a home-screen
+  widget, paragraph text and seeking on the notification card), rows of the checks table. Rules a–k of the journey audit
+  and the implementer's interpretations of them were accepted by the owner on 2026-11-14.
+- 2026-11-14 — from the gesture audit of 2026-11-14 ([GESTURE_AUDIT_2026-11-14.md](../reviews/GESTURE_AUDIT_2026-11-14.md);
+  an internal audit by an isolated agent, not a review by another engine): 9 findings, the orchestrator's decisions A–K.
+  Added decisions Р10 (portrait orientation only), Р11 (the order of the system "Back" in reading: show the panels
+  rather than close the book; reason: the Android edge gesture; replaces rule f), Р12 (protection against a follow-up
+  tap, 350 ms). Supplemented: FR-R2 (what turns pages: an angle under 45° to the horizontal; the follow-up tap), FR-R3
+  (the nearest footnote mark), FR-R5 (touching the thumb without moving changes nothing), FR-R7 (there is no
+  rotation), FR-R8 (the touch target is not cut off by the shape, portrait), FR-R9 (the new "Back" order), FR-P4 (a
+  finger during an automatic turn; the selection is cleared by a page change), FR-P7 (the key is saved on any departure
+  from the field and the screen), FR-P9 (gestures on the phone already at stage 1), FR-D2 ("Stop"), "Out of scope"
+  (landscape orientation), rows of the checks table.
+- 2026-11-15 — implementation of stages 0 and 1 (Codex agents, an experiment: [EXPERIMENT_CODEX_IMPL.md](../reviews/EXPERIMENT_CODEX_IMPL.md))
+  and an external review of stage 1 by two Fable 5.2 agents ([FABLE_REVIEW_001_STAGE1_2026-11-15.md](../reviews/FABLE_REVIEW_001_STAGE1_2026-11-15.md)):
+  21 groups of findings, the accepted ones fixed with tests, the rejections recorded there with reasons. The
+  architecture refined: named XHTML entities are expanded; an EPUB table-of-contents entry for a document without
+  chapter text creates no entry; corrupted data does not crash startup, book deletion goes through `tmp/`; the layout
+  is computed from the place, the start is from the seen line or the start of the block; a re-layout keeps the start of
+  the shown page. Implementers' decisions accepted by the orchestrator: a book file larger than 256 MiB is rejected as
+  unsupported; a book opened from another app opens at once after adding, one chosen with the "+" button stays on the
+  shelf; the system "bold text" does not apply to the book text (measuring and drawing use one style);
+  `launchMode="singleTask"`. 36 golden screenshots were retaken: three because of the shelf's bottom inset, 33 because
+  of the layout from the place (a scene's page starts from the start of a paragraph); the styling did not change. SC-0
+  passed, except for the FR-E6 measurements. SC-1 not passed: the phone and the owner's books.
+- 2026-11-15 — a check of stage 1 on the owner's phone (via `adb`, the owner's books in FB2) and on `test/local_books/`
+  (three FB2: parsing without refusals, the FR-B7 invariants hold). Working: adding with the "+" button, "Open with"
+  into the live app (one instance), turning, the table of contents, the slider, font and theme, the place after a
+  killed process, the system "Back", deletion, returning from "Recents" without reopening the file. Five defects found
+  and fixed. The orchestrator's decisions: `VIEW` and `SEND` accept `application/octet-stream` with no condition on the
+  name: otherwise the app is not offered for an FB2 from the file manager (type "binary file", an opaque address); the
+  price is that the app is in "Open with" also for foreign binary files (FR-L2). A chapter without a title is shown in
+  the table of contents, on the shelf card and in the header by the beginning of its text (FR-R4). The fraction of an
+  unfinished book is at most 99 %, "100 %" only for a finished one (FR-L4). Not checked on the phone: the footnote
+  window, the system "bold text", EPUB and FB2.ZIP (the owner has no such books in the set), the FR-P9 gestures by the
+  owner's hand.
+- 2026-11-15 — a repeat check on the phone after the fixes: an FB2 as a "binary file" with an opaque address is accepted
+  by the app (while a ZIP, PDF and picture with such an address are not), the system bars follow the theme, the table of
+  contents ends above the button panel, a chapter without a title is captioned by the beginning of its text, the
+  footnote window opens. From the owner's book: the `title` of an FB2 footnote section is its mark and does not go into
+  the footnote text (FR-B3); the parsing version is 3.
+- 2026-11-15 — **stage 1 accepted by the owner (SC-1)**. Stage 2 "Narration" begun. The owner will turn on the
+  measurement on a mobile network (FR-E6) when it is needed; `L`, `Lmin` and the reserve target before it are the
+  starting values of А§6.1, А§6.3.
+- 2026-11-15 — the owner's decision on the paid SC-2 acceptance: it is not necessary to read a whole chapter: the owner
+  selectively listens to different paragraphs with the real voice themselves. The SC-2 items "the sum in the settings
+  matches the calculation from `usage`", "repeating the same place makes no requests", "the start pair at 2×" and "the
+  pages turn after the voice" are checked on those same paragraphs, without a separate chapter.
+- 2026-11-15 — the owner's question about cleanup on app uninstall. Checked in the code: everything is stored in the
+  app's internal folder and its cache (books, audio, settings, spending; temporary files in `tmp/` and the cache,
+  cleaned at startup), the key in the protected storage; the app writes nothing to shared storage. Android deletes this
+  together with the app. We will not keep data on uninstall: recorded in "Out of scope". Not checked on the phone.
+- 2026-11-15 — the first check of stage 2 on the phone, a build with a fake voice (`.fake`), via `adb`. Found and fixed:
+  the app crashed at startup: `MainActivity` accessed the platform channels in `onCreate`, while
+  `FlutterFragmentActivity` configures the engine later; the tests could not show this. After the fix, working: taking
+  a book through "Open with", "Listen" (waiting, then sound), highlighting and the page following the voice, sound with
+  the app minimized by a service of the "media playback" type, the system card with the cover, title and buttons
+  (seeking is not enabled), pause, resume and "next" by media keys, the notification stays on pause, "Close" removes
+  the session; the AAC encoder writes audio (≈ 1 MB per several minutes); the fake build stands next to the real one.
+  The owner by ear: the tone is continuous. Noticed: the fake build shows in "Spent" a sum from fake tokens: there is
+  no money behind it. Not checked: the real voice, the screen off, the lock screen, the headset, a call, "Download
+  chapter", uninstalling the app.
+- 2026-11-15 — the owner's first listening with the real voice on the phone. **Voice and speed accepted:** "the voice
+  sounds great, the pauses are only for preparing an audio segment, no complaints about the speed or the voice". Found:
+  after "next" a one-line page and following switched off (being fixed). The owner's decision: "previous" and "next"
+  move by paragraphs, not by segments (А§6.6); a paid request only when moving to the middle of a group of short
+  paragraphs.
+- 2026-11-15 — the owner's clarification by ear (real voice, home network): in the middle of steady listening there are
+  no pauses, the transitions between paragraphs are natural; waiting only at a new start. The AAC file joins and the
+  120 s reserve are confirmed on this network; there is no need to add a pause between segments (А§6.6, А§11).
+- 2026-11-15 — the owner's remark: after a pause, turning and "resume" the screen returned to a page re-laid out from
+  the voice's place (the sounding fragment at the top). The rule in А§5: returning to a place that lies on an
+  already computed page shows that page without changing the text's position (FR-P4, FR-R7).
+- 2026-11-15 — from the owner's remarks from the phone (branch `s002-nav`): "next" showed a one-line page: the target
+  chosen was a shortened page before the layout's start place; after a player command following was switched off: it
+  was switched off by the completion of the earlier turning. Fixed. "Previous/next" moved to paragraphs, returning to a
+  seen place shows the same page (А§5, А§6.6). The chapter title on the "Continue" card and in the reading header is at
+  most two lines with an ellipsis (on the phone a long title took eight lines); the earlier "wraps without limit" is
+  cancelled. Not yet checked on the phone.
+- 2026-11-15 — stage 3, TXT books (branch `s003-txt`): parsing per FR-B5, accepting `.txt` / `text/plain` by the "+"
+  button, "Open with" and "Share" of a file; text without a file (`EXTRA_TEXT`) is not accepted. The book's title is
+  the file name without the extension. FR-B5 refined: the "a paragraph is a line" rule turns on when there is no empty
+  line between lines of text; empty lines only at the beginning and end of the file do not count. Left by the rule,
+  without heuristics: a hyphenated word break at the end of a line becomes "Пере- нос" (a word split across a line
+  break, "Pere- nos"), a heading without an empty line is glued to the text. Not checked on the phone.
+- 2026-11-15 — a check on the phone (fake build): "previous/next" go by paragraphs, the pages are full, following after
+  the commands is on; a windows-1251 TXT book opens through "Open with". Returning to a seen page at first did not work
+  on the phone: the "To current spot" button changes the panel's height, and the layout was recomputed; the screen now
+  keeps the previous layout (branch `s002-nav3`), the repeat check on the phone passed. Added along the way: following
+  turns on by itself when the voice has reached the shown page (А§5): awaiting the owner's word.
+- 2026-11-15 — an external review of the "transitions and TXT" batch
+  ([FABLE_REVIEW_001_NAV_TXT_2026-11-15.md](../reviews/FABLE_REVIEW_001_NAV_TXT_2026-11-15.md)): NEEDS WORK, no
+  blockers. Fixed (branch `s003-revfix`): the language of a book without a language in the file is fixed at adding:
+  the interface language at that moment, books already on the shelf do not change (the owner's decision 2026-11-15:
+  "ok, especially since txt will hardly ever be needed"); "Share" without a file is silently ignored; of a TXT title
+  only `.txt` is cut off; an empty title does not crash the cover placeholder. Findings on the reading screen fixed
+  (branch `s002-nav3`).
+- 2026-11-15 — the owner's remark: after "next", turning back shows a cut-off page (half a screen or a few lines); and
+  his question: "why can't we keep that view with the text that was before turning back?". Both done (branch
+  `s002-nav5`, А§5): a nearby target continues the previous layout instead of starting a new one; the pages before the
+  start place of a far layout are collected backwards and are full, with a repeat of a few lines only between the
+  first and second page of a chapter. The earlier assumption "a short page before the start place" is cancelled. Not
+  checked on the phone. The owner asked for an app icon of their own and to leave one app on the phone: the icon is made
+  (`docs/logo.svg`), the fake-voice build is removed from the phone.
+- 2026-11-15 — CI on GitHub had been red for about fifteen pushes in a row: the APK build ran out of disk space on the
+  runner ever since the player and the media service appeared. The orchestrator did not notice: it only compared the
+  local run. Disk cleanup added to CI; the run is green.
+- 2026-11-15 — the owner's decision: following turns on by itself when the voice has reached the shown page: keep
   (А§5).
-- 2026-11-15 — владелец усомнился, что причина дефектов «текст не такой, как я видел» найдена, и попросил два
-  независимых ревью экрана чтения (Opus 5.5 и gpt-6-astra, оба high;
-  [READER_SCREEN_REVIEW_2026-11-15.md](../reviews/READER_SCREEN_REVIEW_2026-11-15.md)). Оба сошлись: высота страницы
-  зависела от состояния панели плеера, а у перехода между страницами нет одного владельца. Решение владельца: кнопка
-  «К месту чтения» — значком. Сделано (ветка `s004-stable`): высота панели постоянна, подпись состояния переехала в
-  верхнюю строку (FR-P6 изменён), код вокруг меняющейся высоты удалён, найденные ревью дефекты управления исправлены,
-  добавлен покадровый тест свойств экрана. Не сделано: ленивый досчёт назад в глубине длинной главы; полная замена
-  модели навигации — не понадобилась в проверенных сценариях. На телефоне не проверено.
-- 2026-11-16 — экран чтения после работы `s004-stable` проверен на телефоне владельца (подставная сборка из
-  `35a2304`, оркестратор через adb): при «Слушать» текст не перекладывается ни на «Готовлю голос…», ни при начале
-  звука, ни при скрытии системных панелей; после «вперёд» ×3 и паузы первое же касание «назад» листает, страницы
-  полные, текст между соседними страницами не рвётся; «продолжить» возвращает ту же страницу с теми же границами;
-  «К месту чтения» — значок, высота панели не меняется. Не измерено: задержка первого «назад» в глубине длинной
-  главы. Подставная сборка с телефона удалена — на нём одно приложение. Настоящим голосом проверяет владелец.
-- 2026-11-16 — полная проверка на телефоне по [DEVICE_CHECKLIST.md](../DEVICE_CHECKLIST.md), по просьбе владельца
-  («чтобы я не находил примитивные баги сам»); проходили два агента-тестировщика (Sonnet) через adb, release-сборки.
-  Подставная сборка: полка, «Открыть с помощью» (FB2, без дубля), чтение (жесты, оглавление, ползунок, шрифт, темы,
-  сноска, место после перезапуска), плеер (следование, пауза, переходы, «К месту чтения», «Читать отсюда», скорость,
-  таймер сна, голос и проба, конец главы и книги, «Скачать главу», «Удалить озвучку»), фон (уведомление, кнопки
-  гарнитуры эмуляцией, возврат) — без функциональных замечаний, кроме одного дефекта. Дефект: уведомление и
-  foreground-служба оставались после конца книги, закрытия плеера и закрытия прослушивания другой книгой — пакет
-  `audio_service` при idle вызывает только `stopSelf`, а foreground снимает в `onDestroy`, который не наступает при
-  привязанном приложении. Исправлено (`s009-notification`): команда `stopForeground` в `MediaServiceChannel.kt`
-  (reflection к полю `instance` закреплённого `audio_service` 0.18.19 — при обновлении пакета проверить), новое
-  «Слушать» ждёт снятия. Проверено на телефоне на release-сборке: семь сценариев, три цикла «слушать → закрыть».
-  Ещё исправлено: чип голоса обрезал длинное имя при свободном месте (`s008-voice-chip`; два эталонных снимка узкого
-  экрана пересняты — имя там теперь помещается). Настоящая сборка: одно «Слушать», звук через 6,8 с, расход
-  0,38 $ → 0,40 $. Не проверено: погашенный экран и экран блокировки, звонок, наушники, чужой звук, крупный
-  системный шрифт, EPUB / FB2.ZIP / TXT на телефоне (таких файлов на нём нет), речь на слух. Открытые замечания
-  вида, без решения владельца: выбранный абзац и звучащий подсвечены одним цветом; лист «Вид текста» сдвигается
-  при смене темы.
-- 2026-11-16 — решения владельца по двум замечаниям вида с проверки на телефоне: выбранный абзац остаётся того же
-  цвета, что звучащий; сдвиг листа «Вид текста» при смене темы не чинится. Оба записаны в «Не делаем».
-- 2026-11-16 — решение владельца: после выбора главы в оглавлении панели экрана чтения (шапка и нижняя панель с
-  «Слушать») не мелькают, экран показывается сразу без них; с какого абзаца слушать, читатель выбирает сам. Сделано
-  (`s011-toc-panels`): при выборе главы в `reader_screen.dart` меняются ключи двух `_Slide`, панели пересоздаются уже
-  скрытыми (+6/−1 строка); тест `test/reader_screen_toc_panels_test.dart` — три покадровых: выбор главы (панелей нет
-  ни в одном кадре), крестик и системная «Назад» (панели остаются). Проверено на телефоне
-  в тот же день (release-сборка, номер 2, запись экрана двух переходов по кадрам): панелей нет ни в одном кадре.
+- 2026-11-15 — the owner doubted that the cause of the defects "the text is not what I saw" had been found and asked for
+  two independent reviews of the reading screen (Opus 5.5 and gpt-6-astra, both high;
+  [READER_SCREEN_REVIEW_2026-11-15.md](../reviews/READER_SCREEN_REVIEW_2026-11-15.md)). Both agreed: the page height
+  depended on the player panel's state, and the transition between pages has no single owner. The owner's decision: the
+  "To current spot" button as an icon. Done (branch `s004-stable`): the panel's height is constant, the state caption
+  moved to the top row (FR-P6 changed), the code around the changing height removed, the control defects found by the
+  review fixed, a frame-by-frame screen property test added. Not done: lazy backward computation deep in a long
+  chapter; a full replacement of the navigation model was not needed in the scenarios checked. Not checked on the
+  phone.
+- 2026-11-16 — the reading screen after the `s004-stable` work was checked on the owner's phone (fake build from
+  `35a2304`, the orchestrator via adb): on "Listen" the text is not re-laid out either for "Preparing the voice…", or
+  when the sound starts, or when the system bars hide; after "next" ×3 and a pause the very first "previous" tap turns,
+  the pages are full, the text between adjacent pages is not torn; "resume" returns the same page with the same
+  boundaries; "To current spot" is an icon, the panel's height does not change. Not measured: the delay of the first
+  "previous" deep in a long chapter. The fake build is removed from the phone: there is one app on it. The real voice
+  is checked by the owner.
+- 2026-11-16 — a full check on the phone per [DEVICE_CHECKLIST.md](../DEVICE_CHECKLIST.md), at the owner's request ("so
+  that I do not find primitive bugs myself"); two tester agents (Sonnet) went through it via adb, release builds. Fake
+  build: shelf, "Open with" (FB2, no duplicate), reading (gestures, table of contents, slider, font, themes, footnote,
+  the place after a restart), player (following, pause, transitions, "To current spot", "Read from here", speed, sleep
+  timer, voice and probe, end of chapter and book, "Download chapter", "Delete narration"), background (notification,
+  headset buttons by emulation, return): no functional remarks, except for one defect. The defect: the notification
+  and the foreground service remained after the end of the book, closing the player and closing the listening with
+  another book: the `audio_service` package on idle calls only `stopSelf`, and drops the foreground in `onDestroy`,
+  which does not occur while the app is bound. Fixed (`s009-notification`): a `stopForeground` command in
+  `MediaServiceChannel.kt` (reflection to the `instance` field of the pinned `audio_service` 0.18.19: check it when
+  updating the package), a new "Listen" waits for the removal. Checked on the phone on a release build: seven scenarios,
+  three "listen → close" cycles. Also fixed: the voice chip cut off a long name with free space available
+  (`s008-voice-chip`; two golden screenshots of the narrow screen retaken: the name now fits there). Real build: one
+  "Listen", sound after 6.8 s, spending 0.38 $ → 0.40 $. Not checked: the screen off and the lock screen, a call,
+  headphones, foreign audio, a large system font, EPUB / FB2.ZIP / TXT on the phone (there are no such files on it),
+  the speech by ear. Open remarks on the look, without the owner's decision: the selected and the sounding paragraph are
+  highlighted in one color; the "Text appearance" sheet shifts on a theme change.
+- 2026-11-16 — the owner's decisions on two look remarks from the phone check: the selected paragraph stays the same
+  color as the sounding one; the shift of the "Text appearance" sheet on a theme change is not fixed. Both recorded in
+  "Out of scope".
+- 2026-11-16 — the owner's decision: after choosing a chapter in the table of contents, the reading screen's panels (the
+  header and the bottom panel with "Listen") do not flash, the screen shows at once without them; which paragraph to
+  listen from, the reader chooses themselves. Done (`s011-toc-panels`): on choosing a chapter in `reader_screen.dart`
+  the keys of two `_Slide`s change, the panels are recreated already hidden (+6/−1 lines); the test
+  `test/reader_screen_toc_panels_test.dart` has three frame-by-frame cases: choosing a chapter (no panels in any
+  frame), the cross and the system "Back" (the panels stay). Checked on the phone the same day (release build, number
+  2, a screen recording of two transitions frame by frame): no panels in any frame.
+- 2026-11-17 — Ukrainian (uk) added as the fifth interface language by the owner's decision: FR-I1 (five languages, the
+  "Language" item, five ARB files), FR-R8 and FR-T7 (the book-language table: ru, en, pl, de, uk; an unknown language
+  such as cs still falls back to English), rows FR-I1 and FR-T7 of the checks table. The documents were also translated
+  into English in preparation for open-source publication.

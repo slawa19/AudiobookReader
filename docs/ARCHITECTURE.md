@@ -1,68 +1,70 @@
-# Архитектура
+# Architecture
 
-Версия 3 от 2026-11-14: после ревью спеки 001 ([reviews/CODEX_REVIEW_SPEC_2026-11-14.md](reviews/CODEX_REVIEW_SPEC_2026-11-14.md));
-дополнена по ревью макета ([reviews/CODEX_REVIEW_MOCKUP_2026-11-14.md](reviews/CODEX_REVIEW_MOCKUP_2026-11-14.md)).
-Версия 2 — после ревью архитектуры ([reviews/CODEX_REVIEW_ARCH_2026-11-14.md](reviews/CODEX_REVIEW_ARCH_2026-11-14.md))
-и замера задержки Gemini ([GEMINI_TTS.md](GEMINI_TTS.md), раздел «Задержка и скорость синтеза»). Описывает первую
-версию приложения из [CONCEPT.md](CONCEPT.md): Flutter, Android, один пользователь.
+Version 3 of 2026-11-14: after the review of spec 001 ([reviews/CODEX_REVIEW_SPEC_2026-11-14.md](reviews/CODEX_REVIEW_SPEC_2026-11-14.md));
+supplemented after the mock-up review ([reviews/CODEX_REVIEW_MOCKUP_2026-11-14.md](reviews/CODEX_REVIEW_MOCKUP_2026-11-14.md)).
+Version 2 followed the architecture review ([reviews/CODEX_REVIEW_ARCH_2026-11-14.md](reviews/CODEX_REVIEW_ARCH_2026-11-14.md))
+and the measurement of Gemini latency ([GEMINI_TTS.md](GEMINI_TTS.md), section "Latency and synthesis speed"). It
+describes the first version of the app from [CONCEPT.md](CONCEPT.md): Flutter, Android, a single user.
 
-Пометка **[замер]** стоит там, где число ещё ждёт измерения на телефоне; рядом — стартовое значение и то, из чего
-оно выведено.
+The **[measurement]** mark stands where a number still awaits measurement on the phone; next to it are the starting
+value and what it is derived from.
 
-Названия пакетов — кандидаты. Версии и сам выбор подтверждаются при установке по актуальной документации; каждый
-пакет спрятан за своим модулем.
+Package names are candidates. Versions and the choice itself are confirmed at installation against current
+documentation; each package is hidden behind its own module.
 
-## 1. Главные решения
+## 1. Key decisions
 
-| № | Решение | Почему |
+| No. | Decision | Why |
 |---|---|---|
-| A1 | Одна модель книги для всех форматов | экран, озвучка и позиция не знают о форматах; новый формат — один разборщик |
-| A2 | Разбор один раз при добавлении, результат хранится файлом | открытие книги не зависит от капризов исходника и не повторяет разбор |
-| A3 | Базы данных нет: папка на книгу, в ней JSON-файлы; пишет их один последовательный писатель | на полке десятки книг; нет схемы, миграций и генерации кода |
-| A4 | Текст рисует приложение, страницы считаются порциями по мере надобности | нужно знать, какой текст на экране, подсвечивать его и листать вслед за голосом |
-| A5 | Единица озвучки — отрезок: группа коротких блоков, блок или часть длинного блока | один запрос короче ≈ 70 знаков синтезируется медленнее, чем звучит при 1×; длинный упирается в предел Gemini |
-| A6 | Звук отрезка хранится под именем-отпечатком текста и профиля голоса | повтор бесплатен; смена голоса не путает старое с новым |
-| A7 | Плеер играет готовые файлы; очередь синтеза держит непрерывный запас впереди | сеть и Gemini отвязаны от воспроизведения; сбой сети не слышен, пока есть запас |
-| A8 | Каждая асинхронная операция принадлежит сеансу прослушивания | ответ, пришедший после паузы, смены главы или голоса, не трогает плеер и позицию |
-| A9 | Всё платформенное — в одном модуле | остальное проверяется в WSL без телефона |
-| A10 | Без фреймворков состояния и внедрения зависимостей | три экрана и один плеер; хватает `ChangeNotifier` и передачи в конструктор |
+| A1 | One book model for all formats | the screen, narration and position do not know about formats; a new format is one parser |
+| A2 | Parsing happens once, at adding; the result is stored as a file | opening a book does not depend on the quirks of the source and does not repeat the parsing |
+| A3 | No database: a folder per book with JSON files in it; they are written by one sequential writer | there are dozens of books on the shelf; no schema, migrations or code generation |
+| A4 | The app draws the text itself, and pages are computed in portions as needed | we need to know which text is on the screen, highlight it and turn pages after the voice |
+| A5 | The unit of narration is a segment: a group of short blocks, a block, or a part of a long block | one request shorter than ≈ 70 characters is synthesized slower than it sounds at 1×; a long one hits Gemini's limit |
+| A6 | A segment's audio is stored under a name that is a fingerprint of the text and the voice profile | a repeat is free; a change of voice does not confuse old with new |
+| A7 | The player plays ready files; the synthesis queue keeps a continuous reserve ahead | the network and Gemini are decoupled from playback; a network failure is not heard while there is reserve |
+| A8 | Every asynchronous operation belongs to a listening session | a response that arrives after a pause, a chapter change or a voice change does not touch the player or the position |
+| A9 | Everything platform-specific is in one module | the rest is tested in WSL without a phone |
+| A10 | No state or dependency-injection frameworks | three screens and one player; `ChangeNotifier` and constructor passing are enough |
 
-## 2. Модули
+## 2. Modules
 
-Один пакет Flutter, каталоги в `lib/`. Ниже — все разрешённые прямые импорты между модулями; других нет.
+One Flutter package, directories in `lib/`. Below are all the direct imports allowed between modules; there are no
+others.
 
 ```
-app      ──► все модули (корень сборки: создаёт объекты и связывает их)
+app      ──► all modules (the composition root: creates the objects and wires them together)
 screens  ──► reader, playback, library, audio, tts, book
 reader   ──► book
 playback ──► tts, audio, library, book
 library  ──► book
 tts      ──► book
-platform ──► audio, library   (реализует их интерфейсы)
-audio, book — ни от кого
+platform ──► audio, library   (implements their interfaces)
+audio, book — none
 ```
 
-| Модуль | Отвечает за | Не знает о |
+| Module | Responsible for | Does not know about |
 |---|---|---|
-| `book` | модель книги, разборщики FB2 / EPUB / TXT, определение формата и кодировки, текст для речи | Flutter, файловой системе приложения |
-| `library` | полка: добавление, удаление, папки книг; единственный писатель позиции, настроек книги и расхода; настройки приложения (тема, размер, скорость, голос, модель, язык интерфейса) | экранах, плеере |
-| `reader` | разбивка на страницы, отрисовка страницы, подсветка | озвучке, сети |
-| `tts` | клиент Gemini, профиль голоса, отпечаток, деление на отрезки, классы ошибок, подставной синтез, список голосов и цены моделей | плеере, файлах |
-| `audio` | хранилище звука отрезков и проб: записать PCM, отдать файл, посчитать и очистить место | Gemini, книге |
-| `playback` | состояние прослушивания, очередь синтеза, проба голоса, связь с плеером и медиасессией, тарифы на сегодня и расходы по месяцам | отрисовке |
-| `screens` | полка, чтение, оглавление, голос, настройки; строки интерфейса (ARB, `lib/screens/l10n/`) | HTTP, форматах |
-| `platform` | код для Android: кодировщик звука, приём файла из другого приложения | логике приложения |
-| `app` | сборка зависимостей, маршруты, тема | — |
+| `book` | the book model, the FB2 / EPUB / TXT parsers, format and encoding detection, the speech text | Flutter, the app's file system |
+| `library` | the shelf: adding, deleting, book folders; the sole writer of position, book settings and spending; app settings (theme, size, speed, voice, model, interface language) | screens, the player |
+| `reader` | pagination, drawing a page, highlighting | narration, the network |
+| `tts` | the Gemini client, the voice profile, the fingerprint, splitting into segments, error classes, fake synthesis, the voice list and model prices | the player, files |
+| `audio` | the storage of segment and probe audio: write PCM, hand out a file, count and clear the space | Gemini, the book |
+| `playback` | the listening state, the synthesis queue, the voice probe, the link with the player and the media session, today's tariffs and spending by month | drawing |
+| `screens` | shelf, reading, table of contents, voice, settings; the interface strings (ARB, `lib/screens/l10n/`) | HTTP, formats |
+| `platform` | Android code: the audio encoder, receiving a file from another app | the app's logic |
+| `app` | dependency assembly, routes, theme | — |
 
-- `book` и `tts` — чистый Dart без Flutter.
-- Интерфейсы кодировщика и приёма файла объявлены в `audio` и `library`. `platform` их реализует, `app`
-  подставляет реализации; кроме `app`, от `platform` не зависит никто.
-- `playback` сохраняет позицию и расход через `library` сам: при погашенном экране экранов нет.
-- `screens` берёт из `audio` только занятое место; удаляет звук только `playback` (раздел 4).
-- Строки интерфейса лежат в `screens`, а не в `app`: их читают экраны, а `screens` не вправе импортировать `app`.
-  Настройки приложения хранит `library`; голос и модель там — строки, потому что `library` не знает `tts`.
+- `book` and `tts` are pure Dart without Flutter.
+- The interfaces of the encoder and of file receiving are declared in `audio` and `library`. `platform` implements
+  them, `app` plugs the implementations in; apart from `app`, nobody depends on `platform`.
+- `playback` saves the position and spending through `library` itself: with the screen off there are no screens.
+- `screens` takes only the used space from `audio`; only `playback` deletes audio (section 4).
+- The interface strings live in `screens`, not in `app`: the screens read them, and `screens` may not import `app`.
+  The app settings are kept by `library`; the voice and model there are strings, because `library` does not know
+  `tts`.
 
-## 3. Модель книги
+## 3. Book model
 
 ```
 Book      { id, title, author, language, chapters[], parserVersion, totalChars }
@@ -73,400 +75,427 @@ Span      { start, end, style: italic | bold | sup | sub | noteRef(noteId) }
 Note      { id, blocks[] }
 ```
 
-- **Блоки пронумерованы сквозь книгу**; номер постоянен для данного `parserVersion`.
-- **Текст блока — строка без разметки**; начертания лежат отдельно диапазонами.
-- **Единица всех смещений** (`offset`, `Span.start/end`, `charsBefore`, границы отрезков) — кодовая единица UTF-16,
-  то есть индекс строки Dart. Все смещения считаются по `Block.text`.
-- **Вслух читаются** `heading`, `paragraph`, `verse`, `cite`. Не читаются `image` с подписью, `separator`, сноски,
-  оглавление из файла книги, служебные разделы FB2 (`description`).
-- Таблицы в первой версии превращаются в абзацы по строкам.
+- **Blocks are numbered through the whole book**; the number is stable for a given `parserVersion`.
+- **A block's text is a string without markup**; emphasis styles are stored separately as ranges.
+- **The unit of all offsets** (`offset`, `Span.start/end`, `charsBefore`, segment boundaries) is the UTF-16 code unit,
+  that is, a Dart string index. All offsets are counted over `Block.text`.
+- **Read aloud:** `heading`, `paragraph`, `verse`, `cite`. Not read: `image` with a caption, `separator`, footnotes,
+  the table of contents from the book file, FB2 service sections (`description`).
+- Tables in the first version are turned into paragraphs, one per row.
 
-**Текст для речи** — чистая функция `speechText(block)`: текст блока без диапазонов `noteRef` и без знака ударения
-U+0301. Вместе с текстом она отдаёт соответствие смещений обратно в `Block.text`. Блок, у которого текст для речи
-пуст либо не содержит ни одной буквы и ни одной цифры («* * *», «…», одни сноски), вслух не читается: отрезка не
-создаёт и запросом в Gemini не уходит (уточнение по ревью 2026-11-15). Отпечаток считается от текста для речи.
+**Speech text** is the pure function `speechText(block)`: the block's text without the `noteRef` ranges and without
+the stress mark U+0301. Together with the text it returns the mapping of offsets back into `Block.text`. A block whose
+speech text is empty or contains no letter and no digit ("* * *", "…", footnotes only) is not read aloud: it creates
+no segment and does not go to Gemini as a request (a refinement from the 2026-11-15 review). The fingerprint is
+computed from the speech text.
 
-**Главы — линейное разбиение.** Правила, общие для всех форматов:
+**Chapters are a linear partition.** Rules common to all formats:
 
-- каждый блок основного текста принадлежит ровно одной главе и читается один раз;
-- главы идут подряд без пропусков и пересечений; текст до первого заголовка — глава без названия;
-- вложенность выражена только полем `level`. Раздел, у которого есть свой текст до первого подраздела (заголовок,
-  эпиграф, вступление), — сам глава; подраздел начинает следующую;
-- «до конца главы» значит «до первого блока следующей главы любого уровня».
+- every block of the main text belongs to exactly one chapter and is read once;
+- chapters follow one another with no gaps or overlaps; the text before the first heading is a chapter without a
+  title;
+- nesting is expressed only by the `level` field. A section that has its own text before the first subsection (a
+  heading, an epigraph, an introduction) is itself a chapter; a subsection starts the next one;
+- "until the end of the chapter" means "until the first block of the next chapter of any level".
 
-FB2: глава — `section`; заголовок, эпиграф и аннотация раздела — его блоки.
+FB2: a chapter is a `section`; the heading, epigraph and annotation of a section are its blocks.
 
-EPUB: порядок — по `spine`; оглавление (`nav` либо `toc.ncx`) даёт названия и уровни. Запись оглавления ставит
-границу главы так:
+EPUB: the order is by `spine`; the table of contents (`nav` or `toc.ncx`) gives titles and levels. A table-of-contents
+entry sets a chapter boundary as follows:
 
-- относительный путь ссылки разрешается от документа оглавления;
-- ссылка без фрагмента — начало документа;
-- фрагмент указывает на элемент: граница на первом блоке, который начинается с этого элемента или после него (сам
-  блок; первый блок внутри контейнера; для пустого якоря — следующий блок). Элемент не найден — начало документа;
-- несколько записей на одно и то же начало дают одну главу с названием и уровнем первой по порядку записи;
-- запись, у которой до следующей записи нет ни одного блока основного текста (документ с одной обложкой), главы не
-  создаёт и чужое начало не занимает; запись со ссылкой на внешний адрес пропускается;
-- документ `spine` без записи в оглавлении продолжает текущую главу.
+- the relative path of the link is resolved from the table-of-contents document;
+- a link without a fragment is the start of the document;
+- a fragment points to an element: the boundary is at the first block that starts at or after that element (the block
+  itself; the first block inside a container; for an empty anchor, the next block). Element not found: the start of
+  the document;
+- several entries for the same start produce one chapter with the title and level of the first entry in order;
+- an entry that has no block of main text before the next entry (a document with a cover alone) creates no chapter and
+  does not take someone else's start; an entry linking to an external address is skipped;
+- a `spine` document with no entry in the table of contents continues the current chapter.
 
-Структурные признаки EPUB; элемент без них — обычный текст:
+Structural signs of EPUB; an element without them is plain text:
 
-- сноска — элемент с `epub:type` `footnote`, `endnote` или `rearnote`, в том числе `aside` с таким типом; ссылка на
-  неё — `epub:type="noteref"`;
-- оглавление в теле — документ `nav` и элементы с `epub:type="toc"`; блоков основного текста они не дают;
-- подпись к картинке — `figcaption`.
+- a footnote is an element with `epub:type` `footnote`, `endnote` or `rearnote`, including an `aside` with such a type;
+  a reference to it is `epub:type="noteref"`;
+- an in-body table of contents is a `nav` document and elements with `epub:type="toc"`; they yield no blocks of main
+  text;
+- a picture caption is `figcaption`.
 
-Идентификаторы сносок уникальны в пределах документа EPUB, поэтому `noteId` включает его имя. В обоих форматах
-ссылка на несуществующую сноску остаётся обычным текстом без `noteRef`.
+Footnote identifiers are unique within an EPUB document, so `noteId` includes its name. In both formats a reference to
+a nonexistent footnote remains plain text without `noteRef`.
 
-**Определение формата — по содержимому, не по расширению**, по порядку:
+**Format detection is by content, not by extension**, in this order:
 
-1. ZIP с `mimetype` EPUB — EPUB;
-2. ZIP с единственным `.fb2` внутри — FB2;
-3. XML с корнем `FictionBook` — FB2;
-4. любой другой ZIP и PDF (файл начинается с `%PDF`) — отказ «Этот формат не поддерживается»;
-5. в первых 64 КБ файла нет байтов 0x00–0x08 — TXT; иначе отказ «Этот формат не поддерживается».
+1. a ZIP with an EPUB `mimetype`: EPUB;
+2. a ZIP with a single `.fb2` inside: FB2;
+3. XML with the root `FictionBook`: FB2;
+4. any other ZIP and PDF (the file starts with `%PDF`): the refusal "This format is not supported";
+5. no bytes 0x00–0x08 in the first 64 KB of the file: TXT; otherwise the refusal "This format is not supported".
 
-Кодировка FB2 берётся из объявления XML; TXT — UTF-8 с BOM или валидный UTF-8, иначе windows-1251. EPUB отклоняется
-как защищённый, только если `encryption.xml` шифрует хотя бы один документ из `spine`; обфускация шрифтов и
-шифрование неиспользуемых ресурсов игнорируются, зашифрованная картинка не показывается.
+The FB2 encoding is taken from the XML declaration; TXT is UTF-8 with BOM or valid UTF-8, otherwise windows-1251. An
+EPUB is rejected as protected only if `encryption.xml` encrypts at least one document from `spine`; font obfuscation
+and encryption of unused resources are ignored, an encrypted picture is not shown.
 
-**Терпимость разбора — ровно три повреждения**, каждое с маленьким образцом и точным ожидаемым текстом блоков
-(раздел 9):
+**Parsing tolerance is exactly three kinds of damage**, each with a small sample and the exact expected text of blocks
+(section 9):
 
-- незакрытый тег: закрывающий тег закрывает все теги, открытые после парного ему; незакрытые к концу файла
-  закрываются в конце;
-- неизвестная сущность остаётся в тексте так, как написана (`&name;`); именованные сущности XHTML (`&nbsp;`,
-  `&mdash;`…) неизвестными не считаются — это часть формата, они раскрываются в знаки;
-- XML-файл объявлен как UTF-8, но содержит недопустимые последовательности — весь файл читается как windows-1251.
+- an unclosed tag: a closing tag closes all the tags opened after its pair; those unclosed by the end of the file are
+  closed at the end;
+- an unknown entity stays in the text as written (`&name;`); named XHTML entities (`&nbsp;`, `&mdash;`…) are not
+  considered unknown: they are part of the format and are expanded into characters;
+- an XML file is declared UTF-8 but contains invalid sequences: the whole file is read as windows-1251.
 
-Любая другая ошибка XML — отказ «Не удалось прочитать книгу» с технической причиной. Новое повреждение, найденное на
-книге владельца (раздел 9), добавляется так же: общим правилом и образцом.
+Any other XML error is a refusal "Couldn’t read the book" with the technical reason. A new kind of damage found on the
+owner's book (section 9) is added the same way: by a general rule and a sample.
 
-## 4. Хранение
+## 4. Storage
 
-Папка приложения, недоступная другим приложениям:
+An app folder inaccessible to other apps:
 
 ```
 books/<bookId>/
-  original.<ext>     исходный файл как добавлен
-  book.json          модель книги (раздел 3)
-  meta.json          название, автор, число знаков, есть ли обложка — всё, что нужно полке
-  state.json         позиция чтения, место прослушивания (5), признак «дочитана», свой голос книги, время
-                     добавления и последнего открытия (нет — книгу не открывали)
+  original.<ext>     the source file as added
+  book.json          the book model (section 3)
+  meta.json          title, author, character count, whether there is a cover: everything the shelf needs
+  state.json         reading position, listening place (5), the "finished" flag, the book's own voice, the time of
+                     adding and of last opening (absent: the book has not been opened)
   cover.jpg
   images/<imageId>
-  audio/<отпечаток>.<расширение>
-samples/<отпечаток>.<расширение>   звук проб голоса (6.8), общий для всех книг
-usage.json           оплаченные токены по месяцам и моделям
-tmp/                 незавершённое; очищается при запуске
+  audio/<fingerprint>.<extension>
+samples/<fingerprint>.<extension>   the audio of voice probes (6.8), shared by all books
+usage.json           paid tokens by month and model
+tmp/                 unfinished things; cleaned at startup
 ```
 
-- `bookId` — первые 12 знаков sha256 исходного файла. Тот же файл второй раз не добавляется, а открывается.
-- **Повреждённые данные не роняют запуск.** Папка книги, чьи файлы не читаются, на полку не попадает и остальным
-  не мешает; нечитаемый `settings.json` или отсутствующий в нём ключ — умолчания. Удаление книги симметрично
-  добавлению: папка переименовывается в `tmp/` и удаляется оттуда.
-- **Добавление книги завершается одним переименованием.** Файл копируется и разбирается в `tmp/<случайное имя>/`;
-  готовая папка переименовывается в `books/<bookId>/`. Полка и проверка повтора видят только папки в `books/`.
-  Убитый посреди добавления процесс оставляет мусор в `tmp/`, а не полкниги на полке.
-- **Переразбор** готовит новый `book.json` рядом и заменяет прежний переименованием; до этого действует прежний.
-- **Один писатель.** `state.json` и `usage.json` меняет только `Library`, по одной операции за раз: изменение
-  применяется к актуальному содержимому, файл пишется во временный и переименовывается. Два ответа Gemini,
-  пришедшие одновременно, не теряют расход друг друга; запись позиции не затирает смену голоса, а запись позиции
-  чтения — место прослушивания, и наоборот.
-- Позиция пишется не чаще раза в секунду, но последнее изменение записывается всегда; пауза и уход приложения в фон
-  пишут сразу.
-- **Удаление книги и «Очистить озвучку» сетевых запросов не ждут.** Их выполняет `NarrationController`: если
-  слушается затронутая книга, меняет номер сеанса (состояние `idle`); запрещает новую работу для затронутых книг,
-  включая «Скачать главу»; дожидается только идущих записей на диск и сразу удаляет. Ответ Gemini, пришедший потом
-  для удалённой книги или очищенной озвучки: расход записывается, звук отбрасывается. «Очистить озвучку» удаляет
-  `audio/` всех книг и `samples/`.
-- Настройки приложения (голос, модель, тема, размер шрифта, скорость) — в обычном хранилище настроек; ключ Gemini — в
-  защищённом (`flutter_secure_storage`).
-- **Резервное копирование Android выключено для всего приложения**: `allowBackup="false"` и правила извлечения данных
-  (`dataExtractionRules`), исключающие всё — и облачное копирование, и перенос на другое устройство. Книги, позиции,
-  расход и ключ не уходят в облако Google.
+- `bookId` is the first 12 characters of the sha256 of the source file. The same file is not added a second time but
+  opened.
+- **Corrupted data does not crash startup.** A book folder whose files cannot be read does not reach the shelf and does
+  not hinder the others; an unreadable `settings.json` or a key missing from it means defaults. Deleting a book is
+  symmetric to adding: the folder is renamed into `tmp/` and deleted from there.
+- **Adding a book ends with a single rename.** The file is copied and parsed in `tmp/<random name>/`; the finished
+  folder is renamed to `books/<bookId>/`. The shelf and the duplicate check see only the folders in `books/`. A
+  process killed in the middle of adding leaves garbage in `tmp/`, not half a book on the shelf.
+- **Re-parsing** prepares a new `book.json` alongside and replaces the old one by renaming; until then the old one
+  applies.
+- **One writer.** `state.json` and `usage.json` are changed only by `Library`, one operation at a time: a change is
+  applied to the current content, the file is written to a temporary one and renamed. Two Gemini responses that arrive
+  simultaneously do not lose each other's spending; writing the position does not overwrite a voice change, and
+  writing the reading position does not overwrite the listening place, and vice versa.
+- The position is written no more than once a second, but the last change is always written; a pause and the app going
+  to the background write at once.
+- **Deleting a book and "Clear narration" do not wait for network requests.** They are carried out by
+  `NarrationController`: if the affected book is being listened to, it changes the session number (state `idle`); it
+  forbids new work for the affected books, including "Download chapter"; it waits only for the disk writes in flight
+  and deletes at once. A Gemini response that arrives later for a deleted book or cleared narration: the spending is
+  recorded, the audio is discarded. "Clear narration" deletes `audio/` of all books and `samples/`.
+- App settings (voice, model, theme, font size, speed) are in the ordinary settings storage; the Gemini key is in the
+  protected one (`flutter_secure_storage`).
+- **Android backup is turned off for the whole app**: `allowBackup="false"` and data extraction rules
+  (`dataExtractionRules`) that exclude everything, both cloud backup and transfer to another device. Books, positions,
+  spending and the key do not go to the Google cloud.
 
-`book.json` читается и декодируется вне главного изолята. Время открытия большой книги и память проверяются на
-синтетической книге (раздел 9); если один файл окажется тяжёл, модель делится по главам — это замена внутри
-`library`.
+`book.json` is read and decoded outside the main isolate. The opening time of a large book and the memory are checked
+on a synthetic book (section 9); if a single file turns out to be heavy, the model is split by chapter: a replacement
+inside `library`.
 
-**Исходник хранится, чтобы переразобрать книгу после исправления разборщика**: `parserVersion` в `book.json`
-старше текущего → переразбор при открытии. Позиция поэтому хранит, кроме номера блока, первые 64 знака его текста и
-`charsBefore`. После переразбора ищется блок с тем же началом текста, ближайший к прежнему `charsBefore`; не
-нашёлся — берётся блок по `charsBefore`, и это заведомо приблизительно. Озвучка переразбор переживает сама: она
-привязана к тексту.
+**The source is kept so that the book can be re-parsed after a parser fix**: a `parserVersion` in `book.json` older
+than the current one → re-parsing on opening. The position therefore stores, besides the block number, the first 64
+characters of its text and `charsBefore`. After re-parsing, the block with the same text start closest to the old
+`charsBefore` is looked for; if none is found, the block at `charsBefore` is taken, and this is knowingly approximate.
+Narration survives re-parsing by itself: it is tied to the text.
 
-## 5. Чтение
+## 5. Reading
 
-- **Страницы считаются порциями от текущей позиции**, измерением текста средствами Flutter, с возвратом управления
-  между порциями. Первая страница показывается сразу; остальные страницы главы досчитываются в фоне главного
-  изолята. Смена шрифта или размера экрана отменяет идущий расчёт и начинает новый с сохранённой позиции. Смена
-  цветов темы расчёта не требует.
-- Страница — пара «начало: блок и смещение» и «конец». Абзац переносится между страницами по строке.
-- **Номеров страниц нет.** Показывается только доля книги по знакам.
-- Переносов по слогам в первой версии нет; выравнивание по левому краю.
-- **Позиция** — `{block, offset, charsBefore, anchorText}`. У книги их две, обе в `state.json` (раздел 4):
-  **позиция чтения** — что на экране, и **место прослушивания** — начало звучавшего отрезка (6.1).
-- **У позиции чтения один хозяин.** Пока прослушивание не активно (`idle`), позицию чтения пишет экран: начало
-  первой строки на экране. Пока активно (любое состояние, кроме `idle` и `stopped`) — только `NarrationController`:
-  оценку звучащего места внутри отрезка (уточнение 2026-11-15: так ведут себя прототип и настоящий контроллер;
-  пишется при смене блока, на паузе, остановке и «Закрыть», а не на каждом событии плеера). Страница, которую пользователь при этом листает сам, — временное состояние экрана и в
-  файл не попадает.
-- **Место прослушивания пишет только `NarrationController`**, в начале каждого отрезка. Пауза, остановка,
-  «Закрыть» и перезапуск приложения его не стирают; удаление книги удаляет вместе с ней. Экран его не пишет никогда.
-- **Долю книги и название главы для полки `Library` выводит из позиции сама**: кто бы ни записал позицию, полка
-  показывает главу и долю этого места.
-- **«Дочитана» (FR-L4) — отдельный факт в `state.json`, не производная от записанной позиции.** Ставят его показ
-  последней страницы (в том числе первая раскладка одностраничной книги) и конец прослушивания; снимает только показ
-  страницы раньше последней — листанием, ползунком, оглавлением или следованием за голосом. Перераскладка (шрифт,
-  панель) и повторное прослушивание на последней странице его не снимают. Пока он стоит, доля на полке — 100 %.
-- **Передача позиции экрану.** «Закрыть» (крестик на панели плеера) завершает прослушивание: состояние `idle`,
-  позиция чтения — место на экране: звучавшее место (оценка из следования), если экран следовал за голосом; начало
-  страницы, если пользователь листал сам. Панель уходит, страница становится длиннее и пересчитывается так, чтобы это
-  место осталось на экране, — не от начала прежней страницы: иначе пересчёт уводит экран назад, где звучавшего уже нет
-  (замечание владельца 2026-11-14). Дальше позицию чтения пишет экран; место прослушивания остаётся. При переходе в
-  `stopped` экран сначала показывает страницу с сохранённой позицией (включает следование) и получает право писать
-  позицию только при следующем явном перемещении пользователя: листании, переходе по оглавлению или ползунку. Такое
-  перемещение при открытой панели `stopped` выключает следование, как и во время звука: перераскладка и «Закрыть»
-  после него держат место, выбранное читателем, а не место остановки.
-- **«Слушать» из `idle`** (FR-P3; замечание владельца 2026-11-14). Экран только сообщает контроллеру видимую
-  страницу — её начало и конец; место выбирает `NarrationController`:
-  1. место прослушивания на этой странице — продолжать с него;
-  2. иначе — с первого предложения, которое начинается на странице; хвост предложения с прошлой страницы не
-     читается;
-  3. если на странице не начинается ни одно предложение (страница внутри одного длинного предложения) — с начала
-     этого предложения; только в этом случае страница переходит туда.
+- **Pages are computed in portions from the current position**, by measuring the text with Flutter's tools, yielding
+  control between portions. The first page is shown at once; the other pages of the chapter are completed in the
+  background of the main isolate. A change of font or screen size cancels the computation in progress and starts a new
+  one from the saved position. A change of theme colors does not require recomputation.
+- A page is a pair: a "start: block and offset" and an "end". A paragraph is carried across pages by line.
+- **There are no page numbers.** Only the fraction of the book by characters is shown.
+- There is no syllable hyphenation in the first version; left alignment.
+- **A position** is `{block, offset, charsBefore, anchorText}`. A book has two of them, both in `state.json`
+  (section 4): the **reading position**, what is on the screen, and the **listening place**, the start of the segment
+  that was sounding (6.1).
+- **The reading position has one owner.** While listening is not active (`idle`), the reading position is written by
+  the screen: the start of the first line on the screen. While it is active (any state except `idle` and `stopped`),
+  only by `NarrationController`: the estimate of the sounding place inside a segment (a refinement of 2026-11-15: this
+  is how the prototype and the real controller behave; it is written on a block change, on pause, stop and "Close",
+  not on every player event). A page that the user turns to themselves meanwhile is a temporary state of the screen and
+  does not go to the file.
+- **The listening place is written only by `NarrationController`**, at the start of each segment. Pause, stop, "Close"
+  and an app restart do not erase it; deleting a book deletes it together with the book. The screen never writes it.
+- **The fraction of the book and the chapter title for the shelf are derived from the position by `Library` itself**:
+  whoever recorded the position, the shelf shows the chapter and the fraction of that place.
+- **"Finished" (FR-L4) is a separate fact in `state.json`, not derived from the recorded position.** It is set by
+  showing the last page (including the first layout of a one-page book) and by the end of listening; it is cleared only
+  by showing a page earlier than the last one, by turning, the slider, the table of contents or following the voice. A
+  re-layout (font, panel) and re-listening on the last page do not clear it. While it is set, the fraction on the shelf
+  is 100 %.
+- **Handing the position to the screen.** "Close" (the cross on the player panel) ends listening: the state is `idle`,
+  the reading position is the place on the screen: the sounding place (the estimate from following) if the screen
+  followed the voice; the start of the page if the user turned pages themselves. The panel goes away, the page becomes
+  longer and is recomputed so that this place stays on the screen, not from the start of the previous page: otherwise
+  the recomputation takes the screen back to where the sounding place is no longer (the owner's remark of 2026-11-14).
+  After that the reading position is written by the screen; the listening place remains. On the transition to `stopped`
+  the screen first shows the page with the saved position (turns following on) and gets the right to write the
+  position only at the user's next explicit move: turning, going through the table of contents, or the slider. Such a
+  move with the `stopped` panel open turns following off, as during sound: a re-layout and "Close" after it keep the
+  place chosen by the reader, not the stop place.
+- **"Listen" from `idle`** (FR-P3; the owner's remark of 2026-11-14). The screen only reports the visible page to the
+  controller, its start and end; the place is chosen by `NarrationController`:
+  1. the listening place is on this page: continue from it;
+  2. otherwise from the first sentence that begins on the page; the tail of a sentence from the previous page is not
+     read;
+  3. if no sentence begins on the page (the page is inside one long sentence), from the beginning of that sentence;
+     only in this case does the page move there.
 
-  Границы предложений — правило 2 из 6.1 с уточнениями (i) и (ii), по тексту для речи (раздел 3) с переводом смещений
-  обратно в блок; списков слов нет. Неозвучиваемые блоки и картинки пропускаются. Начатое предложение — стартовый отрезок (6.1). Страница назад не перелистывается
-  (кроме случая 3), следование включено с первого кадра: кнопки «К месту чтения» сразу после старта нет. Пока панель
-  плеера появляется и раскладка пересчитывается, страница ставится сразу на звучащее место; сообщения о смене страницы
-  от заменённой раскладки следование не отключают.
-- **Следование за голосом — приблизительное.** Экран показывает страницу с тем местом, которое сейчас звучит, и
-  подсвечивает звучащий абзац (`narration.block`) и абзац, выбранный читателем. Место внутри отрезка оценивается
-  пропорционально: доля проигранного времени файла, приложенная к длине текста отрезка. Числа, сокращения и паузы
-  звучат непропорционально их длине, поэтому на отрезке в несколько страниц страница может перевернуться раньше или
-  позже голоса. Пословной подсветки и точного места нет.
-- **Что включает и что выключает следование** (правило a проверки путей пользователя, принято владельцем
-  2026-11-14). Включает любое действие, которым пользователь сам запускает или меняет место звука: «Слушать» (в том
-  числе после паузы и из панели ошибки), «Читать отсюда», «назад» и «вперёд» плеера, выбор главы в оглавлении, «К
-  месту чтения». **Включает его событие контроллера, а не экран-обёртка:** `NarrationController` ведёт счётчик явных
-  команд пользователя, запускающих или перемещающих звук, откуда бы они ни пришли — с экрана, из уведомления, с
-  гарнитуры; экран включает следование, когда счётчик изменился. Автоматические переходы (следующий отрезок, конец
-  главы, смена голоса или модели) счётчик не трогают. «К месту чтения» — действие самого экрана.
-  Выключают следование только ручное листание и ползунок — при любой открытой панели плеера этой книги, в том числе в
-  `stopped`; голос при этом не прерывается. Жест пальцем выключает его, только когда действительно сменил страницу:
-  начало перетаскивания само по себе ничего не меняет, малое перетаскивание с возвратом на ту же страницу и отменённый
-  жест — тоже; пока жест идёт и страница после него не встала, голос страницу не листает. Исключение (решение C
-  проверки жестов): палец, лёгший на страницу во время автоматического переворота за голосом, её схватил —
-  следование выключается, даже если страница вернулась на прежнюю: иначе дочитываемую страницу не удержать. Ползунок
-  выключает следование, только если отпущен на другой странице; касание бегунка без сдвига ничего не меняет. Выбор в
-  оглавлении во время прослушивания (и на паузе) всегда переводит голос к началу выбранной главы, в том числе
-  текущей; страницу дальше ведёт голос — переход не считается ручным листанием.
-- **Пока выбран абзац** для «Читать отсюда», страница за голосом не уходит: кнопка ждёт нажатия. Выбор снят —
-  экран догоняет голос. Выбор снимается при любой смене страницы — жестом, касанием, ползунком, оглавлением, голосом:
-  невидимого выбора не бывает (решение B проверки жестов).
-- **Что листает.** Только жест, в котором горизонтальный сдвиг больше вертикального на момент распознавания (угол к
-  горизонтали меньше 45°). Преимущественно вертикальный жест не делает ничего: вертикальный распознаватель стоит
-  глубже распознавателя листания, первым видит каждое движение и забирает жест, когда палец ушёл вверх или вниз
-  дальше порога касания и дальше, чем вбок (решение D). Касание трети или смахивание во время анимации прежнего
-  перехода не теряется.
-- **Перераскладка** (шрифт, размер экрана, изменение высоты панели плеера, в том числе от строки скачивания; смена
-  темы её не вызывает): якорь — удержанный выбор абзаца, если он есть; иначе, если экран следует за голосом, место
-  голоса (звучащее, место паузы, место остановки); иначе — начало видимой страницы. Пока раскладка пересчитывается,
-  экран не листает: страница не дёргается назад и вперёд. Жест по прежней раскладке теряется вместе с ней.
-  Якорь отвечает на вопрос «что обязано остаться на экране», а не «с чего начинается страница» (уточнение
-  2026-11-15): если удерживаемое место лежит на показанной странице, новая раскладка считается от начала этой же
-  страницы — текст над звучащим абзацем остаётся; ушло место с первой страницы — показывается следующая, на которой
-  оно лежит. От самого места раскладка считается, только когда его на показанной странице не было (открытие книги,
-  оглавление, ползунок, «К месту чтения», догоняние голоса).
-- **Раскладка считается от места, а не от начала книги** (2026-11-15): открытие на сохранённой позиции и любой
-  переход показывают страницу сразу, сколько бы текста ни было до неё; вперёд страницы досчитываются порциями, назад —
-  по надобности, набирая страницы от места старта к началу главы (ниже). Номеров страниц нет именно
-  поэтому. Место старта раскладки — всегда начало строки, которое читатель уже видел (сохранённая позиция чтения,
-  начало показанной страницы), либо начало блока: для любой другой цели (ползунок, конец книги, место голоса вне
-  показанной страницы, «К месту чтения») раскладка считается от начала блока с целью, и показывается та её
-  страница, на которой цель лежит. Страницы из середины слова или из одного знака не бывает.
-- **Возврат к уже виденному месту показывает ту же страницу** (замечание владельца 2026-11-15: пауза → листание →
-  «продолжить» возвращало на страницу, где звучащий фрагмент стоял сверху, хотя был в середине, — это
-  дезориентирует). Если цель перехода — место голоса, «К месту чтения», возврат после листания — лежит на любой уже
-  посчитанной странице текущей раскладки, показывается именно эта страница, с тем же положением текста; от места
-  или от начала блока раскладка считается, только когда цели нет ни на одной посчитанной странице и она не близко.
-- **Близкая цель продолжает прежнюю раскладку** (вопрос владельца 2026-11-15: «почему нельзя сохранять тот вид с
-  тем текстом, который был до листания назад?»). Программная цель — место голоса, «вперёд/назад» плеера,
-  «продолжить», «К месту чтения» — в той же главе и не дальше 30 000 знаков от края посчитанных страниц
-  (`_nearbyLayoutChars`) не начинает новую раскладку: прежняя досчитывается до цели, и показывается та её страница,
-  на которой цель лежит. Звучащий абзац поэтому не обязан стоять с первой строки страницы, а страницы позади
-  остаются теми, что читатель видел. Дальняя цель, другая глава, оглавление и ползунок — раскладка от места.
-- **Страницы перед местом старта раскладки набираются назад от него** (замечание владельца 2026-11-15: после
-  «вперёд» листание назад показывало страницу в несколько строк). Каждая такая страница заполнена и кончается там,
-  где начинается следующая; укороченной страницы перед местом старта больше нет. У начала главы оставшихся строк
-  может не хватить на страницу — тогда первая страница главы раскладывается вперёд от начала главы, полная, и
-  несколько её последних строк повторяются на второй; перекрытие возможно только на этой границе. Место в
-  перекрытии ищется на второй странице, кроме случая, когда читатель стоит на первой.
-- **Высота панели плеера постоянна** (2026-11-15, по двум независимым ревью экрана чтения). Пока панель открыта в
-  состояниях с кнопками управления (`preparing`, `playing`, `waiting`, `paused`), её высота не зависит ни от
-  следования, ни от подготовки звука, ни от системных панелей: «К месту чтения» — значок в верхней строке (решение
-  владельца), подпись состояния («Готовлю голос…», «Жду связь…») — в той же строке, одной строкой с многоточием,
-  нижний отступ — устойчивый максимум. Причина: любая смена высоты меняла размер страницы и перекладывала текст —
-  при каждом «вперёд», при первом листании, при возврате к голосу; отсюда четыре замечания владельца за один день.
-  Высоту могут менять только панель ошибки, «Книга закончилась» и строка скачивания главы; для них действует обычное
-  «перераскладка держит начало текущей страницы».
-- **Следование выключается, только когда страница действительно сменилась** — не в момент запроса ещё не
-  посчитанной страницы. Касание и смахивание читателя не теряются: ни из-за ожидания досчёта, ни из-за события звука.
-- **Голос сам дошёл до показанной страницы — следование включается** (добавлено 2026-11-15 при исправлении возврата
-  страницы; утверждено владельцем в тот же день): читатель пролистал вперёд, звук идёт, и звучащее место вошло в страницу на
-  экране — дальше экран снова листается за голосом, кнопка «К месту чтения» исчезает.
-- Касание трети страницы во время анимации прежнего перехода не теряется: прежний переход доводится мгновенно,
-  новый идёт от него.
-- «Слушать» после паузы продолжает с места паузы. Начать с другого места — только явным «Читать отсюда» (с начала
-  абзаца), сменой главы в оглавлении, «назад» и «вперёд» плеера (6.4), «Слушать» из `idle` по правилу выше или
-  «Слушать» из `stopped` (с сохранённой позиции чтения либо с новой, если пользователь после остановки листал). Из
-  `stopped` новый сеанс начинают только «Слушать» и «Читать отсюда»; «назад» и «вперёд» там ничего не делают.
-  Ползунок во время прослушивания доступен (8.1) и только листает экран, как листание рукой: следование отключается.
+  Sentence boundaries are rule 2 of 6.1 with clarifications (i) and (ii), over the speech text (section 3) with the
+  offsets translated back into the block; there are no word lists. Non-narrated blocks and pictures are skipped. A
+  begun sentence is a start segment (6.1). The page is not turned back (except in case 3), following is on from the
+  first frame: there is no "To current spot" button right after the start. While the player panel appears and the
+  layout is being recomputed, the page is set at once at the sounding place; page-change messages from the replaced
+  layout do not turn following off.
+- **Following the voice is approximate.** The screen shows the page with the place that is sounding now and highlights
+  the sounding paragraph (`narration.block`) and the paragraph selected by the reader. The place inside a segment is
+  estimated proportionally: the fraction of the file's time played, applied to the length of the segment's text.
+  Numbers, abbreviations and pauses sound out of proportion to their length, so on a segment of several pages the page
+  may turn earlier or later than the voice. There is no word-by-word highlighting and no exact place.
+- **What turns following on and what turns it off** (rule a of the user-journey audit, accepted by the owner
+  2026-11-14). It is turned on by any action with which the user themselves starts or changes the sound's place:
+  "Listen" (including after a pause and from the error panel), "Read from here", the player's "previous" and "next",
+  choosing a chapter in the table of contents, "To current spot". **It is turned on by a controller event, not by a
+  wrapper screen:** `NarrationController` keeps a counter of the user's explicit commands that start or move the sound,
+  wherever they come from: the screen, the notification, the headset; the screen turns following on when the counter
+  has changed. Automatic transitions (the next segment, the end of a chapter, a change of voice or model) do not touch
+  the counter. "To current spot" is the screen's own action. Following is turned off only by manual turning and the
+  slider, with any open player panel of this book, including in `stopped`; the voice is not interrupted. A finger
+  gesture turns it off only when it really changed the page: the start of a drag by itself changes nothing, a small
+  drag with a return to the same page and a cancelled gesture do not either; while the gesture is going on and the
+  page has not settled after it, the voice does not turn the page. An exception (decision C of the gesture audit): a
+  finger that landed on the page during an automatic turn after the voice has grabbed it: following is turned off even
+  if the page returned to the previous one: otherwise the page being finished cannot be held. The slider turns following
+  off only if it is released on another page; touching the thumb without moving changes nothing. Choosing in the table
+  of contents during listening (and on pause) always moves the voice to the start of the chosen chapter, including the
+  current one; the voice then drives the page on: the transition does not count as manual turning.
+- **While a paragraph is selected** for "Read from here", the page does not move away after the voice: the button waits
+  for a press. Once the selection is cleared, the screen catches up with the voice. The selection is cleared on any page
+  change: by a gesture, a tap, the slider, the table of contents, the voice; there is no invisible selection (decision
+  B of the gesture audit).
+- **What turns pages.** Only a gesture whose horizontal shift exceeds the vertical one at the moment of recognition
+  (the angle to the horizontal is less than 45°). A predominantly vertical gesture does nothing: the vertical
+  recognizer sits deeper than the turning recognizer, sees every movement first and takes the gesture when the finger
+  has gone up or down farther than the touch threshold and farther than sideways (decision D). A tap on a third or a
+  swipe during the animation of the previous transition is not lost.
+- **Re-layout** (font, screen size, a change of the player panel's height, including from the download row; a theme
+  change does not cause it): the anchor is the held paragraph selection, if there is one; otherwise, if the screen
+  follows the voice, the voice's place (sounding, pause place, stop place); otherwise the start of the visible page.
+  While the layout is being recomputed, the screen does not turn pages: the page does not jerk back and forth. A
+  gesture over the previous layout is lost together with it. The anchor answers the question "what must stay on the
+  screen", not "what does the page start with" (a refinement of 2026-11-15): if the held place lies on the shown page,
+  the new layout is computed from the start of that same page: the text above the sounding paragraph stays; if the
+  place has left the first page, the next one, on which it lies, is shown. The layout is computed from the place itself
+  only when it was not on the shown page (opening a book, the table of contents, the slider, "To current spot",
+  catching up with the voice).
+- **The layout is computed from a place, not from the start of the book** (2026-11-15): opening at a saved position and
+  any transition show the page at once, however much text lies before it; forward, pages are completed in portions,
+  backward, as needed, gathering pages from the start place toward the start of the chapter (below). This is exactly
+  why there are no page numbers. The layout's start place is always the start of a line that the reader has already
+  seen (the saved reading position, the start of the shown page), or the start of a block: for any other target (the
+  slider, the end of the book, a voice place off the shown page, "To current spot") the layout is computed from the
+  start of the block with the target, and the page of it on which the target lies is shown. A page that begins in the
+  middle of a word or consists of a single character does not occur.
+- **A return to an already seen place shows the same page** (the owner's remark of 2026-11-15: pause → turning →
+  "resume" returned to a page where the sounding fragment stood at the top although it had been in the middle; this is
+  disorienting). If the target of a transition (the voice's place, "To current spot", a return after turning) lies on
+  any already computed page of the current layout, exactly that page is shown, with the same text position; the layout
+  is computed from the place or from the start of the block only when the target is on no computed page and is not
+  near.
+- **A near target continues the previous layout** (the owner's question of 2026-11-15: "why can't we keep that view with
+  the text that was before turning back?"). A programmatic target (the voice's place, the player's "previous/next",
+  "resume", "To current spot") in the same chapter and no farther than 30 000 characters from the edge of the computed
+  pages (`_nearbyLayoutChars`) does not start a new layout: the previous one is completed up to the target, and the page
+  of it on which the target lies is shown. The sounding paragraph therefore need not stand at the first line of a page,
+  and the pages behind stay those that the reader saw. A far target, another chapter, the table of contents and the
+  slider: a layout from the place.
+- **The pages before the layout's start place are gathered backward from it** (the owner's remark of 2026-11-15: after
+  "next", turning back showed a page of a few lines). Each such page is full and ends where the next one begins; a
+  shortened page before the start place no longer exists. At the start of a chapter the remaining lines may not suffice
+  for a page; then the chapter's first page is laid out forward from the start of the chapter, full, and its last few
+  lines are repeated on the second; an overlap is possible only at this boundary. A place in the overlap is looked for
+  on the second page, except when the reader stands on the first.
+- **The player panel's height is constant** (2026-11-15, from two independent reviews of the reading screen). While the
+  panel is open in the states with control buttons (`preparing`, `playing`, `waiting`, `paused`), its height depends
+  neither on following, nor on audio preparation, nor on the system bars: "To current spot" is an icon in the top row
+  (the owner's decision), the state caption ("Preparing the voice…", "Waiting for connection…") is in the same row, on
+  one line with an ellipsis, the bottom inset is a stable maximum. The reason: any change of height changed the page
+  size and re-laid the text: at every "next", at the first turning, on a return to the voice; hence four remarks of
+  the owner in one day. Only the error panel, "End of the book" and the chapter download row may change the height; for
+  them the usual "a re-layout keeps the start of the current page" applies.
+- **Following is turned off only when the page has really changed**, not at the moment a not-yet-computed page is
+  requested. The reader's taps and swipes are not lost: neither because of waiting for the computation nor because of an
+  audio event.
+- **The voice itself reached the shown page: following turns on** (added 2026-11-15 when fixing the page return;
+  approved by the owner the same day): the reader has paged ahead, the sound goes on, and the sounding place has
+  entered the page on the screen: from then on the screen again turns pages after the voice, and the "To current spot"
+  button disappears.
+- A tap on a third of the page during the animation of the previous transition is not lost: the previous transition is
+  completed instantly, the new one goes from it.
+- "Listen" after a pause continues from the pause place. Starting from another place is only by an explicit "Read from
+  here" (from the beginning of a paragraph), by changing the chapter in the table of contents, the player's "previous"
+  and "next" (6.4), "Listen" from `idle` by the rule above, or "Listen" from `stopped` (from the saved reading position
+  or from a new one if the user turned pages after the stop). From `stopped` a new session is started only by "Listen"
+  and "Read from here"; "previous" and "next" do nothing there. The slider during listening is available (8.1) and only
+  turns the screen, like turning by hand: following is turned off.
 
-## 6. Озвучка
+## 6. Narration
 
-### 6.1 Отрезок
+### 6.1 Segment
 
-Отрезок — то, что уходит одним запросом и ложится одним файлом. Отрезки главы — чистая функция от её блоков и двух
-чисел, всегда считается от начала главы и не зависит от того, откуда начали слушать. Сначала для каждого блока
-считается текст для речи (раздел 3), потом к этим текстам применяются правила:
+A segment is what goes out in one request and lands in one file. The segments of a chapter are a pure function of its
+blocks and two numbers, always computed from the start of the chapter and independent of where listening began. First
+the speech text is computed for each block (section 3), then the rules are applied to these texts:
 
-1. Заголовок — всегда отдельный отрезок.
-2. Блок длиннее `L` делится на части не длиннее `L`: по границе предложения; если предложение длиннее `L` — по
-   последнему пробелу; если пробела нет — по `L` знаков, не разрывая суррогатную пару. Деление сохраняет весь текст
-   и всегда продвигается.
+1. A heading is always a separate segment.
+2. A block longer than `L` is split into parts no longer than `L`: at a sentence boundary; if a sentence is longer than
+   `L`, at the last space; if there is no space, at `L` characters, without breaking a surrogate pair. The split keeps
+   all the text and always makes progress.
 
-   **Граница предложения** — знак конца (`.` `!` `?` `…`), возможно закрывающие кавычки и скобки, затем пробельный
-   знак, и два общих правила по форме, без списков слов:
-   - (i) точка после слова из одной буквы — не конец предложения: «г. Москве», «А. С. Пушкин», «т. е.»;
-   - (ii) следующее слово (после пробела, а если там тире с пробелом — после тире) должно начинаться с прописной
-     буквы, цифры или открывающей кавычки или скобки; строчная буква — предложение продолжается: «…потом
-     заговорил», «— Стой! — крикнул он». Для письменностей без регистра правило (ii) не применяется.
+   **A sentence boundary** is an end mark (`.` `!` `?` `…`), possibly closing quotes and brackets, then a whitespace
+   character, and two general rules by form, without word lists:
+   - (i) a period after a one-letter word is not a sentence end: "г. Москве" ("in the city of Moscow"), "А. С. Пушкин"
+     (a name with initials), "т. е." ("i.e.");
+   - (ii) the next word (after the space, and if there is a dash with a space, after the dash) must begin with a capital
+     letter, a digit, or an opening quote or bracket; a lowercase letter means the sentence continues: "…потом
+     заговорил" ("…then he started talking"), "— Стой! — крикнул он" ("'Stop!' he shouted"). For scripts without case,
+     rule (ii) does not apply.
 
-   Границы ищутся в тексте для речи (раздел 3): знак сноски после точки начала следующего предложения не прячет;
-   найденные смещения переводятся обратно в `Block.text`. Правило одно для деления на отрезки и для выбора места
-   старта (раздел 5). **Принятое ограничение:** сокращение длиннее одной буквы («см. рис.») считается концом, а
-   настоящий конец после слова из одной буквы («…сказал я. Потом») — нет; старт выходит чуть раньше или чуть позже,
-   текст не теряется.
-3. Подряд идущие блоки, каждый короче `Lmin`, объединяются в один отрезок, пока сумма не превысит `L`; тексты
-   соединяются переводом строки.
-4. Остальные блоки — по одному на отрезок.
+   Boundaries are looked for in the speech text (section 3): a footnote mark after the period that begins the next
+   sentence does not hide it; the offsets found are translated back into `Block.text`. There is one rule for splitting
+   into segments and for choosing the start place (section 5). **Accepted limitation:** an abbreviation longer than one
+   letter ("см. рис.", "see fig.") counts as an end, and a real end after a one-letter word ("…сказал я. Потом",
+   "…I said. Then") does not; the start comes slightly earlier or later, no text is lost.
+3. Consecutive blocks, each shorter than `Lmin`, are merged into one segment until the sum exceeds `L`; the texts are
+   joined with a newline.
+4. The other blocks go one per segment.
 
-Блоки, которые вслух не читаются (раздел 3), и блоки с пустым текстом для речи пропускаются: отрезков не создают, в
-группы не входят и группу не прерывают. Все длины в правилах — по тексту для речи; переводы строки между блоками
-группы входят в длину.
+Blocks that are not read aloud (section 3) and blocks with empty speech text are skipped: they create no segments, do
+not enter groups and do not interrupt a group. All lengths in the rules are by the speech text; the newlines between a
+group's blocks count toward the length.
 
-**Отрезок несёт список соответствий**: диапазон текста запроса → (блок, диапазон в `Block.text`). По нему подсветка,
-следование и позиция переводят место в отрезке в место на экране.
+**A segment carries a correspondence list**: a range of the request text → (block, range in `Block.text`). With it,
+highlighting, following and the position translate a place in a segment into a place on the screen.
 
-`L` = 600 и `Lmin` = 200 — стартовые значения. Выведены из замера: запрос на Flash идёт ≈ 3,3 с + 0,016 с на
-знак, звука выходит 0,066 с на знак, то есть при 200 знаках синтез вдвое быстрее звука, а при 600 запрос идёт
-≈ 13 с. Уточняются замером на мобильной сети (раздел 11). Числа входят в результат деления, а не в отпечаток: при их
-смене часть старого звука просто перестанет находиться.
+`L` = 600 and `Lmin` = 200 are starting values. They are derived from a measurement: a request to Flash takes
+≈ 3.3 s + 0.016 s per character, the audio yields 0.066 s per character, that is, at 200 characters synthesis is twice
+as fast as the audio, and at 600 a request takes ≈ 13 s. They will be refined by a measurement on a mobile network
+(section 11). The numbers enter the result of the split, not the fingerprint: when they change, part of the old audio
+simply stops being found.
 
-**Готов ли отрезок** — одно правило для всех потребителей (старт, непрерывное чтение, «Скачать главу»): отрезок
-готов, если в хранилище есть его целый файл или все его части. Если не готов, запрашиваются только отсутствующие
-части; если частей нет — целый отрезок, а если он стартовый — двумя частями.
+**Whether a segment is ready** is one rule for all consumers (start, continuous reading, "Download chapter"): a
+segment is ready if the storage has its whole file or all of its parts. If it is not ready, only the missing parts are
+requested; if there are no parts, the whole segment, and if it is a start segment, in two parts.
 
-**Части отрезка.** Первая — наименьшее число целых предложений от начала отрезка, дающее не меньше `firstPartMin` =
-80 знаков (уточнение по ревью 2026-11-15: первое предложение вроде «— Да.» давало секунду звука и восемь секунд
-тишины; запрос не бывает короче ≈ 3,5 с). Если первое предложение длиннее 200 знаков, оно делится по правилу 2 с
-пределом 200, и первой частью становится первый кусок. Вторая — остаток. Пустой остаток или отрезок короче
-`firstPartMin` — запрос один. Каждая часть
-хранится под своим отпечатком.
+**Segment parts.** The first is the smallest number of whole sentences from the start of the segment that gives at
+least `firstPartMin` = 80 characters (a refinement from the 2026-11-15 review: a first sentence like "— Да." ("'Yes.'")
+gave a second of audio and eight seconds of silence; a request is never shorter than ≈ 3.5 s). If the first sentence is
+longer than 200 characters, it is split by rule 2 with a limit of 200, and the first chunk becomes the first part. The
+second is the remainder. An empty remainder, or a segment shorter than `firstPartMin`: one request. Each part is stored
+under its own fingerprint.
 
-**Стартовый отрезок** — тот, с которого пользователь ждёт звук: нажал «Слушать», «Читать отсюда», перешёл к другому
-месту. Первая часть около 100 знаков приходит через ≈ 5 с — это прогноз по одному замеру на 99 знаков, — вместо
-≈ 13 с у целого отрезка в 600 знаков. Если остаток не готов к концу первой части (особенно при 2×), наступает
-пауза; она допустима, это состояние `waiting`.
+**A start segment** is the one from which the user expects sound: pressed "Listen" or "Read from here", moved to
+another place. The first part of about 100 characters arrives in ≈ 5 s (a forecast from one measurement at 99
+characters), instead of ≈ 13 s for a whole 600-character segment. If the remainder is not ready by the end of the first
+part (especially at 2×), a pause occurs; it is acceptable, it is the `waiting` state.
 
-**Старт с блока в середине группы**: стартовый отрезок — хвост группы от этого блока. Это самостоятельный отрезок
-со своим отпечатком, даже если целая группа уже озвучена: чтение начинается ровно с выбранного места. За ним идут
-обычные отрезки главы.
+**A start from a block in the middle of a group**: the start segment is the group tail from this block. It is a
+separate segment with its own fingerprint, even if the whole group is already narrated: reading begins exactly at the
+chosen place. Ordinary segments of the chapter follow it.
 
-**Старт с предложения внутри блока** («Слушать» из `idle`, раздел 5): стартовый отрезок начинается с этого
-предложения — граница по правилу 2 — и идёт до конца отрезка, в который входит блок (хвост блока и, если блок в
-группе, остальные её блоки). Он тоже самостоятельный, со своим отпечатком; к нему применяется деление на части
-(первое предложение — первая часть). Место прослушивания — его начало. За ним идут обычные отрезки главы.
+**A start from a sentence inside a block** ("Listen" from `idle`, section 5): the start segment begins with this
+sentence (the boundary by rule 2) and runs to the end of the segment that the block belongs to (the block tail and, if
+the block is in a group, the group's other blocks). It is also a separate segment with its own fingerprint; the split
+into parts applies to it (the first sentence is the first part). The listening place is its start. Ordinary segments
+of the chapter follow it.
 
-### 6.2 Клиент и отпечаток
+### 6.2 Client and fingerprint
 
-Форма запроса, голоса, пределы, классы ошибок и тарифы — [GEMINI_TTS.md](GEMINI_TTS.md). Клиент повторяет
-проверенный в студии целиком: обработка 404 на модель, проверка `status` ответа, частота из ответа, очистка ключа из
-текстов ошибок.
+The request shape, the voices, the limits, the error classes and the tariffs are in [GEMINI_TTS.md](GEMINI_TTS.md). The
+client repeats in full what was proven in the studio: handling of 404 on the model, checking the response `status`, the
+sample rate from the response, scrubbing the key from error texts.
 
 ```
 TtsEngine.synthesize(text, profile) → { pcm, sampleRate, usage }
   usage: { audioTokens, inputTokens? }
-  ошибки: TemporaryTtsError (408, 429, 5xx, таймаут, сеть) | TtsError (остальное; у 402 — ссылка на пополнение)
-          ошибка несёт usage, если он был в ответе
+  errors: TemporaryTtsError (408, 429, 5xx, timeout, network) | TtsError (everything else; for 402, a top-up link)
+          an error carries usage if it was in the response
 VoiceProfile { model, voiceId, style }
 fingerprint(text, profile, audioFormat) → sha256
 ```
 
-- Клиент сам не повторяет запросы: временную ошибку он только помечает, повторяет очередь.
-- Расход учитывается один раз: из результата или из ошибки.
-- `FakeTtsEngine` отдаёт тон длиной, пропорциональной тексту, с управляемой задержкой и ошибками. Им пользуются все
-  тесты и разработка экранов.
-- **Сборка с подставным синтезом** имеет отдельный `applicationId` (суффикс `.fake`) и поэтому отдельное хранилище:
-  её тон никогда не попадает в кеш настоящей сборки.
-- Идентификаторы моделей, список голосов и цены с датой проверки — в `lib/tts/voices.dart`.
-  Тариф на сегодня (`Tariffs`) и расходы по месяцам (`spentByMonth`) — в `lib/playback/tariffs.dart`.
+- The client does not retry requests itself: it only marks a temporary error, the queue retries.
+- Spending is accounted once: from the result or from the error.
+- `FakeTtsEngine` returns a tone of a length proportional to the text, with controllable delay and errors. All the
+  tests and screen development use it.
+- **A build with fake synthesis** has a separate `applicationId` (the suffix `.fake`) and therefore a separate storage:
+  its tone never gets into the real build's cache.
+- The model identifiers, the voice list and the prices with the check date are in `lib/tts/voices.dart`. Today's tariff
+  (`Tariffs`) and spending by month (`spentByMonth`) are in `lib/playback/tariffs.dart`.
 
-### 6.3 Очередь синтеза
+### 6.3 Synthesis queue
 
-Очередь знает текущий отрезок, конечную границу прослушивания и держит впереди готовый звук.
+The queue knows the current segment and the end boundary of listening and keeps ready audio ahead.
 
-- **Запас — непрерывный готовый звук от текущего места.** Отрезки за первым неготовым в запас не идут. Запас
-  меряется временем прослушивания: секунды звука, делённые на скорость плеера. Синтез идёт, пока запаса меньше
-  цели. Цель — 120 с **[замер]**.
-- **Предел покупки — весь звук впереди, а не только непрерывный** (ревью 2026-11-15). Новый запрос прослушивания не
-  начинается, если звук впереди текущего места — готовый и уже запрошенный, включая звук за неготовым отрезком, —
-  достиг цели запаса. Иначе при отрезке, который раз за разом не получается, очередь выкупала бы книгу до конца,
-  не сыграв ни секунды. В список плеера тоже дописывается звук только до цели запаса.
-- **Ближайший неготовый отрезок запрашивается первым**, включая его повтор после ошибки. Пока он ждёт повтора, новые
-  запросы дальних отрезков не начинаются; уже начатые доводятся.
-- **Конечная граница**: конец книги, а при таймере сна «до конца главы» — конец главы. За границу очередь не
-  запрашивает. Таймер по времени ограничивает цель запаса оставшимся временем.
-- Одновременно до двух запросов **[замер: частотные лимиты]**. Счёт общий: место занимают и запрос прежнего сеанса,
-  который ещё доигрывается, и «Скачать главу», и проба голоса.
-- **Реестр идущих запросов принадлежит очереди, а не сеансу.** Один запрос на отпечаток: перед запросом очередь
-  проверяет хранилище и реестр; второй потребитель того же отпечатка ждёт идущий запрос, а не платит снова. Запрос
-  только публикует файл и записывает расход; плеером он не управляет никогда. Потребитель текущего сеанса, ждавший
-  этот отпечаток, после появления файла сам проверяет, актуален ли ещё его сеанс, и продолжает.
-- **Пауза**: идущие запросы доводятся до конца и сохраняются, новые запросы прослушивания не начинаются,
-  запланированные повторы прослушивания отменяются. «Скачать главу» (6.7) пауза прослушивания не останавливает.
-- **Временная ошибка** повторяется с растущей задержкой до 30 с, пока активна задача, которой нужен отрезок:
-  прослушивание не на паузе, «Скачать главу» или проба голоса (6.8). Пока есть запас, её не видно. В `preparing`
-  состояние не меняется; запас кончился во время `playing` — состояние `waiting`, которое само сменяется
-  воспроизведением.
-- **Постоянная ошибка**: новые запросы прекращаются сразу, готовый непрерывный звук доигрывается, затем состояние
-  `stopped` с причиной «ошибка» и текстом Google; у 402 — кнопка «Пополнить». Пришла во время паузы — `stopped`
-  сразу. Позиция — первый неозвученный отрезок.
-- **Расход** записывается при получении ответа или ошибки с `usage`, независимо от того, удалось ли потом сохранить
-  и проиграть звук. Сумма за месяц в долларах считается по тарифу, действовавшему в том месяце.
+- **The reserve is continuous ready audio from the current place.** Segments beyond the first unready one do not count
+  toward the reserve. The reserve is measured in listening time: seconds of audio divided by the player's speed.
+  Synthesis goes on while the reserve is below the target. The target is 120 s **[measurement]**.
+- **The purchase limit is all the audio ahead, not only the continuous one** (review of 2026-11-15). A new listening
+  request does not begin if the audio ahead of the current place, ready and already requested, including audio beyond
+  an unready segment, has reached the reserve target. Otherwise, with a segment that fails again and again, the queue
+  would buy the book to the end without playing a second. The player's list is also appended with audio only up to the
+  reserve target.
+- **The nearest unready segment is requested first**, including its retry after an error. While it waits for a retry,
+  new requests for far segments do not begin; those already begun are completed.
+- **The end boundary**: the end of the book, and with the "until the end of the chapter" sleep timer, the end of the
+  chapter. The queue does not request beyond the boundary. A time-based timer limits the reserve target to the
+  remaining time.
+- Up to two requests at a time **[measurement: rate limits]**. The count is common: a place is taken by a request of a
+  previous session that is still finishing, by "Download chapter", and by a voice probe.
+- **The registry of in-flight requests belongs to the queue, not to the session.** One request per fingerprint: before
+  a request the queue checks the storage and the registry; a second consumer of the same fingerprint waits for the
+  in-flight request rather than paying again. A request only publishes the file and records the spending; it never
+  controls the player. A consumer of the current session that was waiting for this fingerprint, after the file appears,
+  itself checks whether its session is still current and continues.
+- **Pause**: in-flight requests are completed and saved, new listening requests do not begin, scheduled listening
+  retries are cancelled. A listening pause does not stop "Download chapter" (6.7).
+- **A temporary error** is retried with a growing delay up to 30 s while a task that needs the segment is active:
+  listening not on pause, "Download chapter", or a voice probe (6.8). While there is reserve, it is not visible. In
+  `preparing` the state does not change; if the reserve ran out during `playing`, the state is `waiting`, which gives
+  way to playback by itself.
+- **A permanent error**: new requests stop at once, the ready continuous audio is played out, then the state is
+  `stopped` with the reason "error" and Google's text; for 402, a "Top up" button. If it arrived during a pause, then
+  `stopped` at once. The position is the first unnarrated segment.
+- **Spending** is recorded on receiving a response or an error with `usage`, regardless of whether the audio could then
+  be saved and played. The monthly sum in dollars is computed at the tariff that was in force in that month.
 
-### 6.4 Сеанс
+### 6.4 Session
 
-Сеанс прослушивания — книга, профиль голоса, точка старта и номер, растущий при каждом действии, которое меняет то,
-что должно звучать: старт, «Читать отсюда», переход назад или вперёд, смена главы, смена голоса или модели,
-«Закрыть», удаление книги, «Очистить озвучку».
+A listening session is a book, a voice profile, a start point and a number that grows with each action that changes what
+should sound: start, "Read from here", a move back or forward, a chapter change, a voice or model change, "Close",
+deleting a book, "Clear narration".
 
-- Номер сеанса проверяют контроллеры прослушивания и пробы голоса; прежняя задача очереди отменяется.
-  Очередь номеров сеанса не хранит: публикацию после удаления или очистки запрещают поколения
-  `generation` и `bookGeneration` и отметка об удалении книги.
-- Результат прежнего сеанса: звук сохраняется в хранилище под своим отпечатком, расход записывается — и всё. В
-  список плеера он не попадает, позицию и состояние не меняет. Исключение — удалённая книга и очищенная озвучка
-  (раздел 4): звук отбрасывается.
-- Пауза сеанс не меняет: «Слушать» продолжает с того же места тем же списком.
-- Смена главы, голоса или модели, «Читать отсюда», «назад» и «вперёд» начинают новый сеанс и сохраняют намерение:
-  было на паузе — остаётся на паузе на новом месте; играло — играет. Смена голоса или модели начинает с текущего
-  отрезка.
-- Таймер сна принадлежит контроллеру, а не сеансу (6.6).
+- The session number is checked by the listening and voice-probe controllers; the previous queue task is cancelled. The
+  queue does not store session numbers: publishing after a deletion or clearing is forbidden by the generations
+  `generation` and `bookGeneration` and by the book-deletion mark.
+- The result of a previous session: the audio is saved in the storage under its fingerprint, the spending is recorded,
+  and that is all. It does not enter the player's list, and does not change the position or the state. The exception is
+  a deleted book and cleared narration (section 4): the audio is discarded.
+- A pause does not change the session: "Listen" continues from the same place with the same list.
+- A change of chapter, voice or model, "Read from here", "previous" and "next" start a new session and keep the intent:
+  if it was on pause, it stays on pause at the new place; if it was playing, it plays. A change of voice or model starts
+  from the current segment.
+- The sleep timer belongs to the controller, not to the session (6.6).
 
-### 6.5 Хранилище звука
+### 6.5 Audio storage
 
 ```
 AudioStore.formatId
@@ -474,259 +503,268 @@ AudioStore.has(fingerprint, bookId: …) / file(fingerprint, bookId: …) / put(
 AudioStore.bytesForBook(bookId) / totalBytes / removeBook(bookId) / clearAll()
 ```
 
-- Gemini отдаёт PCM 24 кГц моно — около 170 МБ на час. На телефоне звук сжимается системным кодеком Android через
-  модуль `platform`. Кодек **[замер]**: AAC в контейнере M4A, если проверка на слух и на стыках файлов не покажет
-  иного. Формат входит в отпечаток.
-- **Файл появляется под своим именем только готовым**: запись идёт во временный файл, после завершения кодека —
-  переименование. `has` видит только готовые файлы.
-- Готовый файл, который не читается (не определяется длительность, не играет плеер), удаляется и считается
-  неготовым: отрезок запрашивается заново один раз; повторная неудача — остановка с технической ошибкой на этом
-  отрезке, без перескока через текст (ревью 2026-11-15).
-- Не удалась запись — она повторяется с тем же PCM, пока он в памяти, без нового запроса к Gemini. Если процесс
-  убит между ответом и записью, оплаченный ответ теряется; это принятое ограничение, как в студии.
-- Пробы голоса хранятся тем же способом в `samples/` (раздел 4), вне папок книг.
-- Только для тестов есть кодировщик без сжатия (`WavAudioEncoder`) — тот же интерфейс.
+- Gemini returns 24 kHz mono PCM: about 170 MB per hour. On the phone the audio is compressed by the Android system
+  codec through the `platform` module. The codec **[measurement]**: AAC in an M4A container, unless a check by ear and
+  at file joins shows otherwise. The format is part of the fingerprint.
+- **A file appears under its own name only when ready**: writing goes to a temporary file, and after the codec
+  finishes, a rename. `has` sees only ready files.
+- A ready file that cannot be read (the duration cannot be determined, the player does not play it) is deleted and
+  counts as unready: the segment is requested again once; a second failure is a stop with a technical error at this
+  segment, without skipping over the text (review of 2026-11-15).
+- If a write fails, it is retried with the same PCM while it is in memory, with no new request to Gemini. If the
+  process is killed between the response and the write, the paid response is lost; this is an accepted limitation, as in
+  the studio.
+- Voice probes are stored in the same way in `samples/` (section 4), outside the book folders.
+- Only for the tests there is an encoder without compression (`WavAudioEncoder`), with the same interface.
 
-### 6.6 Воспроизведение
+### 6.6 Playback
 
-- Плеер (`just_audio`) играет список файлов; очередь дописывает в него готовые отрезки текущего сеанса по порядку.
-  У каждого элемента — номер отрезка.
-- Медиасессия (`audio_service`): служба переднего плана с медиа-уведомлением, экран блокировки, кнопки гарнитуры.
-- Звонок, чужой звук и вынутые наушники ставят паузу (`audio_session`). Продолжает пользователь сам;
-  автопродолжения нет.
-- Скорость меняет плеер; запросов смена скорости не делает. «Назад» и «вперёд» переходят по абзацам (решение владельца
-  2026-11-15, после первого прослушивания: переход по отрезкам непонятен — то несколько предложений внутри абзаца, то
-  несколько реплик сразу): «вперёд» — к началу следующего читаемого блока, «назад» — к началу текущего блока, а если
-  звук уже в его начале — к началу предыдущего. «В начале» — от начала блока по оценке места прозвучало меньше
-  3 секунд (`blockStartWindow`) либо звук после предыдущей команды ещё не начался; пауза посреди абзаца началом не
-  считается. Готовый звук используется, где начало блока совпадает с началом
-  отрезка или его части; платный запрос возникает только при переходе в середину группы коротких блоков (хвост
-  группы, 6.1).
-- Паузы между отрезками плеер не добавляет. Если проверка стыков на слух покажет нужду **[замер]**, пауза
-  добавляется между отрезками разных блоков — и никогда между частями одного блока.
-- Таймер сна — пауза по времени или по концу главы, которая звучит в момент срабатывания. Таймер принадлежит
-  контроллеру, а не сеансу: смена места, главы и голоса в той же книге его не сбрасывает. Минуты считаются по
-  настенным часам с момента установки. Таймер снимается при срабатывании, при «Закрыть», при закрытии книги и при
-  смене книги. Срок, истёкший не во время звука: на паузе таймер просто снимается — ему нечего останавливать, и
-  следующее «Слушать» звучит; в `preparing` и `waiting` — пауза, и таймер снят. Перед каждым явным стартом
-  («Слушать», «Читать отсюда», «назад», «вперёд», выбор главы) истёкший срок снимается одной и той же обработкой — в
-  том числе после остановки по ошибке. Конец последней главы (конец книги) — тоже срабатывание «до конца главы».
-- Скорость — настройка: каждый сеанс звучит с сохранённой скоростью с первого звука; источник скорости один — и
-  для подписи, и для плеера.
-- **Счётчик явных команд.** Контроллер увеличивает его на каждой явной команде пользователя, запускающей или
-  перемещающей звук — «Слушать» (из `idle`, `paused`, `stopped`), «Читать отсюда», «назад», «вперёд», выбор главы, —
-  откуда бы она ни пришла: экран, медиасессия (уведомление, экран блокировки), гарнитура. Экран по изменению счётчика
-  включает следование (раздел 5). Автоматические переходы (следующий отрезок, конец главы, смена профиля) его не
-  меняют. Настоящий контроллер публикует новое место синхронно вместе со счётчиком, чтобы экран не перешёл к старому
-  месту.
-- Смена голоса или модели — новый сеанс с начала текущей единицы, в том числе стартового отрезка, начатого с
-  предложения внутри блока (6.1): начало блока заново не читается, место прослушивания не сдвигается.
+- The player (`just_audio`) plays a list of files; the queue appends to it the ready segments of the current session in
+  order. Each item carries a segment number.
+- The media session (`audio_service`): a foreground service with a media notification, the lock screen, the headset
+  buttons.
+- A call, foreign audio and unplugged headphones pause (`audio_session`). The user resumes by themselves; there is no
+  automatic resumption.
+- Speed is changed by the player; a speed change makes no requests. "Previous" and "next" move by paragraphs (the
+  owner's decision of 2026-11-15, after the first listening: moving by segments is confusing, sometimes several
+  sentences within a paragraph, sometimes several lines at once): "next" goes to the start of the next readable block,
+  "previous" to the start of the current block, and if the sound is already at its start, to the start of the previous
+  one. "At the start" means: by the place estimate, less than 3 seconds have sounded from the start of the block
+  (`blockStartWindow`), or the sound after the previous command has not yet begun; a pause in the middle of a paragraph
+  does not count as the start. Ready audio is used where the start of the block coincides with the start of a segment or
+  of its part; a paid request arises only on a move into the middle of a group of short blocks (the group tail, 6.1).
+- The player adds no pauses between segments. If a check of the joins by ear shows a need **[measurement]**, a pause is
+  added between segments of different blocks, and never between parts of one block.
+- The sleep timer is a pause by time or at the end of the chapter that is sounding at the moment of firing. The timer
+  belongs to the controller, not to the session: a change of place, chapter and voice in the same book does not reset
+  it. Minutes are counted by wall clock from the moment it was set. The timer is cleared when it fires, on "Close", on
+  closing the book and on changing the book. A deadline that expired when no sound was playing: on pause the timer is
+  simply cleared, it has nothing to stop, and the next "Listen" sounds; in `preparing` and `waiting`, a pause, and the
+  timer is cleared. Before every explicit start ("Listen", "Read from here", "previous", "next", choosing a chapter) an
+  expired deadline is cleared by one and the same handling, including after a stop by error. The end of the last
+  chapter (the end of the book) is also a firing of "until the end of the chapter".
+- Speed is a setting: each session sounds at the saved speed from the first sound; there is one source of speed, for
+  the caption and for the player.
+- **The explicit-command counter.** The controller increments it on every explicit user command that starts or moves
+  the sound: "Listen" (from `idle`, `paused`, `stopped`), "Read from here", "previous", "next", choosing a chapter,
+  wherever it comes from: the screen, the media session (notification, lock screen), the headset. By a change of the
+  counter the screen turns following on (section 5). Automatic transitions (the next segment, the end of a chapter, a
+  profile change) do not change it. The real controller publishes the new place synchronously together with the
+  counter, so that the screen does not go to the old place.
+- A change of voice or model is a new session from the start of the current unit, including a start segment begun from
+  a sentence inside a block (6.1): the start of the block is not read again, the listening place does not shift.
 
-`NarrationController` — единственное место, где сходятся очередь, плеер, сеанс и позиция. Экран подписан на его
-состояние и ничего не решает сам.
+`NarrationController` is the only place where the queue, the player, the session and the position come together. The
+screen subscribes to its state and decides nothing itself.
 
-| Состояние | Что происходит | Медиасессия | Служба переднего плана |
+| State | What is happening | Media session | Foreground service |
 |---|---|---|---|
-| `idle` | прослушивания нет | нет | нет |
-| `preparing` | ждём первый отрезок; временные ошибки повторяются | «играет», загрузка | да |
-| `playing` | звук идёт | «играет» | да |
-| `waiting` | запас кончился, идут повторы | «играет», загрузка | да |
-| `paused` | пауза пользователя, прерывания или таймера | «пауза» | да, уведомление не снимается (`androidStopForegroundOnPause: false`) |
-| `stopped` | причина «ошибка» или «конец книги» | сессии нет: уведомление исчезает, причина — на экране чтения (2026-11-15: пакет `audio_service` не умеет держать карточку с текстом без службы переднего плана; подменять его код не стали) | нет |
+| `idle` | there is no listening | no | no |
+| `preparing` | waiting for the first segment; temporary errors are retried | "playing", loading | yes |
+| `playing` | sound is going | "playing" | yes |
+| `waiting` | the reserve ran out, retries are in progress | "playing", loading | yes |
+| `paused` | a pause by the user, by an interruption or by the timer | "paused" | yes, the notification is not removed (`androidStopForegroundOnPause: false`) |
+| `stopped` | the reason is "error" or "end of the book" | no session: the notification disappears, the reason is on the reading screen (2026-11-15: the `audio_service` package cannot keep a card with text without a foreground service; we did not replace its code) | no |
 
-Переходы:
+Transitions:
 
 ```
-idle ──старт──► preparing ──первый звук──► playing ◄──────────► paused
+idle ──start──► preparing ──first sound──► playing ◄──────────► paused
                     │                        │  ▲                  ▲
-                    │                        ▼  │ звук готов       │ пауза
+                    │                        ▼  │ sound ready      │ pause
                     │                      waiting ────────────────┘
-                    ├──пауза──► paused
-                    └──постоянная ошибка──► stopped ◄── постоянная ошибка или конец книги ── playing, waiting
-paused ──постоянная ошибка──► stopped
-paused ──«Слушать»──► playing, а если запаса нет — preparing
-stopped ──«Слушать»──► preparing (новый сеанс с сохранённой позиции)
-stopped ──«Читать отсюда»──► preparing (новый сеанс с начала абзаца)
-любое ──«Закрыть», закрытие книги──► idle
+                    ├──pause──► paused
+                    └──permanent error──► stopped ◄── permanent error or end of book ── playing, waiting
+paused ──permanent error──► stopped
+paused ──"Listen"──► playing, or preparing if there is no reserve
+stopped ──"Listen"──► preparing (a new session from the saved position)
+stopped ──"Read from here"──► preparing (a new session from the start of the paragraph)
+any ──"Close", closing the book──► idle
 ```
 
-- Временная ошибка в `preparing` оставляет `preparing`: идут повторы.
-- Смена главы, голоса или модели, «Читать отсюда», «назад» и «вперёд» из `paused` — новый сеанс, состояние
-  `paused` на новом месте; из `preparing`, `playing`, `waiting` — новый сеанс, `preparing` (или сразу `playing`,
-  если звук готов). Касание уже выбранного голоса или модели (и другая строка с тем же действующим голосом) — не
-  смена: сеанс не перезапускается, место паузы не сбрасывается.
-- Постоянная ошибка несёт свой класс и то, к чему относится: 404 — модель, на которой случилась (панель называет
-  её, а не выбранную потом); неверный ключ (400/403 с отказом по ключу) — распознанная причина с кнопкой «Изменить
-  ключ». Панель «Книга закончилась» — только «Закрыть». «К месту чтения» есть в панели управления (`preparing`,
-  `playing`, `waiting`, `paused`), в том числе в `preparing` и `waiting`, где подпись состояния стоит в той же верхней строке (раздел 5), а
-  чип голоса остаётся; в `stopped` её нет: в панели ошибки к месту голоса возвращает «Слушать». Из `stopped` новый
-  сеанс начинают только «Слушать» и «Читать отсюда»; «назад» и «вперёд» (в том числе из уведомления) там ничего не
-  делают.
-- Конец книги, до которого дошло прослушивание, делает книгу дочитанной (FR-L4): контроллер ставит отдельный факт
-  «дочитана» (раздел 5), и ни «Закрыть», ни повторное прослушивание на последней странице его не снимают.
-- **Служба становится активной в момент нажатия «Слушать»**, пока приложение на экране, и аудиофокус запрашивается
-  после её запуска. `preparing` и `waiting` публикуются как «играет, загрузка», а не как пауза: иначе Android
-  вправе остановить приложение, пока оно ждёт ответ Gemini при погашенном экране. В `paused` служба остаётся службой
-  переднего плана, чтобы «Слушать» с экрана блокировки работало при погашенном экране.
-- **Список плеера доигран, а конечная граница не достигнута** — это `waiting`, а не конец книги. Конец книги
-  объявляет только контроллер.
-- Пауза запоминает место внутри файла; «Слушать» в работающем приложении продолжает с него. После перезапуска
-  приложения прослушивание начинается с начала отрезка, на котором остановились: это место прослушивания из
-  `state.json`, и «Слушать» из `idle` берёт его, если оно на открытой странице (раздел 5).
-- Пауза в `preparing` и `waiting` снимает намерение играть: пришедший позже звук ложится в список, но не звучит.
+- A temporary error in `preparing` leaves `preparing`: retries go on.
+- A change of chapter, voice or model, "Read from here", "previous" and "next" from `paused` is a new session, state
+  `paused` at the new place; from `preparing`, `playing`, `waiting` a new session, `preparing` (or `playing` at once if
+  the audio is ready). Touching the already chosen voice or model (and another row with the same effective voice) is not
+  a change: the session is not restarted, the pause place is not reset.
+- A permanent error carries its class and what it relates to: 404, the model on which it happened (the panel names it,
+  not the one chosen afterwards); an invalid key (400/403 with a key refusal), a recognized cause with a "Change key"
+  button. The "End of the book" panel has only "Close". "To current spot" is in the control panel (`preparing`,
+  `playing`, `waiting`, `paused`), including in `preparing` and `waiting`, where the state caption stands in the same top
+  row (section 5) and the voice chip stays; in `stopped` it is absent: in the error panel, "Listen" returns to the
+  voice's place. From `stopped` a new session is started only by "Listen" and "Read from here"; "previous" and "next"
+  (including from the notification) do nothing there.
+- The end of the book reached by listening makes the book finished (FR-L4): the controller sets the separate "finished"
+  fact (section 5), and neither "Close" nor re-listening on the last page clears it.
+- **The service becomes active at the moment "Listen" is pressed**, while the app is on the screen, and audio focus is
+  requested after it starts. `preparing` and `waiting` are published as "playing, loading", not as a pause: otherwise
+  Android may stop the app while it waits for Gemini's response with the screen off. In `paused` the service remains a
+  foreground service so that "Listen" from the lock screen works with the screen off.
+- **The player list is played out and the end boundary has not been reached**: this is `waiting`, not the end of the
+  book. The end of the book is declared only by the controller.
+- A pause remembers the place inside the file; "Listen" in the running app continues from it. After an app restart,
+  listening begins from the start of the segment where it stopped: this is the listening place from `state.json`, and
+  "Listen" from `idle` takes it if it is on the open page (section 5).
+- A pause in `preparing` and `waiting` removes the intent to play: audio that arrives later goes into the list but does
+  not sound.
 
-### 6.7 «Скачать главу»
+### 6.7 "Download chapter"
 
-Задача очереди: дальняя граница — конец текущей главы, цель — все её отрезки готовы (правило готовности, 6.1)
-вместо запаса. Доступна и во время прослушивания, и без него; от сеанса не зависит и заканчивается, когда глава
-готова, по «Остановить», удалению книги, «Очистить озвучку» или постоянной ошибке (с текстом Google). Повторы
-временных ошибок идут, пока задача активна.
+A queue task: the far boundary is the end of the current chapter, the goal is all its segments ready (the readiness rule,
+6.1) in place of the reserve. It is available both during listening and without it; it does not depend on the session
+and ends when the chapter is ready, on "Stop", on deleting the book, on "Clear narration" or on a permanent error (with
+Google's text). Retries of temporary errors go on while the task is active.
 
-В первой версии работает, пока приложение на экране; экран на это время не гаснет. Ушли из приложения —
-остановилась, вернулись — продолжает с первого неготового отрезка. Ручное «Остановить» отменяет и это продолжение.
+In the first version it works while the app is on the screen; the screen does not go dark during that time. If the user
+leaves the app, it stops; on return, it continues from the first unready segment. A manual "Stop" cancels this
+continuation too.
 
-Оценка цены перед началом считается по уникальным отсутствующим отпечаткам главы — после «Остановить» и после
-ошибки это неготовый остаток, а не цена всей главы.
+The price estimate before the start is computed over the chapter's unique missing fingerprints: after "Stop" and after
+an error it is the unready remainder, not the price of the whole chapter.
 
-**Профиль.** Задача принадлежит главе и профилю голоса (6.2), с которыми её начали. Готовность главы
-(«озвучена») и оценка считаются для действующего профиля книги — контракт `isVoiced`/`estimate`/`start` принимает
-профиль: звук другим голосом или моделью для нового профиля не годится. Смена голоса книги, голоса приложения или
-модели останавливает задачу (готовое сохраняется), и у текущей главы появляется предложение с оценкой для нового
-профиля.
+**Profile.** The task belongs to a chapter and to the voice profile (6.2) with which it was begun. A chapter's readiness
+("narrated") and the estimate are computed for the book's current profile: the `isVoiced`/`estimate`/`start` contract
+takes a profile: audio in another voice or model does not suit the new profile. A change of the book's voice, of the
+app's voice or of the model stops the task (what is ready is kept), and the current chapter gets an offer with an
+estimate for the new profile.
 
-**Одна задача.** Предложение скачать — в блоке текущей главы и только когда никакая задача не идёт. Блок с ходом
-(доля готового и «Остановить») или ошибкой — у той главы, которой принадлежит задача, даже если читатель уже в
-другой. Оценка — отдельной строкой перед кнопкой. Постоянная ошибка показывается в том же блоке — причина, ответ
-Google, «Скачать снова» с оценкой остатка; панель плеера при этом не открывается; новое начало заменяет упавшую
-задачу. После завершения блок показывает «озвучена», после ручной остановки — снова предложение скачать с оценкой
-остатка. Записанный звук занимает место в хранилище (6.5): после «Очистить озвучку» новое скачивание и новые пробы
-снова видны в объёме книги и всей озвучки, и «Удалить озвучку» и «Очистить» снова доступны.
+**One task.** The offer to download is in the current chapter's block and only when no task is running. The block with
+progress (the fraction ready and "Stop") or an error is at the chapter the task belongs to, even if the reader is
+already in another. The estimate is on a separate line before the button. A permanent error is shown in the same block:
+the cause, Google's response, "Download again" with an estimate of the remainder; the player panel does not open; a new
+start replaces the failed task. After completion the block shows "narrated"; after a manual stop, an offer to download
+again with an estimate of the remainder. The recorded audio takes space in the storage (6.5): after "Clear narration" a
+new download and new probes are again visible in the volume of the book and of all narration, and "Delete narration" and
+"Clear" are available again.
 
-### 6.8 Проба голоса
+### 6.8 Voice probe
 
-- Открытие экрана выбора голоса ставит прослушивание на паузу.
-- Фраза и стиль пробы — по языку книги, из таблицы в модуле `tts` (FR-T7); для голоса приложения — на языке
-  интерфейса. Проба озвучивается **полным действующим профилем** (6.2): голос, модель, стиль.
-- Проба играет отдельным коротким плеером, не через список прослушивания.
-- Звук — в `samples/<отпечаток>` (раздел 4); отпечаток считается от фразы и полного профиля, поэтому второй раз
-  бесплатна проба того же профиля, а после смены модели (или языка) тот же голос озвучивается заново.
-- Запрос идёт через очередь: один запрос на отпечаток, место в общем лимите, расход учитывается как обычно.
-  Временная ошибка повторяется, пока открыт экран выбора голоса.
-- У строки голоса три видимых состояния пробы: ожидание (в том числе повторы), звучит, ошибка с текстом Google.
+- Opening the voice selection screen pauses listening.
+- The probe's phrase and style follow the book's language, from the table in the `tts` module (FR-T7); for the app's
+  voice, the interface language. The probe is narrated with the **full current profile** (6.2): voice, model, style.
+- The probe plays through a separate short player, not through the listening list.
+- The audio is in `samples/<fingerprint>` (section 4); the fingerprint is computed from the phrase and the full
+  profile, so a probe of the same profile is free the second time, and after a change of model (or language) the same
+  voice is narrated again.
+- The request goes through the queue: one request per fingerprint, a place in the common limit, spending accounted as
+  usual. A temporary error is retried while the voice selection screen is open.
+- A voice row has three visible probe states: waiting (including retries), sounding, an error with Google's text.
 
-## 7. Платформа
+## 7. Platform
 
-Модуль `platform` — единственное место с кодом на Kotlin и каналами к нему:
+The `platform` module is the only place with Kotlin code and the channels to it:
 
-- кодировщик PCM → сжатый файл (`MediaCodec` + `MediaMuxer`);
-- приём файла от другого приложения («Открыть с помощью») и из системного выбора файла; файл сразу копируется во
-  временную папку добавления, постоянные права на исходник не запрашиваются.
+- the encoder PCM → compressed file (`MediaCodec` + `MediaMuxer`);
+- receiving a file from another app ("Open with") and from the system file picker; the file is copied at once into the
+  temporary adding folder, permanent rights to the source are not requested.
 
-Разрешения: интернет; служба переднего плана и её тип «воспроизведение медиа» (`FOREGROUND_SERVICE`,
-`FOREGROUND_SERVICE_MEDIA_PLAYBACK`). Разрешение на уведомления не запрашивается: единственное уведомление
-приложения — медиасессия, для неё Android делает исключение. Доступа к общей памяти, контактам, местоположению нет.
-Незашифрованный HTTP запрещён; приложение обращается только к `generativelanguage.googleapis.com`.
+Permissions: internet; the foreground service and its "media playback" type (`FOREGROUND_SERVICE`,
+`FOREGROUND_SERVICE_MEDIA_PLAYBACK`). The notification permission is not requested: the app's only notification is the
+media session, for which Android makes an exception. There is no access to shared storage, contacts or location.
+Unencrypted HTTP is forbidden; the app contacts only `generativelanguage.googleapis.com`.
 
-Утверждения этого раздела о поведении Android и раздела 6.6 о службе — по документации; на телефоне владельца они
-проверяются по списку ручной проверки (раздел 9).
+The statements of this section about Android's behavior and of section 6.6 about the service are from the
+documentation; on the owner's phone they are checked by the manual checklist (section 9).
 
-Минимальная версия Android — 12 (`minSdk 31`); телефон владельца — Samsung Galaxy S26 Ultra (спека 001, раздел 1).
+The minimum Android version is 12 (`minSdk 31`); the owner's phone is a Samsung Galaxy S26 Ultra (spec 001, section 1).
 
-**Ориентация — только портретная** (спека 001, Р10; решение F проверки жестов). Закреплена в манифесте
-(`android:screenOrientation="portrait"`) и в коде (`SystemChrome.setPreferredOrientations` при запуске). Альбомной
-в первой версии нет: вырез камеры сбоку и зона жеста «домой» в альбомной не решены. Смена размера окна (разделённый
-экран) раскладку пересчитывает, место чтения сохраняется (раздел 5).
+**Orientation is portrait only** (spec 001, Р10; decision F of the gesture audit). It is fixed in the manifest
+(`android:screenOrientation="portrait"`) and in code (`SystemChrome.setPreferredOrientations` at startup). There is no
+landscape in the first version: the camera cutout at the side and the "home" gesture zone are unresolved in landscape.
+A window-size change (split screen) recomputes the layout, the reading place is kept (section 5).
 
-## 8. Экраны и состояние
+## 8. Screens and state
 
-- Маршруты: полка → чтение; поверх чтения — оглавление, вид текста, голос, скорость, таймер, сноска; настройки с
-  полки. Переходы — 8.1.
-- Состояние экранов держат `_ShelfScreenState` и `ReaderScreenState`. `NarrationController` и
-  `Library` живут всё время работы приложения и создаются в `app`.
-- Зависимости передаются в конструкторы. Генерации кода нет: чтение и запись JSON для нескольких классов написаны
-  руками. Единственное исключение — классы строк интерфейса, которые генерирует `flutter gen-l10n` из ARB (входит
-  в инструмент Flutter, запускается сам при `pub get`, тестах и сборке; решение владельца 2026-11-14).
-- Строки интерфейса — в ARB-файлах `lib/screens/l10n/app_<язык>.arb` на четырёх языках (ru, en, pl, de); язык —
-  телефона, если он из четырёх, иначе английский; выбор в настройках важнее. Системные подписи Material —
-  делегаты `GlobalMaterialLocalizations` из `material_ui`.
-- Разбор книги при добавлении идёт в отдельном изоляте: полка не замирает.
+- Routes: shelf → reading; over reading: the table of contents, text appearance, voice, speed, timer, footnote;
+  settings from the shelf. Transitions are 8.1.
+- The screens' state is held by `_ShelfScreenState` and `ReaderScreenState`. `NarrationController` and `Library` live
+  for the whole run of the app and are created in `app`.
+- Dependencies are passed into constructors. There is no code generation: reading and writing JSON for a few classes is
+  written by hand. The only exception is the interface-string classes generated by `flutter gen-l10n` from ARB (part of
+  the Flutter tool, it runs by itself on `pub get`, tests and build; the owner's decision of 2026-11-14).
+- The interface strings are in the ARB files `lib/screens/l10n/app_<language>.arb` in five languages (ru, en, pl, de,
+  uk; Ukrainian added by the owner's decision of 2026-11-17); the language is the phone's if it is one of the five,
+  otherwise English; a choice in the settings takes priority. The system Material labels are the
+  `GlobalMaterialLocalizations` delegates from `material_ui`.
+- Book parsing at adding runs in a separate isolate: the shelf does not freeze.
 
-### 8.1 Переходы
+### 8.1 Transitions
 
-- Оглавление, вид текста, голос, скорость и таймер открываются поверх чтения и книгу не закрывают.
-- Оглавление звук не останавливает. Экран «Голос» ставит прослушивание на паузу (6.8).
-- **Системная «Назад» на экране чтения** (спека 001, Р11; решение J проверки жестов, заменяет правило f проверки
-  путей): 1) снимает выбор абзаца; 2) закрывает лист, диалог, сноску; 3) если панели чтения скрыты — показывает их,
-  книга не закрывается; 4) если панели показаны — закрывает книгу: прослушивание → `idle`, таймер сна снят (6.6). При
-  прослушивании так же: первая «Назад» показывает шапку и ползунок над панелью плеера, звук идёт. **Причина — краевой
-  жест Android:** при жестовой навигации смахивание от края экрана — это «Назад»; читатель, листающий страницы от
-  края, иначе закрывал бы книгу и обрывал звук. Стрелка «Назад» в шапке чтения закрывает книгу сразу. Проверяется
-  только на телефоне (спека 001, FR-P9).
-- **Защита от касания вдогонку** (спека 001, Р12; решение A проверки жестов). После того как слой под пальцем
-  сменился — нижняя панель чтения ↔ панель плеера, вид панели плеера (управление, ошибка, конец книги), строка
-  скачивания, закрылся лист, диалог или экран поверх чтения, открылся лист, — новые элементы управления и страница под
-  ними `layerSettleTime` = 350 мс не принимают касаний. Механизм один: экран чтения поглощает касания после смены
-  слоя, лист — первые 350 мс после открытия. Второе касание двойного нажатия приходит через 100–250 мс; два
-  осмысленных нажатия с промежутком больше 350 мс работают как обычно. Показ и скрытие панелей чтения касанием центра
-  сменой слоя под пальцем не считаются: панели встают у краёв.
-- Настройки открываются с полки. С экрана чтения — только из «Слушать» без ключа, из «Выбрать модель» при ошибке
-  404 и из «Изменить ключ» при отказе по ключу (сразу к открытому полю ключа); «Назад» из них возвращает в ту же
-  книгу, озвучка сама не запускается. Непустое значение в поле ключа сохраняется при любом уходе с поля и с экрана
-  («Готово», «Назад» экранная и системная, потеря фокуса); пустое поле ключ не трогает.
-- Панель плеера видна только на экране чтения; мини-плеера на полке нет.
-- Во время прослушивания касание центра страницы показывает шапку и ползунок над панелью плеера; ползунок листает
-  только экран (5).
+- The table of contents, text appearance, voice, speed and timer open over reading and do not close the book.
+- The table of contents does not stop the sound. The "Voice" screen pauses listening (6.8).
+- **The system "Back" on the reading screen** (spec 001, Р11; decision J of the gesture audit, replaces rule f of the
+  journey audit): 1) clears the paragraph selection; 2) closes a sheet, dialog, footnote; 3) if the reading panels are
+  hidden, shows them, and the book is not closed; 4) if the panels are shown, closes the book: listening → `idle`, the
+  sleep timer cleared (6.6). During listening it is the same: the first "Back" shows the header and the slider above
+  the player panel, the sound goes on. **The reason is the Android edge gesture:** with gesture navigation a swipe from
+  the screen edge is "Back"; a reader who turns pages from the edge would otherwise close the book and cut off the
+  sound. The "Back" arrow in the reading header closes the book at once. Checked only on the phone (spec 001, FR-P9).
+- **Protection against a follow-up tap** (spec 001, Р12; decision A of the gesture audit). After the layer under the
+  finger has changed (reading bottom panel ↔ player panel, the player panel's view (controls, error, end of the book),
+  the download row, a sheet, dialog or screen over reading closed, a sheet opened), the new controls and the page under
+  them do not accept taps for `layerSettleTime` = 350 ms. There is one mechanism: the reading screen absorbs taps after
+  a layer change, a sheet for the first 350 ms after opening. The second tap of a double press comes after 100–250 ms;
+  two deliberate presses more than 350 ms apart work as usual. Showing and hiding the reading panels by a tap on the
+  center is not counted as a layer change under the finger: the panels appear at the edges.
+- The settings open from the shelf. From the reading screen only from "Listen" without a key, from "Choose model" on a
+  404 error and from "Change key" on a key refusal (straight to the open key field); "Back" from them returns to the
+  same book, narration does not start by itself. A non-empty value in the key field is saved on any departure from the
+  field and from the screen ("Done", on-screen and system "Back", loss of focus); an empty field does not touch the key.
+- The player panel is visible only on the reading screen; there is no mini-player on the shelf.
+- During listening, a tap on the center of the page shows the header and the slider above the player panel; the slider
+  turns only the screen (5).
 
-## 9. Проверка
+## 9. Verification
 
-| Что | Чем | Где |
+| What | By what | Where |
 |---|---|---|
-| разборщики: каждое правило и каждое из трёх повреждений — образец с точным ожидаемым текстом блоков, глав и сносок; определение формата; линейность глав; текст для речи; деление на отрезки и список соответствий; отпечаток | модульные тесты | WSL, CI |
-| клиент Gemini: настоящий класс с фиктивным ключом и подставным HTTP на ответах, записанных по форме из студии | модульные тесты | WSL, CI |
-| разбивка на страницы, в том числе глава в сотни тысяч знаков | тесты со встроенным шрифтом | WSL, CI |
-| очередь, сеансы, состояния: поздний ответ после паузы и смены главы, два одинаковых абзаца, ошибка ближайшего отрезка при готовых дальних, конец списка плеера до конца книги, правило готовности и части, хвост группы, потребитель чужого запроса, удаление и очистка во время запроса, проба и «Скачать главу» в общем лимите, таймер на подставных часах; «Слушать» из паузы и «назад/вперёд» без готового звука — через `preparing`/`waiting`, а не сразу `playing`; поздний результат запроса или записи на диск после «Закрыть», удаления и смены сеанса — двойником, которому ответ возвращается после новой команды | тесты с `FakeTtsEngine` (управляемые задержки и ошибки) и подставным плеером | WSL, CI |
-| хранение: убитое добавление, недописанный звук, одновременные записи расхода | модульные тесты | WSL, CI |
-| экраны | снимки экранов против эталона: владелец утверждает экраны на телефоне, после этого их снимки записываются эталоном и дальше защищают от регрессий; с макетом FigCraft автоматически не сравниваются | WSL, CI |
-| фон и ожидание при погашенном экране, пауза при погашенном экране и «Слушать» с экрана блокировки, гарнитура, звонок во время ожидания и во время звука, «Открыть с помощью», кодек и стыки файлов, дописывание списка плеера, вторая сборка поверх первой | список ручной проверки `docs/DEVICE_CHECKLIST.md`, создаётся на этапе 2 спеки 001 до её приёмки SC-2 | телефон владельца |
+| parsers: each rule and each of the three kinds of damage is a sample with the exact expected text of blocks, chapters and footnotes; format detection; the linearity of chapters; speech text; splitting into segments and the correspondence list; the fingerprint | unit tests | WSL, CI |
+| the Gemini client: the real class with a dummy key and a fake HTTP on responses recorded in the studio's shape | unit tests | WSL, CI |
+| pagination, including a chapter of hundreds of thousands of characters | tests with a bundled font | WSL, CI |
+| queue, sessions, states: a late response after a pause and a chapter change, two identical paragraphs, an error of the nearest segment with far ones ready, the end of the player list before the end of the book, the readiness rule and parts, the group tail, a consumer of someone else's request, deletion and clearing during a request, a probe and "Download chapter" in the common limit, the timer on a fake clock; "Listen" from pause and "previous/next" without ready audio go through `preparing`/`waiting`, not straight to `playing`; a late result of a request or of a disk write after "Close", deletion and a session change, by a double to which the response is returned after a new command | tests with `FakeTtsEngine` (controllable delays and errors) and a fake player | WSL, CI |
+| storage: a killed adding, an unfinished audio file, simultaneous writes of spending | unit tests | WSL, CI |
+| screens | screenshots against a golden: the owner approves the screens on the phone, after which their screenshots are recorded as the golden and from then on protect against regressions; they are not compared with the FigCraft mock-up automatically | WSL, CI |
+| background and waiting with the screen off, a pause with the screen off and "Listen" from the lock screen, the headset, a call during waiting and during sound, "Open with", the codec and the file joins, appending to the player list, a second build on top of the first | the manual checklist `docs/DEVICE_CHECKLIST.md`, created at stage 2 of spec 001 before its acceptance SC-2 | the owner's phone |
 
-- В тестах нет настоящего сетевого транспорта: к Gemini они не обращаются.
-- Образцы книг в `test/fixtures/` — собственные маленькие файлы на каждое правило разбора, с парой «срабатывает /
-  обязано молчать». Чужие книги в репозиторий не кладутся.
-- Настоящие книги владельца лежат в `test/local_books/` (вне git). Дымовой тест разбирает каждую, проверяет
-  линейность глав и пропускается, если папки нет.
-- CI: анализатор, тесты, сборка APK как проверка того, что проект собирается.
-- **APK для телефона собирается локально одним постоянным ключом подписи**, который хранится вне репозитория.
-  Сборки CI подписаны другим ключом и поверх установленного приложения не ставятся.
+- The tests contain no real network transport: they do not call Gemini.
+- The book samples in `test/fixtures/` are our own small files, one per parsing rule, with a "fires / must stay silent"
+  pair. Other people's books are not put into the repository.
+- The owner's real books are in `test/local_books/` (outside git). A smoke test parses each of them, checks the
+  linearity of chapters and is skipped if the folder is absent.
+- CI: the analyzer, the tests, an APK build as a check that the project builds.
+- **The APK for the phone is built locally with one permanent signing key**, which is kept outside the repository. CI
+  builds are signed with another key and cannot be installed over an installed app.
 
-## 10. Чего в архитектуре нет намеренно
+## 10. What the architecture deliberately lacks
 
-- Базы данных, слоя репозиториев поверх файлов, миграций.
-- Фреймворка состояния, контейнера зависимостей, генерации кода (кроме gen-l10n для строк интерфейса, раздел 8).
-- Встроенного браузера для показа книги.
-- Второго движка озвучки. `TtsEngine` — интерфейс ради подставного синтеза в тестах; системный голос Android
-  отклонён владельцем для первой версии.
-- **Воспроизведения потокового ответа Gemini.** Замер показал, что поток даёт первый звук через 2,1 с против ≈ 5 с
-  у стартового отрезка. Но чтобы этим воспользоваться, звук надо играть до того, как файл готов: меняются источник
-  плеера, понятие готового отрезка, очередь, учёт запаса и восстановление после обрыва посреди ответа. Три секунды
-  этого не стоят, пока владелец не скажет иное после пользования.
-- Пословной подсветки и точного места внутри отрезка: Gemini не отдаёт временных меток (5).
-- Номеров страниц: показывается только доля книги (5).
-- Автопродолжения после звонка и других прерываний (6.6).
-- Фоновой загрузки главы без приложения на экране (6.7).
-- Аналитики, отчётов о сбоях, сетевых обращений кроме Gemini.
+- A database, a repository layer on top of files, migrations.
+- A state framework, a dependency container, code generation (except gen-l10n for the interface strings, section 8).
+- An embedded browser for showing the book.
+- A second narration engine. `TtsEngine` is an interface for the sake of fake synthesis in the tests; the Android
+  system voice was rejected by the owner for the first version.
+- **Playing Gemini's streaming response.** A measurement showed that the stream gives the first sound after 2.1 s
+  against ≈ 5 s for a start segment. But to take advantage of this, the audio would have to be played before the file is
+  ready: the player's source, the notion of a ready segment, the queue, the reserve accounting and the recovery from a
+  break in the middle of a response all change. Three seconds is not worth it until the owner says otherwise after using
+  the app.
+- Word-by-word highlighting and the exact place inside a segment: Gemini does not return timestamps (5).
+- Page numbers: only the fraction of the book is shown (5).
+- Automatic resumption after a call and other interruptions (6.6).
+- Background chapter download without the app on the screen (6.7).
+- Analytics, crash reports, network calls other than to Gemini.
 
-## 11. Что ещё ждёт замера
+## 11. What still awaits measurement
 
-Платные замеры — по правилу `AGENTS.md`, «Деньги»: мелкий (центы) делается без вопроса владельцу, крупнее — с его
-согласия и с названной заранее оценкой. Задержка с рабочего компьютера
-по проводной сети измерена 2026-11-14 ([GEMINI_TTS.md](GEMINI_TTS.md)); ниже — остальное.
+Paid measurements follow the `AGENTS.md` rule, "Money": a small one (cents) is done without asking the owner, a larger
+one with his consent and an estimate named in advance. Latency from the work computer over a wired network was measured
+on 2026-11-14 ([GEMINI_TTS.md](GEMINI_TTS.md)); below is the rest.
 
-| Что | Где проверяется | Этап спеки 001 | Что изменится при плохом результате |
+| What | Where it is checked | Stage of spec 001 | What changes on a bad result |
 |---|---|---|---|
-| задержка и скорость синтеза на мобильной сети | рабочий компьютер, подключённый к интернету через точку доступа телефона; платно | 0 | `L`, `Lmin`, цель запаса |
-| два одновременных запроса: частотные лимиты | рабочее окружение; платно | 0 | число одновременных запросов |
-| очень короткий текст в одном запросе | рабочее окружение; платно | 0 | нижняя граница длины первой части |
-| кодек: качество на слух, размер, стыки файлов | телефон; несколько платных абзацев | 2 | формат хранилища, пауза между отрезками |
-| служба при погашенном экране во время ожидания и паузы | телефон, подставной синтез | 2 | соответствие состояний медиасессии (6.6) |
-| дописывание списка `just_audio` до и после того, как он доигран | телефон, подставной синтез | 2 | способ пополнения списка |
-| время открытия и память на книге в несколько мегабайт текста | телефон, синтетическая книга | 1 | деление `book.json` по главам |
+| latency and synthesis speed on a mobile network | the work computer connected to the internet through the phone's hotspot; paid | 0 | `L`, `Lmin`, the reserve target |
+| two simultaneous requests: rate limits | the working environment; paid | 0 | the number of simultaneous requests |
+| a very short text in one request | the working environment; paid | 0 | the lower bound of the first part's length |
+| the codec: quality by ear, size, file joins | phone; a few paid paragraphs | 2 | the storage format, a pause between segments |
+| the service with the screen off during waiting and pause | phone, fake synthesis | 2 | the correspondence of the media-session states (6.6) |
+| appending to the `just_audio` list before and after it has been played out | phone, fake synthesis | 2 | the way the list is replenished |
+| opening time and memory on a book of several megabytes of text | phone, a synthetic book | 1 | splitting `book.json` by chapter |
