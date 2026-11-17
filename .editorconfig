@@ -13,3 +13,7 @@ indent_size = 4
 
 [*.{cmd,bat}]
 end_of_line = crlf
+
+# License texts are kept verbatim (see .gitattributes).
+[{NOTICES,assets/fonts/*-OFL.txt}]
+trim_trailing_whitespace = false

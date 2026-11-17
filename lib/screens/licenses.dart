@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 const appName = 'Book AudioReader';
@@ -12,38 +10,14 @@ const repositoryUrl = 'https://github.com/slawa19/AudiobookReader';
 
 const _copyright = '© 2026 Slawa Gorobets';
 
-/// The license files bundled as assets (pubspec.yaml). The full GPL text is the repository's `LICENSE` file.
-const projectLicenseAsset = 'LICENSE';
-const merriweatherLicenseAsset = 'assets/fonts/Merriweather-OFL.txt';
-const robotoLicenseAsset = 'assets/fonts/Roboto-OFL.txt';
-
-/// The sources and the attribution of the bundled demo books (public-domain texts, Wikisource notes under CC BY-SA).
-const demoSourcesAsset = 'assets/demo/SOURCES.txt';
-const demoTextsPackage = 'Demo texts';
-
-/// Adds the notices that Flutter does not collect itself to [LicenseRegistry]: the project, the two bundled fonts and
-/// the bundled demo texts. Flutter's own NOTICES already cover the pub packages and the engine. Call once at startup.
-/// The files are read lazily, when the license page is opened.
-void registerLicenses() => LicenseRegistry.addLicense(collectOwnLicenses);
-
-/// The license entries of the project itself, of the bundled fonts and of the demo texts. [bundle] is for tests.
-Stream<LicenseEntry> collectOwnLicenses([AssetBundle? bundle]) async* {
-  final assets = bundle ?? rootBundle;
-  final project = await assets.loadString(projectLicenseAsset);
-  yield LicenseEntryWithLineBreaks(
-    [appName],
-    '$_copyright\n\n'
-    '$appName is free software: you can redistribute it and modify it under the terms of the GNU General Public '
-    'License, version 3 or (at your option) any later version (GPL-3.0-or-later).\n\n'
-    'Source code: $repositoryUrl\n\n'
-    '$project',
-  );
-  yield LicenseEntryWithLineBreaks(['Merriweather'], await assets.loadString(merriweatherLicenseAsset));
-  yield LicenseEntryWithLineBreaks(['Roboto'], await assets.loadString(robotoLicenseAsset));
-  yield LicenseEntryWithLineBreaks([demoTextsPackage], await assets.loadString(demoSourcesAsset));
-}
-
 /// The standard Flutter license page with the app name and version.
+///
+/// The page lists what the `flutter` tool collected into the app's NOTICES at build time: for every package, this app
+/// included, it reads the package's `NOTICES` file, or its `LICENSE` when there is none. The `LICENSE` alone would be
+/// listed under the Dart package name `audiobook_reader`. So the repository root carries a `NOTICES` file in the tool's
+/// format (entries separated by a line of 80 dashes, each starting with its names and a blank line): the app under
+/// [appName] with the copyright, GPL-3.0-or-later, [repositoryUrl] and the full text of `LICENSE`; the OFL texts of the
+/// two bundled fonts; the sources of the demo texts. `test/licenses_test.dart` keeps it equal to those files.
 void openLicenses(BuildContext context) => showLicensePage(
       context: context,
       applicationName: appName,

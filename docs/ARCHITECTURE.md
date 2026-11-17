@@ -659,8 +659,15 @@ The `platform` module is the only place with Kotlin code and the channels to it:
   temporary adding folder, permanent rights to the source are not requested.
 
 Permissions: internet; the foreground service and its "media playback" type (`FOREGROUND_SERVICE`,
-`FOREGROUND_SERVICE_MEDIA_PLAYBACK`). The notification permission is not requested: the app's only notification is the
-media session, for which Android makes an exception. There is no access to shared storage, contacts or location.
+`FOREGROUND_SERVICE_MEDIA_PLAYBACK`); notifications (`POST_NOTIFICATIONS`). The app's only notification is the media
+session card, which Android 13+ shows without the notification permission (the media-session exemption; seen on the
+owner's phone on 2026-11-17 with the permission denied: the card with working buttons in the shade, the service in the
+foreground). Without the declared permission, though, Android shows the app's notifications as "Blocked" and its
+switch in the system settings cannot be turned on. So the permission is declared and asked once, when listening starts
+for the first time (`NotificationPrompt` in `playback`, the request through the `platform` channel
+`audiobook_reader/notification_permission`, the flag `notificationsAsked` in the settings). Playback does not wait for
+the answer; after a refusal the app does not ask again, and the user can change it in the system settings. There is no
+access to shared storage, contacts or location.
 Unencrypted HTTP is forbidden; the app contacts only `generativelanguage.googleapis.com`.
 
 The statements of this section about Android's behavior and of section 6.6 about the service are from the

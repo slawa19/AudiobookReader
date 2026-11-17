@@ -43,6 +43,7 @@ class AppSettings extends ChangeNotifier {
   String _modelId;
   String? _apiKey;
   String? _language;
+  bool _notificationsAsked = false;
 
   ThemeChoice get theme => _theme;
   int get fontStep => _fontStep;
@@ -53,6 +54,9 @@ class AppSettings extends ChangeNotifier {
   /// Interface language: a language code or `null` — "Same as system" (the phone language; if unsupported — English).
   String? get language => _language;
 
+  /// Whether the system was already asked for the notification permission: it is asked once (A§7).
+  bool get notificationsAsked => _notificationsAsked;
+
   /// The key does not get here: a separate protected storage keeps it.
   Map<String, Object?> toJson() => {
     'theme': theme.name,
@@ -61,6 +65,7 @@ class AppSettings extends ChangeNotifier {
     'voice': voice,
     'modelId': modelId,
     'language': language,
+    'notificationsAsked': notificationsAsked,
   };
 
   void restore(Map<String, Object?> json) {
@@ -70,6 +75,7 @@ class AppSettings extends ChangeNotifier {
     if (json['voice'] case final String value) _voice = value;
     if (json['modelId'] case final String value) _modelId = value;
     _language = json['language'] is String ? json['language']! as String : null;
+    _notificationsAsked = json['notificationsAsked'] == true;
     notifyListeners();
   }
 
@@ -90,6 +96,7 @@ class AppSettings extends ChangeNotifier {
   set speed(double v) => _set(() => _speed = v);
   set voice(String v) => _set(() => _voice = v);
   set modelId(String v) => _set(() => _modelId = v);
+  set notificationsAsked(bool v) => _set(() => _notificationsAsked = v);
   set apiKey(String? v) {
     final value = v?.replaceAll(RegExp(r'[\s\p{Cc}\p{Default_Ignorable_Code_Point}]', unicode: true), '');
     _apiKey = value == null || value.isEmpty ? null : value;

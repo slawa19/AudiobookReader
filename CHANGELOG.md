@@ -56,3 +56,7 @@ following the review and the full phone check of 2026-11-16.
 - After pause, paging and "continue" the screen returns to the same page instead of laying the text out again.
 - The chapter title on the "Continue" card and in the reading header takes no more than two lines.
 - After choosing a chapter in the table of contents the panels do not flash: the page opens at once without them.
+- The license page listed the app twice, as "Book AudioReader" and as "audiobook_reader"; now once.
+- Android showed the app's notifications as blocked, and they could not be turned on in the system settings. The app
+  now asks once, the first time listening starts, whether it may send notifications; listening does not wait for the
+  answer, and the player card works either way.

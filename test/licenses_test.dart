@@ -1,81 +1,107 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:audiobook_reader/screens/licenses.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'support/harness.dart';
 
-/// Packages of the entries that the registry yields, with the text of each package's entries.
-Future<Map<String, String>> collect() async {
-  final out = <String, StringBuffer>{};
-  await for (final entry in LicenseRegistry.licenses) {
-    for (final package in entry.packages) {
-      (out[package] ??= StringBuffer()).writeln(entry.paragraphs.map((p) => p.text).join('\n'));
+const demoTexts = 'Demo texts';
+
+/// The separator of entries in a NOTICES file (`licenseSeparator` of the flutter tool's `license_collector.dart`).
+final separator = '\n${'-' * 80}\n';
+
+/// The entries of the repository's `NOTICES` file read by the flutter tool's rule for a package's NOTICES file
+/// (`LicenseCollector.obtainLicenses`): only when the file has more than one entry, the lines before the first blank
+/// line of each entry are package names; a single entry would be listed under the Dart package name.
+Map<String, String> noticesEntries() {
+  final raw = File('NOTICES').readAsStringSync().split(separator);
+  expect(raw.length, greaterThan(1), reason: 'with one entry the tool ignores the names in it');
+  final out = <String, String>{};
+  for (final entry in raw) {
+    final split = entry.indexOf('\n\n');
+    expect(split, greaterThan(0), reason: 'every entry starts with its names and a blank line');
+    for (final name in entry.substring(0, split).split('\n')) {
+      expect(out.containsKey(name), isFalse, reason: name);
+      out[name] = entry.substring(split + 2);
     }
   }
-  return {for (final e in out.entries) e.key: e.value.toString()};
+  return out;
 }
 
+/// The license entries that the license page shows, by package. The source is the NOTICES that the flutter tool
+/// built for the test bundle with the same collector as for the APK (`build/unit_test_assets/NOTICES.Z`); the test
+/// binding does not register it, so it is read here and split by the rule of `ServicesBinding._parseLicenses`.
+Future<Map<String, List<String>>> pageEntries() async {
+  final bytes = await rootBundle.load('NOTICES.Z');
+  final notices = utf8.decode(gzip.decode(bytes.buffer.asUint8List()));
+  final out = <String, List<String>>{};
+  for (final entry in notices.split(separator)) {
+    final split = entry.indexOf('\n\n');
+    if (split < 0) continue;
+    for (final package in entry.substring(0, split).split('\n')) {
+      (out[package] ??= []).add(entry.substring(split + 2));
+    }
+  }
+  return out;
+}
+
+String dartPackageName() =>
+    RegExp(r'^name:\s*(\S+)\s*$', multiLine: true).firstMatch(File('pubspec.yaml').readAsStringSync())!.group(1)!;
+
 void main() {
-  group('registry', () {
-    setUp(() {
-      LicenseRegistry.reset();
-      registerLicenses();
-    });
-    tearDown(LicenseRegistry.reset);
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-    test('yields the project, Merriweather, Roboto and the demo texts, and claims nothing else', () async {
-      final packages = await collect();
-      expect(packages.keys.toSet(), {appName, 'Merriweather', 'Roboto', demoTextsPackage});
-      // The other side: a package name that is not ours is not claimed.
-      expect(packages.containsKey('flutter'), isFalse);
-      expect(packages.containsKey('Open Sans'), isFalse);
+  group('the NOTICES file at the repository root', () {
+    test('names the app, the two fonts and the demo texts, and nothing under the Dart package name', () {
+      final entries = noticesEntries();
+      expect(entries.keys.toSet(), {appName, 'Merriweather', 'Roboto', demoTexts});
+      expect(dartPackageName(), 'audiobook_reader');
+      expect(entries.containsKey(dartPackageName()), isFalse);
     });
 
-    test('the project entry names the license, the holder and the repository; the full GPL text follows', () async {
-      final text = (await collect())[appName]!;
-      expect(text, contains('GPL-3.0-or-later'));
-      expect(text, contains('Slawa Gorobets'));
-      expect(text, contains(repositoryUrl));
-      expect(text, contains('GNU GENERAL PUBLIC LICENSE'));
-      expect(text, contains('Version 3, 29 June 2007'));
+    test('the app entry: the holder, the license, the repository, then the whole LICENSE file', () {
+      final text = noticesEntries()[appName]!;
+      final license = File('LICENSE').readAsStringSync();
+      expect(text, endsWith(license));
+      final preamble = text.substring(0, text.length - license.length);
+      expect(preamble, contains('© 2026 Slawa Gorobets'));
+      expect(preamble, contains('GPL-3.0-or-later'));
+      expect(preamble, contains('Source code: $repositoryUrl'));
+      expect(license, contains('GNU GENERAL PUBLIC LICENSE'));
+      expect(license, contains('Version 3, 29 June 2007'));
     });
 
-    test('the font entries carry their own SIL Open Font License texts', () async {
-      final packages = await collect();
+    test('the font and demo-text entries are their files, byte for byte', () {
+      final entries = noticesEntries();
+      expect(entries['Merriweather'], File('assets/fonts/Merriweather-OFL.txt').readAsStringSync());
+      expect(entries['Roboto'], File('assets/fonts/Roboto-OFL.txt').readAsStringSync());
+      expect(entries[demoTexts], File('assets/demo/SOURCES.txt').readAsStringSync());
       for (final font in ['Merriweather', 'Roboto']) {
-        expect(packages[font], contains('SIL OPEN FONT LICENSE Version 1.1'), reason: font);
-        expect(packages[font], isNot(contains('GNU GENERAL PUBLIC LICENSE')), reason: font);
+        expect(entries[font], contains('SIL OPEN FONT LICENSE Version 1.1'), reason: font);
       }
-      expect(packages['Merriweather'], contains('Merriweather'));
-      expect(packages['Roboto'], contains('Roboto'));
-    });
-
-    test('the demo-texts entry carries the Wikisource attribution and the CC BY-SA notice', () async {
-      final packages = await collect();
-      final text = packages[demoTextsPackage]!;
-      expect(text, contains('Wikisource contributors, licensed under CC BY-SA 4.0'));
-      expect(text, contains('https://creativecommons.org/licenses/by-sa/4.0/'));
-      expect(text, contains('public-domain works'));
-      // The other side: the attribution belongs to the demo texts alone, not to the project or the fonts.
+      // The CC BY-SA attribution belongs to the demo texts alone.
+      expect(entries[demoTexts], contains('Wikisource contributors, licensed under CC BY-SA 4.0'));
       for (final other in [appName, 'Merriweather', 'Roboto']) {
-        expect(packages[other], isNot(contains('CC BY-SA')), reason: other);
+        expect(entries[other], isNot(contains('CC BY-SA')), reason: other);
       }
     });
   });
 
-  test('the registered files are bundled by pubspec.yaml assets', () {
-    final pubspec = File('pubspec.yaml').readAsStringSync();
-    for (final asset in [projectLicenseAsset, merriweatherLicenseAsset, robotoLicenseAsset]) {
-      expect(pubspec, contains('- $asset\n'), reason: asset);
-      expect(File(asset).existsSync(), isTrue, reason: asset);
+  test('the license data the page shows: the app once under its name, never under the Dart package name', () async {
+    final entries = await pageEntries();
+    // The other side: the data really is the tool's NOTICES with the dependencies, not an empty registry.
+    expect(entries.keys, containsAll(['flutter', 'audio_service', 'just_audio']));
+    expect(entries.containsKey(dartPackageName()), isFalse);
+    expect(entries[appName], hasLength(1));
+    expect(entries[appName]!.single, contains('GPL-3.0-or-later'));
+    expect(entries[appName]!.single, contains(repositoryUrl));
+    expect(entries[appName]!.single, contains('GNU GENERAL PUBLIC LICENSE'));
+    for (final name in ['Merriweather', 'Roboto', demoTexts]) {
+      expect(entries[name], hasLength(1), reason: name);
     }
-    // SOURCES.txt is bundled through its directory entry, which takes the files directly in that directory.
-    expect(pubspec, contains('- assets/demo/\n'));
-    expect(demoSourcesAsset, 'assets/demo/SOURCES.txt');
-    expect(File(demoSourcesAsset).existsSync(), isTrue);
   });
 
   test('appVersion equals the version in pubspec.yaml (without the build number)', () {
@@ -86,9 +112,6 @@ void main() {
   });
 
   testWidgets('the last settings row opens the standard license page with the app name and version', (tester) async {
-    LicenseRegistry.reset();
-    registerLicenses();
-    addTearDown(LicenseRegistry.reset);
     await pumpPrototype(tester);
     await tester.tap(find.byTooltip('Настройки'));
     await settle(tester);
@@ -103,14 +126,6 @@ void main() {
     expect(find.byType(LicensePage), findsOneWidget);
     expect(find.text(appName), findsWidgets);
     expect(find.text(appVersion), findsOneWidget);
-    // The page lists the packages from the registry: ours are there.
-    for (var i = 0; i < 50 && find.text('Roboto').evaluate().isEmpty; i++) {
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
-      await tester.pump(const Duration(milliseconds: 100));
-    }
-    expect(find.text('Merriweather'), findsOneWidget);
-    expect(find.text('Roboto'), findsOneWidget);
-    expect(find.text(demoTextsPackage), findsOneWidget);
   });
 
   group('the row at 320 dp with the text scale 1.3', () {

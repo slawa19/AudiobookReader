@@ -60,6 +60,11 @@ signed with the permanent key.
   after the start at a new place, while preparation is in progress. Expected: the notification stays, a late file does
   not sound by itself; resuming works without opening the window, a ready file — from the place of the pause.
   Build: fake. Money: no.
+- [ ] **Notification permission.** On a fresh install (or one that has never listened) press "Listen". Expected: the
+  system asks once whether the app may send notifications, and the sound starts without waiting for the answer. After
+  "Don't allow": the card is still in the shade with working buttons, App info shows notifications blocked, its switch
+  can be turned on; the next "Listen", also after a restart, does not ask again. After "Allow": App info shows
+  notifications allowed. Build: fake. Money: no.
 - [ ] **Card contents.** Listen to a book with a cover and without one, change the chapter, check the notification and
   the lock screen. Expected: the correct book and chapter titles, for an unnamed chapter — the start of its text; the
   cover or a placeholder with the first letter, as on the shelf; no paragraph and no rewind by seconds.

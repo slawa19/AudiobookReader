@@ -33,11 +33,14 @@ The app's behavior for the reader does not change, except for the fifth interfac
   that it awaits the owner's confirmation.
 - **R4.** Licensing. Done 2026-11-17. The GPL-3.0 `LICENSE` file; third-party notices shown in the app (Flutter's
   license page plus the OFL texts of Merriweather and Roboto, which are in `assets/fonts/`); attribution of the demo
-  texts, which are public-domain works from Wikisource (`assets/demo/SOURCES.txt`). The app registers the project's own
-  entry, the two OFL texts and, since the review fixes of 2026-11-17, a "Demo texts" entry with
-  `assets/demo/SOURCES.txt` (the Wikisource sources and the CC BY-SA attribution of three editorial notes) with
-  `LicenseRegistry` (`lib/screens/licenses.dart`; the texts are bundled as assets) and
-  has one last row in the settings, "Open-source licenses", that opens `showLicensePage`. The version on that page is
+  texts, which are public-domain works from Wikisource (`assets/demo/SOURCES.txt`). The app's own entries are in the
+  `NOTICES` file at the repository root, in the flutter tool's NOTICES format: "Book AudioReader" (the copyright,
+  GPL-3.0-or-later, the repository link and the text of `LICENSE`), the two OFL texts and "Demo texts" with
+  `assets/demo/SOURCES.txt` (the Wikisource sources and the CC BY-SA attribution of three editorial notes). The flutter
+  tool reads a package's `NOTICES` in place of its `LICENSE`, so the root package is no longer listed a second time
+  under its Dart name `audiobook_reader` (2026-11-17; before that the entries were registered with `LicenseRegistry`
+  at startup and the tool added `LICENSE` under the Dart name). The app has one last row in the settings,
+  "Open-source licenses", that opens `showLicensePage`. The version on that page is
   the constant `appVersion`, which `test/licenses_test.dart` keeps equal to `version:` in `pubspec.yaml`.
 - **R5.** English screenshots of the main screens in `README.md`. Done 2026-11-17. The existing `l10n-en-*` goldens
   were not enough: the interface was English, but the shelf and the book text were Russian. So the test
@@ -87,9 +90,11 @@ The app's behavior for the reader does not change, except for the fifth interfac
   `docs/RELEASING.md` verify it. **Not verified:** no release exists yet (the dry run does not attest).
 - **SC-5.** The `LICENSE` file is present, the README names the license, and the in-app licenses page lists Flutter's
   packages, the two font licenses and the demo-text attribution. The file and the README are verified;
-  `test/licenses_test.dart` checks the project, the two font entries, the demo-texts entry with its CC BY-SA notice and
-  the settings row that opens the page. Flutter's own packages come from the
-  standard license registry; the page has not yet been looked at on the phone.
+  `test/licenses_test.dart` checks the root `NOTICES` file against `LICENSE`, the two OFL texts and
+  `assets/demo/SOURCES.txt`, checks the NOTICES that the flutter tool builds for the test bundle (the app listed once,
+  as "Book AudioReader", never as `audiobook_reader`), and the settings row that opens the page. The NOTICES inside the
+  fake debug APK built on 2026-11-17 has the app once and no `audiobook_reader`; the page itself has not yet been looked
+  at on the phone with this build.
 
 ## 4. Out of scope
 
@@ -147,3 +152,11 @@ The app's behavior for the reader does not change, except for the fifth interfac
   covers the whole Cyrillic block; the Ukrainian chapter mark is «озвучено». Finding 5 (the keystore path with the
   Windows user account in two old `AGENTS.md` revisions) is a recorded refusal: the owner decided on 2026-11-17 to
   publish without a second history rewrite (R7).
+- 2026-11-17 — seen on the owner's phone: the license page listed the app twice, as "Book AudioReader" (our entry,
+  registered with `LicenseRegistry`) and as "audiobook_reader" (the flutter tool puts every package's `LICENSE` into
+  the app's NOTICES under the package name, the root package included; `flutter_tools`
+  `lib/src/license_collector.dart`). Fixed: the app's own entries moved from `LicenseRegistry` into a `NOTICES` file
+  at the repository root, which the tool reads in place of `LICENSE` and whose entries carry their own names; the
+  startup registration and the license assets in `pubspec.yaml` are removed. `test/licenses_test.dart` checks the file
+  against its sources and the tool-built NOTICES of the test bundle; the NOTICES inside the built fake debug APK has the
+  app once (R4, SC-5). The page in the new build is not yet looked at on the phone: the phone locked during the check.

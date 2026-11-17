@@ -35,6 +35,7 @@ void main() {
         'android.permission.WAKE_LOCK',
         'android.permission.FOREGROUND_SERVICE',
         'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
+        'android.permission.POST_NOTIFICATIONS',
       ]),
     );
     final application = RegExp(r'<application\b[^>]*>').firstMatch(manifest)!.group(0)!;

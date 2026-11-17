@@ -39,10 +39,6 @@ flutter:
     - assets/demo/
     - assets/demo/images/
     - assets/demo/covers/
-    # License texts shown on the in-app license page (lib/screens/licenses.dart).
-    - LICENSE
-    - assets/fonts/Merriweather-OFL.txt
-    - assets/fonts/Roboto-OFL.txt
 
   fonts:
     # Book text and book titles. OFL, source: assets/fonts/SOURCES.txt.
