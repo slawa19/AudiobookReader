@@ -1,8 +1,10 @@
 # Spec 003. Preparing the open-source publication
 
-Status: started 2026-11-17; all of R1–R7 is merged into `main` the same day, except the owner's steps: the visibility
-of the GitHub repository is switched to public by the owner, after which the first real release can be cut (R6, SC-4).
-The state and the owner's list are in [WHERE_WE_ARE.md](../WHERE_WE_ARE.md).
+Status: started 2026-11-17; done the same day. All of R1–R7 is merged into `main`, the repository is public and named
+`slawa19/BookAudioReader`, and the first release, v0.1.0, was cut and verified (R6, SC-4). What remains is not part of
+the spec: a native-speaker reading of the Ukrainian strings, the owner's confirmation of the technical-text rule
+(Changelog, 2026-11-17), and the phone checks that SC-5 and the Changelog name as not done. The state is in
+[WHERE_WE_ARE.md](../WHERE_WE_ARE.md).
 
 The app's behavior for the reader does not change, except for the fifth interface language. No new features.
 
@@ -60,8 +62,10 @@ The app's behavior for the reader does not change, except for the fifth interfac
   Status: the workflow `.github/workflows/release.yml`, `docs/RELEASING.md` (with the published certificate
   fingerprint) and the pinning are done and merged on 2026-11-17 (merge e286b61, fingerprint d39037d). The four signing
   secrets and the variable `SIGNING_CERT_SHA256` are set in GitHub. The dry run of 2026-11-17 (run 44035431681)
-  passed: tests, build, signing, certificate check, checksums; the attestation and release steps are skipped in a dry run. **No release has been cut:** an attestation needs a public repository, so the first real release
-  waits for the visibility switch.
+  passed: tests, build, signing, certificate check, checksums; the attestation and release steps are skipped in a dry run.
+  An attestation needs a public repository, so the first real release waited for the visibility switch. Done: the
+  repository was made public and renamed on 2026-11-17, and **v0.1.0 was released** the same day from the annotated tag
+  `v0.1.0` on the `main` commit `12edfaa` (run 44066806437; the evidence is in SC-4).
 - **R7.** Pre-publication audit. On 2026-11-17 the audit of the history found no secrets, keystores or third-party
   copyrighted content (the audit recorded 179 commits; `git rev-list --count` gives 181 for the commit before the one
   that wrote the audit into this spec, 6df6e62). Later that day the history was **rewritten once**, for a reason the
@@ -72,13 +76,13 @@ The app's behavior for the reader does not change, except for the fifth interfac
   found one more item in the reachable history: two old revisions of `AGENTS.md` (commits 3a77332 and 6df6e62) name the
   Windows user account in the absolute path of the permanent keystore. They hold no key material and the current tree
   does not contain the path. The owner decided on 2026-11-17 to publish with the history as rewritten that day, without
-  a second rewrite; the risk is judged low. What remains is the owner's: switching the repository visibility to public.
+  a second rewrite; the risk is judged low. The repository was then switched to public by the owner (2026-11-17).
 
 ## 3. Acceptance criteria
 
 - **SC-1.** The full `scripts/test.sh` is green in the main worktree after every merge; `git status --porcelain` is
-  empty; CI on GitHub is green. Verified locally at `9210fdc` (the merge of R5): analyzer clean, 914 tests passed. CI on
-  GitHub: not verified here; check with `gh run list` after the push.
+  empty; CI on GitHub is green. Verified locally at `9210fdc` (the merge of R5): analyzer clean, 914 tests passed; and at
+  `12edfaa` (the release commit): analyzer clean, 918 tests passed, CI on GitHub green (2026-11-17).
 - **SC-2.** No Cyrillic remains in documentation, comments, test names and script messages, except text that is data
   (D3). Verified on 2026-11-17 by a scan of all tracked text files: what remains is quoted interface strings, book and
   test text, reading-style prompts, sentence-boundary examples and the Russian page names in the source notes, each with
@@ -87,14 +91,25 @@ The app's behavior for the reader does not change, except for the fifth interfac
   by a script over all tracked `*.md` files: 326 relative links and anchors, none broken; the quoted names of
   documents' sections and the `A§N` references all point to existing headings.
 - **SC-4.** A tag `vX.Y.Z` produces a release with the APK, `SHA-256` checksums and an attestation, and the commands in
-  `docs/RELEASING.md` verify it. **Not verified:** no release exists yet (the dry run does not attest).
+  `docs/RELEASING.md` verify it. **Done, 2026-11-17.** The tag `v0.1.0` (annotated, on `main` commit `12edfaa`)
+  started the release run 44066806437; every step passed, including "The tagged commit is on main", the signature
+  check, "Attest the build provenance" and "Create the GitHub Release". The release page
+  (https://github.com/slawa19/BookAudioReader/releases/tag/v0.1.0) has `BookAudioReader-0.1.0.apk` and `SHA256SUMS`.
+  Checked on a fresh download of the published assets: `sha256sum -c SHA256SUMS` printed
+  `BookAudioReader-0.1.0.apk: OK`; the `gh attestation verify` command of `docs/RELEASING.md` (with `--repo`,
+  `--signer-workflow`, `--source-ref refs/tags/v0.1.0`, `--deny-self-hosted-runners`) exited 0; `apksigner verify
+  --print-certs` printed one signer whose SHA-256 is `708d7a23…00bf563`, equal to the fingerprint in
+  `docs/RELEASING.md`. **Not verified:** the rejecting side of the guard "The tagged commit is on main" has never been
+  exercised on GitHub (only the passing side ran, on this release); the same holds for the tag-versus-`pubspec.yaml`
+  check. The APK on the owner's phone is a local build of the same commit, not the published file.
 - **SC-5.** The `LICENSE` file is present, the README names the license, and the in-app licenses page lists Flutter's
   packages, the two font licenses and the demo-text attribution. The file and the README are verified;
   `test/licenses_test.dart` checks the root `NOTICES` file against `LICENSE`, the two OFL texts and
   `assets/demo/SOURCES.txt`, checks the NOTICES that the flutter tool builds for the test bundle (the app listed once,
   as "Book AudioReader", never as `audiobook_reader`), and the settings row that opens the page. The NOTICES inside the
-  fake debug APK built on 2026-11-17 has the app once and no `audiobook_reader`; the page itself has not yet been looked
-  at on the phone with this build.
+  fake debug APK built on 2026-11-17 has the app once and no `audiobook_reader`. Seen on the phone (Samsung SM-S948B),
+  2026-11-17, by an agent over adb, in both the fake and the real app: the license page lists the app once as "Book
+  AudioReader", with "Demo texts", "Merriweather" and "Roboto", and has no `audiobook_reader` entry.
 
 ## 4. Out of scope
 
@@ -129,7 +144,7 @@ The app's behavior for the reader does not change, except for the fifth interfac
   `Book AudioReader (fake)`), the license page, the web prototype (`web/`, the device frame title) and the
   documentation use it; the package and the applicationId (changing it would break updating the installed app) are unchanged.
 - 2026-11-17 — The owner had the repository switched to public and renamed to `slawa19/BookAudioReader`; the release
-  file is `BookAudioReader-<version>.apk`. Links, the attestation command and the license notice follow.
+  file is `BookAudioReader-<version>.apk`. Links, the attestation command and the license notice follow (`12edfaa`).
 - 2026-11-17 — spec written; documentation translated to English (R2) by a separate agent working in its own worktree.
 - 2026-11-17 — R2 and R3 done and merged: documentation, then tests, tooling and CI messages, then `lib/`, `android/`
   and `web/` comments in English; section references are written `A§N` and spec decisions `D1…D12` with Latin letters.
@@ -160,4 +175,17 @@ The app's behavior for the reader does not change, except for the fifth interfac
   at the repository root, which the tool reads in place of `LICENSE` and whose entries carry their own names; the
   startup registration and the license assets in `pubspec.yaml` are removed. `test/licenses_test.dart` checks the file
   against its sources and the tool-built NOTICES of the test bundle; the NOTICES inside the built fake debug APK has the
-  app once (R4, SC-5). The page in the new build is not yet looked at on the phone: the phone locked during the check.
+  app once (R4, SC-5). The page in the new build was not looked at on the phone at that moment: the phone locked during
+  the check (seen later the same day, see the last entry).
+- 2026-11-17 — **v0.1.0 released** (R6, SC-4 done). The tag `v0.1.0` on `main` commit `12edfaa` started run 44066806437;
+  all steps passed, including the first real execution of the guard "The tagged commit is on main" (passing side only)
+  and the attestation. The published APK and `SHA256SUMS` were downloaded and checked with the commands of
+  `docs/RELEASING.md`: checksum OK, `gh attestation verify` exit 0, one signer with the published fingerprint. CI on
+  `12edfaa` is green; the local full run: analyzer clean, 918 tests passed (SC-1).
+- 2026-11-17 — the two defects seen on the owner's phone were checked on the phone (SM-S948B) by an agent over adb. On
+  the fake build the notification permission dialog appears on the first "Listen" while narration already plays; after
+  "Allow" App info shows notifications allowed; the media card in the shade has working pause and play; later listens
+  show no second dialog. The license page lists the app once ("Book AudioReader", "Demo texts", "Merriweather",
+  "Roboto"), with no `audiobook_reader` entry, in both the fake and the real app. **Not checked on the phone:** the
+  lock-screen card; the permission dialog in the real app (the owner will see it on the next "Listen"); a large system
+  font; the Polish and German interface.

@@ -83,17 +83,20 @@ Wonderland* (public domain, Project Gutenberg); nothing is narrated or paid for.
 
 ## Status
 
-Version 0.1.0, the first version, in development. All its features are written.
+Version 0.1.0 is the first release (2026-11-17): the [signed APK](https://github.com/slawa19/BookAudioReader/releases/tag/v0.1.0)
+is published with a checksum and a build-provenance attestation; how to verify it is in
+[docs/RELEASING.md](docs/RELEASING.md). All the planned features of the first version are written.
 Reading has been accepted by the owner on the phone. Narration, the player and background playback have been passed on
 the phone by the checklist; what remains for the owner is what can only be done by hand and by ear: the lock screen,
 headphones, a phone call. What has been done and what is next — [docs/WHERE_WE_ARE.md](docs/WHERE_WE_ARE.md).
 
 ## Install
 
-Signed APKs are published on the [Releases page](https://github.com/slawa19/BookAudioReader/releases): GitHub Actions
-builds them from a version tag. Download the APK and open it on the phone (Android asks to allow installs from your
-browser or file manager). How to verify the file before installing it: [docs/RELEASING.md](docs/RELEASING.md). If the
-page shows no release yet, build the app yourself, as below.
+Signed APKs are published on the [Releases page](https://github.com/slawa19/BookAudioReader/releases) (the first one,
+[v0.1.0](https://github.com/slawa19/BookAudioReader/releases/tag/v0.1.0), is out): GitHub Actions builds them from a
+version tag. Download the APK and open it on the phone (Android asks to allow installs from your browser or file
+manager). How to verify the file before installing it: [docs/RELEASING.md](docs/RELEASING.md). You can also build the
+app yourself, as below.
 
 To install an APK you built yourself: `adb install -r build/app/outputs/flutter-apk/app-real-release.apk`.
 

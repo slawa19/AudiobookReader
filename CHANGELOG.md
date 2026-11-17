@@ -4,10 +4,16 @@ What changed for the reader. Format — [Keep a Changelog](https://keepachangelo
 reasons are in the spec's Changelog ([docs/specs/001-first-version.md](docs/specs/001-first-version.md)); details are
 in the git history.
 
-## Unreleased — 0.1.0
+## Unreleased
 
-The first version, in development; there have been no releases yet. The build number is 2: the state after the rework
-following the review and the full phone check of 2026-11-16.
+Nothing yet.
+
+## 0.1.0 — 2026-11-17
+
+The first release, published in [GitHub Releases](https://github.com/slawa19/BookAudioReader/releases/tag/v0.1.0) as
+`BookAudioReader-0.1.0.apk` with `SHA256SUMS` and a build-provenance attestation; how to verify it is in
+[docs/RELEASING.md](docs/RELEASING.md). The build number is 2: the state after the rework following the review and the
+full phone check of 2026-11-16.
 
 ### Added
 
@@ -41,9 +47,8 @@ following the review and the full phone check of 2026-11-16.
 - The repository is prepared for open-source publication under GPL-3.0-or-later (`LICENSE`; the fonts and the demo
   texts keep their own licenses, see `assets/*/SOURCES.txt`). Documentation, code comments, test names and commit
   messages are in English ([spec 003](docs/specs/003-open-source.md)).
-- Signed APKs are meant to be published in GitHub Releases from a `vX.Y.Z` tag with SHA-256 checksums and a
-  build-provenance attestation (`.github/workflows/release.yml`, [docs/RELEASING.md](docs/RELEASING.md)). No release has
-  been cut yet.
+- Signed APKs are published in GitHub Releases from a `vX.Y.Z` tag with SHA-256 checksums and a build-provenance
+  attestation (`.github/workflows/release.yml`, [docs/RELEASING.md](docs/RELEASING.md)); this is the first one.
 - The README has English screenshots (`docs/screenshots/`).
 
 ### Fixed
