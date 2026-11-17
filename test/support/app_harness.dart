@@ -69,6 +69,10 @@ class AppHarness {
   bool fakeTts = false;
   final secretStore = TestSecretStore(null);
   final screenAwake = TestScreenAwake();
+
+  /// The system dialog for the notification permission: each call is recorded, [notificationAnswer] answers it.
+  int notificationRequests = 0;
+  Future<bool> Function() notificationAnswer = () async => false;
   FakeTtsEngine? _synthesis;
   PlayerPort? _playerPort, _samplePort;
 
@@ -133,6 +137,10 @@ class AppHarness {
       secretStore: secretStore,
       mediaLifecycle: TestMediaServiceLifecycle(),
       screenAwake: screenAwake,
+      requestNotifications: () async {
+        notificationRequests++;
+        return notificationAnswer();
+      },
     );
   }
 

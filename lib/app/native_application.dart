@@ -19,6 +19,7 @@ import '../platform/platform.dart';
 import '../platform/secret_store.dart';
 import '../platform/audio_encoder.dart';
 import '../platform/external_links.dart';
+import '../platform/notification_permission.dart';
 import '../playback/file_chapter_download.dart';
 import '../playback/clock.dart';
 import '../playback/controller.dart';
@@ -26,6 +27,7 @@ import '../playback/file_voice_sample.dart';
 import '../playback/just_audio_player.dart';
 import '../playback/media_session.dart';
 import '../playback/player.dart';
+import '../playback/notification_prompt.dart';
 import '../playback/screen_awake.dart';
 import '../playback/synthesis_queue.dart';
 import '../playback/tariffs.dart';
@@ -63,6 +65,7 @@ class NativeApplication extends AppAssembly {
   late final SynthesisQueue queue;
   late final FileChapterDownloads downloads;
   late final ScreenAwakePort _screenAwake;
+  late final NotificationPrompt _notificationPrompt;
   late final PlayerPort player, samplePlayer;
   late final NarrationMediaHandler media;
   NarrationAudioFocus? _focus;
@@ -85,6 +88,7 @@ class NativeApplication extends AppAssembly {
     bool fakeTts = useFakeTts,
     MediaServiceLifecycle? mediaLifecycle,
     ScreenAwakePort? screenAwake,
+    Future<bool> Function()? requestNotifications,
   }) async {
     final settings = NativeSettings(
       voice: defaultVoiceName,
@@ -118,6 +122,7 @@ class NativeApplication extends AppAssembly {
       fakeTts: fakeTts,
       mediaLifecycle: mediaLifecycle,
       screenAwake: screenAwake,
+      requestNotifications: requestNotifications,
     );
   }
 
@@ -134,6 +139,7 @@ class NativeApplication extends AppAssembly {
     bool fakeTts = useFakeTts,
     MediaServiceLifecycle? mediaLifecycle,
     ScreenAwakePort? screenAwake,
+    Future<bool> Function()? requestNotifications,
   }) : settings = library.settings {
     final audio = FileAudioStore(library.root, encoder: encoder ?? const AndroidAudioEncoder());
     final tariffs = Tariffs(today: clock ?? DateTime.now);
@@ -174,6 +180,12 @@ class NativeApplication extends AppAssembly {
       lifecycle: mediaLifecycle ?? AndroidMediaServiceLifecycle(),
     );
     settings.addListener(media.publish);
+    _notificationPrompt = NotificationPrompt(
+      controller: narration,
+      settings: settings,
+      request: requestNotifications ?? AndroidNotificationPermission.request,
+      failed: (error) => library.recordFileFailure('notification_permission', error),
+    );
     services = AppServices(
       library: library,
       settings: settings,
@@ -272,6 +284,7 @@ class NativeApplication extends AppAssembly {
   Future<void> disposePlayback() async {
     settings.removeListener(media.publish);
     media.dispose();
+    _notificationPrompt.dispose();
     await _focus?.dispose();
     services.narration.dispose();
     services.sampler.dispose();

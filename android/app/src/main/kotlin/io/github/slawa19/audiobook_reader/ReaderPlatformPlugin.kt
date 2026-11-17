@@ -15,6 +15,7 @@ class ReaderPlatformPlugin : FlutterPlugin, ActivityAware {
     private lateinit var audioEncoder: AudioEncoderChannel
     private lateinit var links: MethodChannel
     private lateinit var mediaService: MediaServiceChannel
+    private lateinit var notificationPermission: NotificationPermissionChannel
     private lateinit var screenAwake: MethodChannel
     private var keepScreenOn = false
 
@@ -29,6 +30,7 @@ class ReaderPlatformPlugin : FlutterPlugin, ActivityAware {
         incomingFiles = IncomingFilesChannel(context, binding.binaryMessenger)
         audioEncoder = AudioEncoderChannel(binding.binaryMessenger)
         mediaService = MediaServiceChannel(context, binding.binaryMessenger)
+        notificationPermission = NotificationPermissionChannel(context, binding.binaryMessenger)
         screenAwake = MethodChannel(binding.binaryMessenger, "audiobook_reader/screen_awake")
         screenAwake.setMethodCallHandler { call, result ->
             if (call.method != "setEnabled") result.notImplemented()
@@ -64,6 +66,7 @@ class ReaderPlatformPlugin : FlutterPlugin, ActivityAware {
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         incomingFiles.activity = binding.activity
+        notificationPermission.attach(binding)
         applyScreenAwake()
     }
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) { onAttachedToActivity(binding) }
@@ -71,12 +74,14 @@ class ReaderPlatformPlugin : FlutterPlugin, ActivityAware {
     override fun onDetachedFromActivity() {
         incomingFiles.activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         incomingFiles.activity = null
+        notificationPermission.detach()
     }
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         incomingFiles.close()
         audioEncoder.close()
         links.setMethodCallHandler(null)
         mediaService.close()
+        notificationPermission.close()
         screenAwake.setMethodCallHandler(null)
     }
 }
