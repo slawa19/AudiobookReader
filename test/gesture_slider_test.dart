@@ -1,5 +1,5 @@
-// Ползунок по книге пальцем: перетаскивание, за край, во время прослушивания (раздел C проверки жестов
-// 2026-11-14). Прежние тесты ползунка — одно касание дорожки.
+// The book slider by finger: dragging, past the edge, while listening (section C of the gesture review
+// of 2026-11-14). The earlier slider tests are a single tap on the track.
 
 import 'package:audiobook_reader/book/model.dart';
 import 'package:audiobook_reader/library/library.dart';
@@ -14,15 +14,16 @@ import 'support/harness.dart';
 
 const _slider = Key('book-slider');
 
-/// Точка дорожки ползунка для доли [v]: у ползунка Material 3 поля по 24 dp с краёв.
+/// The track point of the slider for the fraction [v]: the Material 3 slider has 24 dp margins at the edges.
 Offset trackPoint(WidgetTester tester, double v) {
   final box = tester.getRect(find.byKey(_slider));
   return Offset(box.left + 24 + (box.width - 48) * v, box.center.dy);
 }
 
 void main() {
-  testWidgets('перетаскивание во время прослушивания: шапка показывает главу под пальцем, голос места не меняет, '
-      'после отпускания — страница с этим местом и следование выключено (FR-R5)', (tester) async {
+  testWidgets('dragging while listening: the header shows the chapter under the finger, the voice does not change '
+      'position, '
+      'after release — the page with that position and following is off (FR-R5)', (tester) async {
     final p = await pumpPrototype(tester, demoAcceleration: 1);
     await openKapitanskaya(tester, p, at: const ReadingPosition(3, 0));
     await startListening(tester);
@@ -30,17 +31,19 @@ void main() {
     final block = p.narration.block;
     await tapCenter(tester);
     await advance(tester, const Duration(milliseconds: 500));
-    expect(find.byKey(_slider).hitTestable(), findsOneWidget, reason: 'ползунок над панелью плеера');
+    expect(find.byKey(_slider).hitTestable(), findsOneWidget, reason: 'the slider is above the player panel');
     final chapterBefore = tester.widget<Text>(find.byKey(const Key('top-bar-chapter'))).data;
 
     final f = await Finger.down(tester, trackPoint(tester, 0.05));
     await f.move(trackPoint(tester, 0.9) - trackPoint(tester, 0.05), ms: 400);
     await f.hold(200);
-    // Палец ещё на ползунке: шапка — глава под пальцем, страница и следование прежние.
+    // The finger is still on the slider: the header shows the chapter under the finger, the page and following are
+    // unchanged.
     final preview = tester.widget<Text>(find.byKey(const Key('top-bar-chapter'))).data;
     expect(preview, chapterLabel(book, book.chapterOf(book.placeAt(0.9).$1)));
-    expect(preview, isNot(chapterBefore), reason: 'предусловие: 90 % книги — другая глава');
-    expect(reader(tester).following, isTrue, reason: 'следование выключает отпускание, а не начало перетаскивания');
+    expect(preview, isNot(chapterBefore), reason: 'precondition: 90 % of the book is a different chapter');
+    expect(reader(tester).following, isTrue, reason: 'following is turned off by the release, not by the start of the '
+        'drag');
     await f.up();
     await advance(tester, const Duration(milliseconds: 600));
 
@@ -49,15 +52,17 @@ void main() {
     expect(book.fractionAt(page.firstBlock, page.firstOffset), lessThanOrEqualTo(0.91));
     expect(book.fractionAt(page.lastBlock, page.lastEnd), greaterThanOrEqualTo(0.89));
     expect(st.following, isFalse);
-    // Голос за это время сам прошёл не дальше пары абзацев от места старта — к 90 % книги он не перенесён.
-    expect(p.narration.block! - block!, inInclusiveRange(0, 3), reason: 'голос места не меняет');
+    // In the meantime the voice itself advanced no more than a couple of paragraphs from the start — it was not moved
+    // to 90 % of the book.
+    expect(p.narration.block! - block!, inInclusiveRange(0, 3), reason: 'the voice does not change position');
     expect(p.narration.state, NarrationState.playing);
     expect(find.byKey(const Key('to-reading-place')), findsOneWidget);
     expect(tester.widget<Text>(find.byKey(const Key('top-bar-chapter'))).data, chapterLabel(book, page.chapter));
   });
 
-  testWidgets('перетаскивание за правый край и отпускание далеко от ползунка — последняя страница и 100 %; за левый — '
-      'первая', (tester) async {
+  testWidgets('dragging past the right edge and releasing far from the slider — the last page and 100 %; past the left '
+      '— '
+      'the first', (tester) async {
     final p = await pumpPrototype(tester);
     await openKapitanskaya(tester, p);
     await tapCenter(tester);
@@ -80,7 +85,8 @@ void main() {
     expect(p.library.positionOf('kapitanskaya'), const ReadingPosition(0, 0));
   });
 
-  testWidgets('слушаю, тронул бегунок и отпустил, не сдвинув: страница та же, следование не выключено (FR-P4)',
+  testWidgets('listening, touched the thumb and released without moving it: the page is the same, following is not '
+      'turned off (FR-P4)',
       (tester) async {
     final p = await pumpPrototype(tester, demoAcceleration: 1);
     await openKapitanskaya(tester, p);
@@ -95,16 +101,16 @@ void main() {
     await f.hold(250);
     await f.up();
     await advance(tester, const Duration(milliseconds: 600));
-    expect(reader(tester).page, page, reason: 'ползунок не сдвинут — страница та же');
+    expect(reader(tester).page, page, reason: 'the slider is not moved — the page is the same');
     expect(reader(tester).following, isTrue,
-        reason: 'FR-P4: следование выключает ползунок, только когда он сдвинут');
+        reason: 'FR-P4: the slider turns following off only when it is moved');
   });
 
-  testWidgets('книга в одну страницу: ползунок не роняет экран и страницу не меняет', (tester) async {
+  testWidgets('a one-page book: the slider does not crash the screen and does not change the page', (tester) async {
     await pumpPrototype(tester);
     await openBook(tester, 'Война и мир');
     final st = reader(tester);
-    expect(st.layout.pages.length, 1, reason: 'предусловие: книга-заглушка — одна страница');
+    expect(st.layout.pages.length, 1, reason: 'precondition: the stub book is one page');
     await tapCenter(tester);
     await tester.pumpAndSettle();
     final f = await Finger.down(tester, trackPoint(tester, 0.9));

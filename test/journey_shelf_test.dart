@@ -1,4 +1,4 @@
-// Пути пользователя «полка ↔ книга», добавление и настройки ключа.
+// User journeys “shelf ↔ book”, adding a book and key settings.
 
 import 'package:audiobook_reader/screens/common.dart';
 import 'package:audiobook_reader/screens/reader_screen.dart';
@@ -17,28 +17,30 @@ Future<void> backToShelf(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('слушал и перешёл оглавлением в другую главу → на полку: «Продолжить» называет главу, где остановился',
+  testWidgets('listened and moved to another chapter via the table of contents → shelf: “Continue” names the chapter '
+      'where I stopped',
       (tester) async {
-    // FR-L4 и CONCEPT §3: карточка «Продолжить» показывает главу места чтения. Позицию во время прослушивания пишет
-    // контроллер (А§5) — название главы должно идти вместе с ней.
+    // FR-L4 and CONCEPT §3: the “Continue” card shows the chapter of the reading position. During listening the
+    // position is written by the controller (А§5) — the chapter title must go together with it.
     final p = await pumpPrototype(tester, demoAcceleration: 1);
-    await openKapitanskaya(tester, p); // сохранённое место — глава II
+    await openKapitanskaya(tester, p); // the saved position is in chapter II
     await listenFromPanel(tester);
     await tapCenter(tester);
     await chooseChapter(tester, 'Глава III. Крепость');
     final book = currentBook(tester);
-    expect(book.chapterOf(p.narration.block!), 2, reason: 'предусловие: голос в главе III');
+    expect(book.chapterOf(p.narration.block!), 2, reason: 'precondition: the voice is in chapter III');
 
     await backToShelf(tester);
     final entry = p.library.entry('kapitanskaya');
-    expect(book.chapterOf(p.library.positionOf('kapitanskaya')!.block), 2, reason: 'позиция — в главе III');
-    expect(entry.chapterTitle, 'Глава III. Крепость', reason: 'на полке — глава, в которой позиция');
+    expect(book.chapterOf(p.library.positionOf('kapitanskaya')!.block), 2, reason: 'the position is in chapter III');
+    expect(entry.chapterTitle, 'Глава III. Крепость', reason: 'the shelf shows the chapter that holds the position');
     expect(find.text('Глава II. Вожатый'), findsNothing);
   });
 
-  testWidgets('«Закрыть» после перехода в другую главу → на полку: «Продолжить» называет главу на экране', (tester) async {
-    // FR-P8: «Закрыть» отдаёт писателю место на экране (при следовании — звучавшее); полка показывает главу этого
-    // места.
+  testWidgets('“Close” after moving to another chapter → shelf: “Continue” names the chapter on '
+      'screen', (tester) async {
+    // FR-P8: “Close” gives the writer the position on screen (when following — the one that was playing); the shelf
+    // shows the chapter of that position.
     final p = await pumpPrototype(tester, demoAcceleration: 1);
     await openKapitanskaya(tester, p);
     await listenFromPanel(tester);
@@ -50,8 +52,8 @@ void main() {
     expect(p.library.entry('kapitanskaya').chapterTitle, 'Глава III. Крепость');
   });
 
-  testWidgets('дочитал до последней страницы → на полку: «100 %»', (tester) async {
-    // FR-L4: «у дочитанной — „100 %“». Читатель, дошедший до последней страницы, книгу дочитал.
+  testWidgets('read to the last page → shelf: “100 %”', (tester) async {
+    // FR-L4: "a finished book shows “100 %”". A reader who reached the last page has finished the book.
     final p = await pumpPrototype(tester);
     await openKapitanskaya(tester, p);
     await tapCenter(tester);
@@ -59,15 +61,16 @@ void main() {
     await tester.tapAt(Offset(slider.right - 2, slider.center.dy));
     await tester.pumpAndSettle();
     final st = reader(tester);
-    expect(st.page, st.layout.pages.length - 1, reason: 'предусловие: последняя страница');
+    expect(st.page, st.layout.pages.length - 1, reason: 'precondition: the last page');
     await tester.tap(find.byTooltip('Назад'));
     await tester.pumpAndSettle();
     await settle(tester);
     expect(shelfProgress(ru, p.library.entry('kapitanskaya').fraction), shelfProgress(ru, 1),
-        reason: 'на полке дочитанная книга — «100 %»');
+        reason: 'on the shelf a finished book shows “100 %”');
   });
 
-  testWidgets('слушал → на полку → снова в книгу: доля на полке равна доле внизу страницы', (tester) async {
+  testWidgets('listened → shelf → back into the book: the fraction on the shelf equals the fraction at the bottom of '
+      'the page', (tester) async {
     final p = await pumpPrototype(tester, demoAcceleration: 1);
     await openKapitanskaya(tester, p);
     await listenFromPanel(tester);
@@ -76,10 +79,11 @@ void main() {
     final shelf = shelfProgress(ru, p.library.entry('kapitanskaya').fraction);
     await openKapitanskaya(tester, p);
     final footer = tester.widget<Text>(find.byKey(const Key('footer-percent'))).data;
-    expect(footer, shelf, reason: 'одна и та же книга показывает одну долю');
+    expect(footer, shelf, reason: 'the same book shows the same fraction');
   });
 
-  testWidgets('листал книгу → на полку → другая книга → назад в первую: та же страница, доля на полке как в книге',
+  testWidgets('turned pages → shelf → another book → back to the first: the same page, the fraction on the shelf '
+      'matches the book',
       (tester) async {
     final p = await pumpPrototype(tester);
     await openKapitanskaya(tester, p);
@@ -95,14 +99,15 @@ void main() {
     await tapRightThird(tester);
     await tester.pumpAndSettle();
     await backToShelf(tester);
-    expect(p.library.shelf.first.id, 'dama', reason: 'последняя открытая — первой (FR-L4)');
+    expect(p.library.shelf.first.id, 'dama', reason: 'the last opened book comes first (FR-L4)');
     await openKapitanskaya(tester, p);
     final now = reader(tester).layout.pages[reader(tester).page];
     expect((now.firstBlock, now.firstOffset), (shown.firstBlock, shown.firstOffset));
   });
 
-  testWidgets('удалил «Записки охотника» → «+» → тот же файл: книга добавляется, приложение не падает', (tester) async {
-    // FR-L3 открывает имеющуюся книгу, только если она на полке. После удаления её на полке нет.
+  testWidgets('deleted “Записки охотника” → “+” → the same file: the book is added, the app does not '
+      'crash', (tester) async {
+    // FR-L3 opens an existing book only if it is on the shelf. After deletion it is not on the shelf.
     final p = await pumpPrototype(tester);
     await tester.longPress(find.text('Записки охотника'));
     await tester.pumpAndSettle();
@@ -110,7 +115,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('confirm-delete')));
     await tester.pumpAndSettle();
-    expect(p.library.shelf.any((e) => e.id == 'zapiski'), isFalse, reason: 'предусловие');
+    expect(p.library.shelf.any((e) => e.id == 'zapiski'), isFalse, reason: 'precondition');
 
     await tester.tap(find.byTooltip('Добавить книгу'));
     await tester.pumpAndSettle();
@@ -118,15 +123,15 @@ void main() {
     await advance(tester, const Duration(seconds: 3));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    // Не только «не упало»: книга снова на полке, новая, и открывается (усилено по ревью логики).
-    expect(p.library.shelf.where((e) => e.id == 'zapiski').length, 1, reason: 'книга добавлена заново');
-    expect(p.library.entry('zapiski').opened, isFalse, reason: 'добавленная заново — новая');
+    // Not only "did not crash": the book is on the shelf again, new, and opens (strengthened per the logic review).
+    expect(p.library.shelf.where((e) => e.id == 'zapiski').length, 1, reason: 'the book is added again');
+    expect(p.library.entry('zapiski').opened, isFalse, reason: 'a re-added book is new');
     await openBook(tester, 'Записки охотника');
     expect(find.byType(ReaderScreen), findsOneWidget);
     expect(currentBook(tester).id, 'zapiski');
   });
 
-  testWidgets('«+» → «Повести Белкина» дважды: книга на полке одна (FR-L3)', (tester) async {
+  testWidgets('“+” → “Повести Белкина” twice: there is one book on the shelf (FR-L3)', (tester) async {
     final p = await pumpPrototype(tester);
     for (var i = 0; i < 2; i++) {
       await tester.tap(find.byTooltip('Добавить книгу'));
@@ -142,24 +147,27 @@ void main() {
     expect(p.library.shelf.where((e) => e.title == 'Повести Белкина').length, 1);
   });
 
-  testWidgets('«+» → новая книга добавилась: «Продолжить» по-прежнему у книги, которую читали, а не у неоткрытой',
+  testWidgets('“+” → a new book is added: “Continue” still belongs to the book that was being read, not to the '
+      'unopened one',
       (tester) async {
-    // FR-L4: полка — по времени последнего ОТКРЫТИЯ; у неоткрытой — «новая». Продолжить можно только начатую книгу.
+    // FR-L4: the shelf is ordered by the time of the last OPENING; an unopened book is "new". Only a started book can
+    // be continued.
     final p = await pumpPrototype(tester);
     await tester.tap(find.byTooltip('Добавить книгу'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pick-ok')));
     await advance(tester, const Duration(seconds: 3));
     await tester.pumpAndSettle();
-    expect(p.library.shelf.any((e) => e.title == 'Повести Белкина'), isTrue, reason: 'предусловие');
+    expect(p.library.shelf.any((e) => e.title == 'Повести Белкина'), isTrue, reason: 'precondition');
     final card = find.ancestor(of: find.text('Продолжить'), matching: find.byType(Card));
     expect(find.descendant(of: card, matching: find.text('Капитанская дочка')), findsOneWidget);
     expect(find.descendant(of: card, matching: find.text('Повести Белкина')), findsNothing);
   });
 
-  testWidgets('ключ есть → «Изменить» → передумал и нажал «Готово» на пустом поле: ключ не стёрт', (tester) async {
-    // FR-P7: поле показывает сохранённый ключ скрытым. «Изменить» с пустым вводом не должно молча удалять ключ:
-    // следующее «Слушать» поведёт в настройки.
+  testWidgets('a key exists → “Change” → changed my mind and pressed “Done” on an empty field: the key is not '
+      'erased', (tester) async {
+    // FR-P7: the field shows the saved key hidden. “Change” with empty input must not silently delete the key:
+    // the next “Listen” would lead to settings.
     final p = await pumpPrototype(tester);
     await tester.tap(find.byTooltip('Настройки'));
     await tester.pumpAndSettle();

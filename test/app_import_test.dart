@@ -17,19 +17,19 @@ import 'support/harness.dart';
 import 'support/gated_file_library.dart';
 import 'support/library_time.dart';
 
-// Начало безымянной главы есть также в шапке. Здесь проверяем саму страницу.
+// The start of an unnamed chapter is also in the header. Here we check the page itself.
 Finder pageText(String text) => find.descendant(
   of: find.byType(BookPage), matching: find.textContaining(text, findRichText: true));
 
 void main() {
-  testWidgets('+ доступен во время разбора предыдущего выбора', (tester) async {
+  testWidgets('+ stays available while the previous pick is being parsed', (tester) async {
     final gate = Completer<ParsedBook>();
     final h = AppHarness(tester);
     await h.start(parser: (_) => gate.future);
     final file = await h.copy(shortBook());
     await h.pick(file);
     await h.until(() => h.app.library.addJobs.isNotEmpty);
-    // Кнопка появляется вместе со строкой; дожидаемся её анимации, не spinner разбора.
+    // The button appears together with the row; wait for its animation, not for the parsing spinner.
     await tester.pump(const Duration(milliseconds: 500));
     await tester.tap(find.byTooltip('Добавить книгу'));
     await tester.pump();
@@ -40,7 +40,7 @@ void main() {
     expect(h.app.library.shelf, hasLength(1));
   });
 
-  testWidgets('FR-L2: + → Добавляется → полка → настоящий текст образца', (tester) async {
+  testWidgets('FR-L2: + → Adding → shelf → real sample text', (tester) async {
     final gate = Completer<ParsedBook>();
     final h = AppHarness(tester);
     await h.start(parser: (_) => gate.future);
@@ -65,7 +65,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('отмена системного выбора ничего не меняет', (tester) async {
+  testWidgets('cancelling the system picker changes nothing', (tester) async {
     final h = AppHarness(tester);
     await h.start();
     await h.pick(null);
@@ -86,7 +86,7 @@ void main() {
     ),
   ];
   for (final (reason, bytes, message) in failures) {
-    testWidgets('FR-B2: отказ ${reason.name} виден, временная копия удалена', (tester) async {
+    testWidgets('FR-B2: failure ${reason.name} is shown, the temporary copy is deleted', (tester) async {
       final h = AppHarness(tester);
       await h.start();
       final file = await h.copy(bytes(), 'refused.book');
@@ -104,7 +104,7 @@ void main() {
     });
   }
 
-  testWidgets('FR-L3: повтор выбора открывает существующую книгу и удаляет копию', (tester) async {
+  testWidgets('FR-L3: picking again opens the existing book and deletes the copy', (tester) async {
     final h = AppHarness(tester);
     await h.start();
     final first = await h.copy(shortBook());
@@ -122,7 +122,8 @@ void main() {
   });
 
   for (final cold in [false, true]) {
-    testWidgets('внешний файл ${cold ? 'до подписки' : 'после подписки'} добавляется и открывается', (tester) async {
+    testWidgets('external file ${cold ? 'before subscription' : 'after subscription'} is added and '
+        'opened', (tester) async {
       final h = AppHarness(tester);
       await h.start(mount: !cold);
       final bytes = zip({'book.fb2': shortBook()});
@@ -145,7 +146,7 @@ void main() {
     });
   }
 
-  testWidgets('ошибки выбора, чтения и потока видны; после onError приходит EPUB', (tester) async {
+  testWidgets('picker, read and stream errors are shown; an EPUB arrives after onError', (tester) async {
     final h = AppHarness(tester);
     await h.start();
     h.files.pickError = StateError('copy refused');
@@ -178,7 +179,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('внешняя книга поверх чтения заменяет книгу и остаётся в режиме чтения', (tester) async {
+  testWidgets('an external book over reading replaces the book and stays in reading mode', (tester) async {
     final h = AppHarness(tester);
     await h.start();
     final first = await h.copy(longBook());
@@ -197,7 +198,7 @@ void main() {
 
   for (final copyError in [false, true]) {
     testWidgets(
-      'поздняя загрузка с полки не перекрывает ${copyError ? 'отказ копирования' : 'более новую внешнюю книгу'}',
+      'a late shelf load does not override ${copyError ? 'the copy failure' : 'a newer external book'}',
       (tester) async {
         final h = AppHarness(tester);
         await h.start(mount: false);
@@ -221,7 +222,7 @@ void main() {
         await h.pump();
         await tester.tap(find.text('Краткая'));
         await h.until(() => library.entered.isCompleted);
-        expect(find.byType(ReaderScreen), findsNothing, reason: 'до загрузки остаётся полка');
+        expect(find.byType(ReaderScreen), findsNothing, reason: 'the shelf stays until loading finishes');
         expect(find.text('Краткая'), findsOneWidget);
         String? externalId;
         if (copyError) {

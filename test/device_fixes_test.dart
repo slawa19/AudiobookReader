@@ -57,7 +57,8 @@ Future<void> openContents(WidgetTester tester, Prototype p, Book book, {int curr
 }
 
 void main() {
-  testWidgets('оглавление: область 48 dp не входит в прокрутку, последняя глава доступна целиком', (tester) async {
+  testWidgets('table of contents: the 48 dp area is not part of the scroll, the last chapter is fully '
+      'reachable', (tester) async {
     final p = await pumpPrototype(tester, size: phone320, textScale: 1.3);
     tester.view.padding = const FakeViewPadding(top: 64, bottom: 96);
     tester.view.viewPadding = const FakeViewPadding(top: 64, bottom: 96);
@@ -81,7 +82,7 @@ void main() {
   });
 
   for (final current in [0, 1, 2]) {
-    testWidgets('оглавление: название, начало текста и пропуск картинки (текущая $current)', (tester) async {
+    testWidgets('table of contents: title, start of text and skipping an image (current $current)', (tester) async {
       final p = await pumpPrototype(tester, size: phone320, textScale: 1.3);
       await openContents(tester, p, contentsBook(), current: current);
       expect(find.text('Настоящее название'), findsOneWidget);
@@ -99,7 +100,7 @@ void main() {
     });
   }
 
-  testWidgets('48 dp: настройки, голос и все листы прокручиваются над системной областью', (tester) async {
+  testWidgets('48 dp: settings, voice and all sheets scroll above the system area', (tester) async {
     final p = await pumpPrototype(tester, size: phone320, textScale: 1.3);
     tester.view.padding = const FakeViewPadding(top: 64, bottom: 96);
     tester.view.viewPadding = const FakeViewPadding(top: 64, bottom: 96);
@@ -188,7 +189,7 @@ void main() {
   });
 
   for (final titled in [false, true]) {
-    testWidgets('безымянная глава: одна подпись на полке после перезапуска и в шапке (название $titled)', (
+    testWidgets('unnamed chapter: one label on the shelf after a restart and in the header (title $titled)', (
       tester,
     ) async {
       final h = AppHarness(tester);
@@ -226,12 +227,12 @@ void main() {
       expect(
         h.app.library.shelf.single.chapterTitle,
         expected,
-        reason: 'библиотека сохраняет подпись вместе с позицией',
+        reason: 'the library saves the label together with the position',
       );
     });
   }
 
-  test('доля: новая, начало, малые значения, округление, 99 % и дочитанная', () {
+  test('fraction: new, start, small values, rounding, 99 % and finished', () {
     final l10n = lookupAppLocalizations(const Locale('ru'));
     expect(shelfProgress(l10n, null), l10n.progressNew);
     for (final (fraction, percent) in [(0.0, 0), (0.004, 0), (0.006, 1), (0.995, 99), (0.9999, 99), (1.0, 100)]) {
@@ -239,7 +240,8 @@ void main() {
     }
   });
 
-  testWidgets('доля: конец позиции без finished не даёт 100 %, finished даёт и после перезапуска', (tester) async {
+  testWidgets('fraction: end of position without finished does not give 100 %, finished does, also after a '
+      'restart', (tester) async {
     final h = AppHarness(tester);
     await h.start();
     await h.pick(await h.copy(longBook()));
@@ -259,7 +261,7 @@ void main() {
     expect(h.app.library.entry(id).fraction, 1);
   });
 
-  testWidgets('доля: одна позиция меньше половины процента совпадает в чтении и на полке', (tester) async {
+  testWidgets('fraction: a position under half a percent matches in reading and on the shelf', (tester) async {
     final h = AppHarness(tester);
     await h.start();
     final source = utf8.decode(longBook());
@@ -282,7 +284,8 @@ void main() {
     expect(shelfProgress(l10n, fraction), footer);
   });
 
-  testWidgets('системные панели: тема меняет значки, подложка Android отключена на полке и в оглавлении', (
+  testWidgets('system bars: the theme changes the icons, the Android scrim is disabled on the shelf and in the table '
+      'of contents', (
     tester,
   ) async {
     final styles = <Map<Object?, Object?>>[];
@@ -329,7 +332,7 @@ void main() {
     }
   });
 
-  testWidgets('системные панели: смена темы из листа чтения сразу обновляет значки', (tester) async {
+  testWidgets('system bars: changing the theme from the reading sheet updates the icons at once', (tester) async {
     await pumpPrototype(tester);
     await openBook(tester, 'Капитанская дочка');
     await tester.tapAt(tester.getRect(find.byKey(const Key('page-area'))).center);

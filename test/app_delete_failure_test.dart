@@ -12,7 +12,7 @@ class _FailingDeleteLibrary extends FakeLibrary {
 }
 
 void main() {
-  testWidgets('ошибка удаления видна строкой отказа и не теряется в Future', (tester) async {
+  testWidgets('a delete error is shown as a failure row and is not lost in the Future', (tester) async {
     final prototype = await Prototype.create();
     final library = _FailingDeleteLibrary();
     final controller = FakeNarrationController(

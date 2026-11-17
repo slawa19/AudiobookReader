@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/book_samples.dart';
 
 void main() {
-  test('FR-B1: чистый синхронный разбор переносится в изолят', () async {
+  test('FR-B1: pure synchronous parsing moves to an isolate', () async {
     final bytes = utf8.encode(fixture('fb2_inline.xml'));
     final result = await Isolate.run(() => parseBook(bytes));
     invariants(result.book);
@@ -18,7 +18,7 @@ void main() {
       '😀 тихо громко x2 H2O[1][2][3][4].',
     );
   });
-  test('FR-B1: JSON сохраняет всю модель, сноски, картинки и UTF-16', () {
+  test('FR-B1: JSON keeps the whole model, notes, images and UTF-16', () {
     final book = checked(utf8.encode(fixture('fb2_inline.xml'))).book;
     final json = jsonDecode(jsonEncode(book.toJson())) as Map<String, Object?>;
     final restored = Book.fromJson(json);
@@ -36,7 +36,7 @@ void main() {
   });
 
   test(
-    'FR-B1: speechText удаляет только noteRef и ударение, смещения UTF-16',
+    'FR-B1: speechText removes only noteRef and stress marks, UTF-16 offsets',
     () {
       const b = Block(
         index: 0,
@@ -93,7 +93,7 @@ void main() {
   );
 
   test(
-    'FR-B1: пустая речь, пересекающиеся ссылки, виды произносимых блоков',
+    'FR-B1: empty speech, overlapping references, kinds of spoken blocks',
     () {
       const empty = Block(
         index: 0,

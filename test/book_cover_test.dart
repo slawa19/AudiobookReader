@@ -5,7 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 void main() {
   for (final title in ['', 'ёжик', '👩‍🚀 Полёт']) {
-    testWidgets('заглушка обложки: название «$title»', (tester) async {
+    testWidgets('cover placeholder: title «$title»', (tester) async {
       final entry = ShelfEntry(
         id: 'book',
         title: title,

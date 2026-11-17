@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('импорт передаёт путь и не читает исходник в главном изоляте приложения', () {
+  test('import passes the path and does not read the source in the main isolate of the app', () {
     final application = File('lib/app/native_application.dart').readAsStringSync();
     expect(application, isNot(contains('file.readAsBytes()')));
     expect(application, contains('library.addFile('));

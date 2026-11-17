@@ -1,5 +1,5 @@
-// Жесты и слои: панели, панель плеера, листы, системная «Назад», второе касание по месту, где слой только что
-// сменился (разделы B, D, G проверки жестов 2026-11-14).
+// Gestures and layers: panels, the player panel, sheets, the system Back, a second tap on a spot where a layer has just
+// changed (sections B, D, G of the gesture review of 2026-11-14).
 
 import 'package:audiobook_reader/library/library.dart';
 import 'package:audiobook_reader/playback/narration.dart';
@@ -11,9 +11,9 @@ import 'support/flows.dart';
 import 'support/harness.dart';
 
 void main() {
-  group('второе касание по тому же месту', () {
+  group('a second tap on the same spot', () {
     for (final (size, scale, label) in const [(phone412, 1.0, '412 × 915'), (phone320, 1.3, '320 × 640 ×1,3')]) {
-      testWidgets('«Слушать» нажата дважды подряд ($label): озвучка идёт с того же места, а не стоит на паузе',
+      testWidgets('“Listen” pressed twice in a row ($label): narration plays from the same place and is not paused',
           (tester) async {
         final p = await pumpPrototype(tester, size: size, textScale: scale, demoAcceleration: 1);
         await openKapitanskaya(tester, p);
@@ -23,16 +23,18 @@ void main() {
         await quickTap(tester, c);
         await frames(tester, 160);
         final started = p.narration.unitStart;
-        expect(p.narration.state, NarrationState.preparing, reason: 'предусловие: первое касание начало озвучку');
+        expect(p.narration.state, NarrationState.preparing, reason: 'precondition: the first tap started the '
+            'narration');
         await quickTap(tester, c);
         await advance(tester, const Duration(seconds: 2));
         expect(p.narration.state, NarrationState.playing,
-            reason: 'двойное нажатие на «Слушать» — всё равно «слушать»: под палец не должна вставать другая кнопка');
+            reason: 'a double press on “Listen” is still “listen”: no other button may end up under the finger');
         expect(p.narration.unitStart, started);
       });
     }
 
-    testWidgets('«Слушать» нажата дважды подряд в любом месте кнопки: второе касание ничего не нажимает', (tester) async {
+    testWidgets('“Listen” pressed twice in a row anywhere on the button: the second tap presses '
+        'nothing', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       final wrong = <String>[];
@@ -46,14 +48,14 @@ void main() {
         final started = p.narration.unitStart;
         await quickTap(tester, c);
         await advance(tester, const Duration(seconds: 2));
-        final at = '${(fx * 100).round()} % ширины кнопки';
-        if (find.byKey(const Key('sleep-15')).evaluate().isNotEmpty) wrong.add('$at: открыт таймер сна');
-        if (find.byKey(const Key('speed-1.0')).evaluate().isNotEmpty) wrong.add('$at: открыт лист скорости');
+        final at = '${(fx * 100).round()} % of the button width';
+        if (find.byKey(const Key('sleep-15')).evaluate().isNotEmpty) wrong.add('$at: sleep timer is open');
+        if (find.byKey(const Key('speed-1.0')).evaluate().isNotEmpty) wrong.add('$at: speed sheet is open');
         if (p.narration.state != NarrationState.playing) wrong.add('$at: ${p.narration.state.name}');
         if (p.narration.unitStart != started) {
-          wrong.add('$at: место звука ушло с блока ${started?.block} на ${p.narration.unitStart?.block}');
+          wrong.add('$at: the audio position moved from block ${started?.block} to ${p.narration.unitStart?.block}');
         }
-        // Вернуть экран к чтению без плеера (подготовка следующего прохода).
+        // Return the screen to reading without the player (prepare the next pass).
         if (find.byKey(const Key('player-panel')).hitTestable().evaluate().isEmpty) {
           await tester.binding.handlePopRoute();
           await advance(tester, const Duration(milliseconds: 600));
@@ -64,7 +66,7 @@ void main() {
       expect(wrong, isEmpty);
     });
 
-    testWidgets('«Закрыть» нажата дважды подряд: страница не перелистывается', (tester) async {
+    testWidgets('“Close” pressed twice in a row: the page does not turn', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await startListening(tester);
@@ -76,11 +78,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(p.narration.state, NarrationState.idle);
       expect(onPage(tester, sounding), isTrue,
-          reason: 'после «Закрыть» на экране звучавшее место (FR-P8); второе касание его не уводит');
+          reason: 'after “Close” the screen shows the position that was playing (FR-P8); the second tap does not move '
+              'it away');
       expect(reader(tester).panelsVisible, isFalse);
     });
 
-    testWidgets('выбор в листе скорости или таймера сделан двойным касанием: лист закрыт, звук идёт, экран чтения тот же',
+    testWidgets('a choice in the speed or timer sheet made by a double tap: the sheet is closed, audio plays, the '
+        'reading screen is the same',
         (tester) async {
       final wrong = <String>[];
       for (final (opener, choice) in const [
@@ -89,7 +93,7 @@ void main() {
         ('sleep', 'sleep-15'),
         ('sleep', 'sleep-chapter'),
       ]) {
-        // Каждый выбор — на свежем экране.
+        // Each choice is made on a fresh screen.
         await tester.pumpWidget(const SizedBox());
         final p = await pumpPrototype(tester, demoAcceleration: 1);
         await openKapitanskaya(tester, p);
@@ -101,17 +105,17 @@ void main() {
         await frames(tester, 160);
         await quickTap(tester, c);
         await advance(tester, const Duration(milliseconds: 800));
-        if (p.narration.state != NarrationState.playing) wrong.add('$choice: звук остановлен (${p.narration.state.name})');
+        if (p.narration.state != NarrationState.playing) wrong.add('$choice: audio stopped (${p.narration.state.name})');
         if (find.byKey(const Key('page-area')).hitTestable().evaluate().isEmpty) {
-          wrong.add('$choice: поверх чтения открыт другой экран');
+          wrong.add('$choice: another screen is open over reading');
         } else if (reader(tester).panelsVisible) {
-          wrong.add('$choice: открыты панели чтения');
+          wrong.add('$choice: reading panels are open');
         }
       }
-      expect(wrong, isEmpty, reason: 'второе касание той же кнопки листа попадает в то, что под листом');
+      expect(wrong, isEmpty, reason: 'a second tap on the same sheet button hits whatever is under the sheet');
     });
 
-    testWidgets('строка скачивания: «Стоп» дважды — панели не открываются, страница та же', (tester) async {
+    testWidgets('download row: “Stop” twice — the panels do not open, the page is the same', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       final page = reader(tester).page;
@@ -128,8 +132,9 @@ void main() {
     });
   });
 
-  group('выбранный абзац и другие жесты', () {
-    testWidgets('слушаю → долгое нажатие → передумал и смахнул → «К месту чтения» возвращает к голосу', (tester) async {
+  group('a selected paragraph and other gestures', () {
+    testWidgets('listening → long press → changed my mind and swiped → “To current spot” returns to the '
+        'voice', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await startListening(tester);
@@ -140,21 +145,23 @@ void main() {
 
       await swipe(tester, at(tester, 0.85, 0.3), const Offset(-220, 0), ms: 110);
       await advance(tester, const Duration(milliseconds: 800));
-      expect(reader(tester).page, voicePage + 1, reason: 'предусловие: смахивание перелистнуло');
-      expect(find.byKey(const Key('read-from-here')), findsNothing, reason: 'предусловие: кнопки «Читать отсюда» нет');
+      expect(reader(tester).page, voicePage + 1, reason: 'precondition: the swipe turned the page');
+      expect(find.byKey(const Key('read-from-here')), findsNothing, reason: 'precondition: there is no “Read from '
+          'here” button');
       expect(find.byKey(const Key('to-reading-place')), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('to-reading-place')));
       await advance(tester, const Duration(milliseconds: 800));
       final sounding = reader(tester).soundingPosition!;
       expect(onPage(tester, sounding), isTrue,
-          reason: '«К месту чтения» включает следование (FR-P4): на экране должно быть звучащее место');
+          reason: '“To current spot” turns following on (FR-P4): the screen must show the position being played');
     });
   });
 
-  group('слой перехватывает жест', () {
-    testWidgets('смахивание, начатое на панели плеера, страницу не листает; начатое на странице и законченное на панели — '
-        'листает', (tester) async {
+  group('a layer captures the gesture', () {
+    testWidgets('a swipe started on the player panel does not turn the page; one started on the page and ended on the '
+        'panel '
+        'turns it', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await startListening(tester);
@@ -164,7 +171,7 @@ void main() {
       await advance(tester, const Duration(milliseconds: 600));
       expect(reader(tester).page, page);
       expect(reader(tester).following, isTrue);
-      expect(p.narration.state, NarrationState.playing, reason: 'смахивание по панели не нажимает её кнопок');
+      expect(p.narration.state, NarrationState.playing, reason: 'a swipe over the panel does not press its buttons');
 
       await swipe(tester, Offset(panel.right - 30, panel.top - 40), const Offset(-240, 80), ms: 120);
       await advance(tester, const Duration(milliseconds: 1200));
@@ -173,7 +180,8 @@ void main() {
       expect(p.narration.state, NarrationState.playing);
     });
 
-    testWidgets('панели чтения открыты: смахивание по шапке ничего не листает и панели не прячет', (tester) async {
+    testWidgets('reading panels are open: a swipe over the header turns no page and does not hide the '
+        'panels', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       final page = reader(tester).page;
@@ -187,10 +195,10 @@ void main() {
     });
   });
 
-  group('системная «Назад» (FR-R9)', () {
-    // Приведено к решению J (проверка жестов 2026-11-14): при показанных панелях «Назад» после листа закрывает книгу;
-    // прятать панели «Назад» больше не должна. Было: «лист, потом панели, потом книга».
-    testWidgets('панели + сноска: лист, потом книга; страница та же', (tester) async {
+  group('the system Back (FR-R9)', () {
+    // Aligned with decision J (gesture review of 2026-11-14): with the panels shown, Back after a sheet closes the
+    // book; Back no longer hides the panels. It used to be: "sheet, then panels, then book".
+    testWidgets('panels + a note: the sheet, then the book; the page is the same', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p, at: const ReadingPosition(0, 0));
       await tapCenter(tester);
@@ -198,7 +206,7 @@ void main() {
       await tester.tapAt(noteRefCenter(tester, 'n1'));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('note-sheet')), findsOneWidget);
-      expect(reader(tester).panelsVisible, isTrue, reason: 'сноска открывается и при открытых панелях');
+      expect(reader(tester).panelsVisible, isTrue, reason: 'a note opens even with the panels open');
 
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
@@ -212,7 +220,7 @@ void main() {
       expect(find.byKey(const Key('shelf-title')), findsOneWidget);
     });
 
-    testWidgets('«Назад» посреди анимации листа скорости и посреди перелистывания', (tester) async {
+    testWidgets('Back in the middle of the speed sheet animation and in the middle of a page turn', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await startListening(tester);
@@ -220,17 +228,17 @@ void main() {
       await frames(tester, 64);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('speed-1.5')), findsNothing, reason: 'лист закрыт');
-      expect(find.byKey(const Key('player-panel')), findsOneWidget, reason: 'книга и плеер на месте');
+      expect(find.byKey(const Key('speed-1.5')), findsNothing, reason: 'the sheet is closed');
+      expect(find.byKey(const Key('player-panel')), findsOneWidget, reason: 'the book and the player are in place');
       expect(p.narration.state, NarrationState.playing);
 
-      // Касание правой трети и «Назад» через 80 мс: книга закрывается без исключений, позиция записана. Приведено к
-      // решению J: панели скрыты — первая «Назад» их показывает, вторая закрывает книгу.
+      // A tap on the right third and Back after 80 ms: the book closes without exceptions, the position is saved.
+      // Aligned with decision J: panels hidden — the first Back shows them, the second closes the book.
       await quickTap(tester, at(tester, 0.9, 0.3));
       await frames(tester, 80);
       await tester.binding.handlePopRoute();
       await frames(tester, 80);
-      expect(reader(tester).panelsVisible, isTrue, reason: 'решение J: первая «Назад» показывает панели');
+      expect(reader(tester).panelsVisible, isTrue, reason: 'decision J: the first Back shows the panels');
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
@@ -240,10 +248,10 @@ void main() {
   });
 }
 
-/// Место стоит на странице, которая сейчас на экране.
+/// The position is on the page that is currently on screen.
 bool onPage(WidgetTester tester, ReadingPosition at) => currentPage(tester).contains(at.block, at.offset);
 
-/// Абзац текущей страницы, начинающийся на ней ниже первого куска (под ним не панель плеера).
+/// A paragraph of the current page that starts on it below the first piece (the player panel is not under it).
 int lowestParagraph(WidgetTester tester) {
   final st = reader(tester);
   final book = st.widget.book;

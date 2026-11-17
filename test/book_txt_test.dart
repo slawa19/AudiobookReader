@@ -10,7 +10,7 @@ void main() {
   List<String> texts(List<int> bytes) =>
       checked(bytes).book.blocks.map((b) => b.text).toList();
 
-  test('FR-B5: UTF-8 с BOM и без; кириллица и другие алфавиты сохраняются', () {
+  test('FR-B5: UTF-8 with and without BOM; Cyrillic and other alphabets are preserved', () {
     const text = 'Привет, Ёж! № 1 — «да». Łódź 日本 😀';
     for (final bytes in [
       utf8.encode(text),
@@ -23,8 +23,8 @@ void main() {
     ]);
   });
 
-  test('FR-B5: невалидный UTF-8 целиком читается как windows-1251', () {
-    // Привет, Ёж! № 1 — «да». — байты, не зависящие от декодера приложения.
+  test('FR-B5: invalid UTF-8 is read entirely as windows-1251', () {
+    // Привет, Ёж! № 1 — «да». — bytes that do not depend on the application decoder.
     final bytes = [
       207,
       240,
@@ -52,13 +52,13 @@ void main() {
     ];
     expect(texts(bytes), ['Привет, Ёж! № 1 — «да».']);
     expect(texts([239, 187, 191, ...bytes]), ['Привет, Ёж! № 1 — «да».']);
-    // Одна и та же последовательность валидна в UTF-8: приоритет у UTF-8.
+    // The same sequence is valid in UTF-8: UTF-8 takes priority.
     expect(texts([208, 144]), ['А']);
     expect(texts([208, 144, 32, 255]), ['Рђ я']);
   });
 
   test(
-    'FR-B5: декларация XML у обычного TXT не выбирает кодировку и не удаляется',
+    'FR-B5: an XML declaration in a plain TXT does not select the encoding and is not removed',
     () {
       const text = '<?xml encoding="windows-1251"?>\nПривет';
       expect(texts(utf8.encode(text)), [
@@ -69,7 +69,7 @@ void main() {
   );
 
   test(
-    'FR-B5: пустая строка включает склейку, без неё каждая строка — абзац',
+    'FR-B5: an empty line enables merging, without one every line is a paragraph',
     () {
       expect(texts(utf8.encode('Один\nдва\n\nТри\nчетыре')), [
         'Один два',
@@ -84,7 +84,7 @@ void main() {
     },
   );
 
-  test('FR-B5: пустые строки только по краям не включают склейку', () {
+  test('FR-B5: empty lines only at the edges do not enable merging', () {
     expect(texts(utf8.encode('\n \nОдин\nдва\n\t\n')), ['Один', 'два']);
     expect(texts(utf8.encode('\n \nОдин\nдва\n\nТри\n\t\n')), [
       'Один два',
@@ -93,7 +93,7 @@ void main() {
     expect(texts(utf8.encode('Единственная\n')), ['Единственная']);
   });
 
-  test('FR-B5: CRLF, CR и LF равноправны, в том числе в одном файле', () {
+  test('FR-B5: CRLF, CR and LF are equivalent, including within one file', () {
     for (final end in ['\r\n', '\r', '\n']) {
       expect(texts(utf8.encode(['Один', 'два', '', 'Три'].join(end))), [
         'Один два',
@@ -114,7 +114,7 @@ void main() {
   });
 
   test(
-    'FR-B5: пробельные строки — разделители, пробелы внутри текста — нет',
+    'FR-B5: whitespace-only lines are separators, spaces inside text are not',
     () {
       expect(texts(utf8.encode('  Один  \n\tдва\t\n \t\u00a0 \nТри')), [
         'Один два',
@@ -129,7 +129,7 @@ void main() {
   );
 
   test(
-    'FR-B5/B6: пустой файл и одни пустые строки отклоняются, один блок — нет',
+    'FR-B5/B6: an empty file and only empty lines are rejected, a single block is not',
     () {
       for (final bytes in [
         <int>[],
@@ -153,7 +153,7 @@ void main() {
     },
   );
 
-  test('FR-B5: одна глава без названия, только абзацы, без эвристик и XML-разметки', () {
+  test('FR-B5: one chapter without a title, paragraphs only, no heuristics and no XML markup', () {
     const text = 'Глава 1\nПере-\nнос\n\n<p>Текст &amp; [1]</p>\n***';
     final result = checked(utf8.encode(text));
     final book = result.book;

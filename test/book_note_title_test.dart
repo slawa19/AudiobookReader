@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:audiobook_reader/book/parse.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Знак сноски FB2 (`title` её раздела) не входит в текст сноски — найдено на книге владельца 2026-11-15.
+/// The FB2 note marker (the `title` of its section) is not part of the note text — found on the owner's book on
+/// 2026-11-15.
 void main() {
   List<String> noteText(String notes) {
     final book = parseBook(utf8.encode(
@@ -13,15 +14,15 @@ void main() {
     return [for (final b in book.notes['n1']!.blocks) b.text];
   }
 
-  test('title раздела сноски — знак, в текст сноски не идёт', () {
+  test('the title of a note section is a marker, it does not go into the note text', () {
     expect(noteText('<section id="n1"><title><p>1</p></title><p>Пояснение.</p></section>'), ['Пояснение.']);
   });
 
-  test('сноска без title остаётся как есть', () {
+  test('a note without title stays as is', () {
     expect(noteText('<section id="n1"><p>1</p><p>Пояснение.</p></section>'), ['1', 'Пояснение.']);
   });
 
-  test('сноска из одного title не становится пустой', () {
+  test('a note consisting of a single title does not become empty', () {
     expect(noteText('<section id="n1"><title><p>Пояснение.</p></title></section>'), ['Пояснение.']);
   });
 }

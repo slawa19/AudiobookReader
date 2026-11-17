@@ -77,7 +77,7 @@ void main() {
 
   for (final format in ['txt', 'fb2', 'epub']) {
     test(
-      '$format: пустой язык фиксируется при добавлении и переживает смену интерфейса и переразбор',
+      '$format: an empty language is fixed at adding and survives an interface change and a re-parse',
       () async {
         library.settings.language = 'ru';
         final bytes = sample(format);
@@ -113,7 +113,7 @@ void main() {
 
   for (final format in ['fb2', 'epub']) {
     test(
-      '$format: язык из метаданных не заменяется языком интерфейса',
+      '$format: the language from metadata is not replaced by the interface language',
       () async {
         library.settings.language = 'ru';
         final source = await File('${root.path}/source')
@@ -126,7 +126,7 @@ void main() {
 
   for (final version in [0, currentParserVersion]) {
     test(
-      'старая книга с пустым языком сохраняет его и отпечаток: parserVersion=$version',
+      'an old book with an empty language keeps it and its fingerprint: parserVersion=$version',
       () async {
         final source = await File('${root.path}/source')
             .writeAsBytes(sample('txt'));
@@ -156,7 +156,7 @@ void main() {
     );
   }
 
-  test('язык захватывается до ожидания разбора', () async {
+  test('the language is captured before waiting for the parse', () async {
     library.dispose();
     final parsing = Completer<void>();
     final gate = Completer<ParsedBook>();

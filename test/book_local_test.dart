@@ -6,7 +6,7 @@ import 'support/book_samples.dart';
 
 void main() {
   final dir = Directory('test/local_books');
-  test('FR-B7: инварианты на каждой локальной книге владельца', () {
+  test('FR-B7: invariants on every local book of the owner', () {
     final files = dir
         .listSync(recursive: true)
         .whereType<File>()
@@ -17,9 +17,9 @@ void main() {
           ).hasMatch(f.path),
         )
         .toList();
-    expect(files, isNotEmpty, reason: 'Папка есть, но книг нет');
+    expect(files, isNotEmpty, reason: 'The folder exists but has no books');
     for (final file in files) {
       checked(file.readAsBytesSync());
     }
-  }, skip: !dir.existsSync() ? 'test/local_books/ отсутствует' : false);
+  }, skip: !dir.existsSync() ? 'test/local_books/ is missing' : false);
 }

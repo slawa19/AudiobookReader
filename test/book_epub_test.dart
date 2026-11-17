@@ -16,7 +16,7 @@ String singleNav(String href) =>
     fixture('epub_single_nav.xhtml').replaceAll('HREF', href);
 
 void main() {
-  test('FR-B4/B6: отсутствующая сноска на ресурс и отсутствующий документ — обычные ссылки', () {
+  test('FR-B4/B6: a missing note resource and a missing document are ordinary links', () {
     final b = checked(
       epub(
         content: fixture('epub_missing_note_resource.xhtml'),
@@ -28,7 +28,7 @@ void main() {
     expect(chapters(b), [('Глава', 1, 0, 1)]);
     expect(b.notes, isEmpty);
   });
-  test('FR-B4: pre сохраняет переводы строк, обычный абзац нормализует их', () {
+  test('FR-B4: pre keeps line breaks, an ordinary paragraph normalizes them', () {
     final b = checked(
       epub(content: fixture('epub_pre.xhtml'), nav: singleNav('../text.xhtml')),
     ).book;
@@ -39,7 +39,7 @@ void main() {
     expect(chapters(b), [('Глава', 1, 0, 2)]);
     expect(b.notes, isEmpty);
   });
-  test('FR-B4: таблица по строкам разделяет вложенные абзацы; код и стили не текст', () {
+  test('FR-B4: a table row by row separates nested paragraphs; code and styles are not text', () {
     final b = checked(
       epub(
         content: fixture('epub_table.xhtml'),
@@ -54,7 +54,7 @@ void main() {
     expect(chapters(b), [('Глава', 1, 0, 3)]);
     expect(b.notes, isEmpty);
   });
-  test('FR-B4: абзацы внутри списка не склеиваются, начертание внутри строки не дробит её', () {
+  test('FR-B4: paragraphs inside a list are not merged, inline styling does not split the line', () {
     final b = checked(
       epub(
         content: fixture('epub_list.xhtml'),
@@ -69,7 +69,7 @@ void main() {
     expect(b.notes, isEmpty);
   });
   test(
-    'FR-B4: начертание сохраняется по обе стороны встроенного изображения',
+    'FR-B4: styling is preserved on both sides of an inline image',
     () {
       final b = checked(
         epub(
@@ -94,7 +94,7 @@ void main() {
   );
   for (final ncx in [false, true]) {
     test(
-      'FR-B4: EPUB ${ncx ? 2 : 3}, относительный путь от оглавления, уровни, метаданные и обложка',
+      'FR-B4: EPUB ${ncx ? 2 : 3}, relative path from the table of contents, levels, metadata and cover',
       () {
         final r = checked(
           epub(ncx: ncx, cover3: !ncx, spine: ncx ? ['text'] : ['text', 'nav']),
@@ -123,7 +123,7 @@ void main() {
     '#missing': 0,
   };
   for (final e in anchors.entries) {
-    test('FR-B4: граница ${e.key.isEmpty ? 'без фрагмента' : e.key}', () {
+    test('FR-B4: boundary ${e.key.isEmpty ? 'without fragment' : e.key}', () {
       final b = checked(epub(nav: singleNav('../text.xhtml${e.key}'))).book;
       expect(b.blocks.map((b) => b.text), expectedText);
       expect(chapters(b), [
@@ -133,7 +133,7 @@ void main() {
       expect(b.notes, isEmpty);
     });
   }
-  test('FR-B4: дубликаты границ оставляют первую запись, другой якорь даёт другую главу', () {
+  test('FR-B4: duplicate boundaries keep the first entry, a different anchor gives a different chapter', () {
     final nav = singleNav('../text.xhtml#heading').replaceFirst(
       '</li></ol>',
       '</li><li><a href="../text.xhtml#heading">Дубликат</a></li><li><a href="../text.xhtml#container">Другая</a></li></ol>',
@@ -148,7 +148,7 @@ void main() {
     expect(b.notes, isEmpty);
   });
   test(
-    'FR-B4: документ spine без записи продолжает главу; запись создаёт границу',
+    'FR-B4: a spine document without an entry continues the chapter; an entry creates a boundary',
     () {
       final nav = singleNav('../text.xhtml');
       final continued = checked(epub(nav: nav, spine: ['text', 'second'])).book;
@@ -174,7 +174,7 @@ void main() {
       expect(split.notes, isEmpty);
     },
   );
-  test('FR-B4: порядок spine сильнее порядка manifest и оглавления', () {
+  test('FR-B4: spine order takes precedence over manifest and table-of-contents order', () {
     final b = checked(
       epub(nav: singleNav('../text.xhtml'), spine: ['second', 'text']),
     ).book;
@@ -182,7 +182,7 @@ void main() {
     expect(chapters(b), [('', 1, 0, 1), ('Глава', 1, 1, 7)]);
     expect(b.notes, isEmpty);
   });
-  test('FR-B4: структурные признаки сносок, оглавления, подписи и похожий обычный текст', () {
+  test('FR-B4: structural markers of notes, table of contents, caption and similar ordinary text', () {
     final r = checked(
       epub(
         content: fixture('epub_structures.xhtml'),
@@ -236,7 +236,7 @@ void main() {
   });
   for (final type in ['footnote', 'endnote', 'rearnote']) {
     test(
-      'FR-B4: тип $type у aside и другого элемента; без типа — основной текст',
+      'FR-B4: type $type on aside and on another element; without a type it is main text',
       () {
         for (final tag in ['aside', 'div']) {
           final content = fixture('epub_note_type.xhtml')
@@ -253,7 +253,7 @@ void main() {
       },
     );
   }
-  test('FR-B4: noteId включает документ, сноски вне spine доступны, пустая ссылка обычная', () {
+  test('FR-B4: noteId includes the document, notes outside the spine are available, an empty link is ordinary', () {
     final source = fixture('epub_note_documents.xhtml');
     final b = checked(epub(content: source, nav: singleNav('../text.xhtml')))
         .book;
@@ -275,7 +275,7 @@ void main() {
       'OPS/notes.xhtml#r',
     ]);
   });
-  test('FR-B4: figcaption даёт подпись, class caption остаётся абзацем', () {
+  test('FR-B4: figcaption gives a caption, class caption stays a paragraph', () {
     final source = fixture('epub_plain_caption.xhtml');
     final b = checked(epub(content: source, nav: singleNav('../text.xhtml')))
         .book;
@@ -287,7 +287,7 @@ void main() {
     expect(chapters(b), [('Глава', 1, 0, 3)]);
     expect(b.notes, isEmpty);
   });
-  test('FR-B4: картинки внутри контейнера figure сохраняют порядок и все изображения', () {
+  test('FR-B4: images inside a figure container keep the order and all the images', () {
     final b = checked(
       epub(
         content: fixture('epub_mixed_figure.xhtml'),

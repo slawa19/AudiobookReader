@@ -1,6 +1,6 @@
-// Решения A–J по проверке жестов 2026-11-14 (docs/reviews/GESTURE_AUDIT_2026-11-14.md) и пути, которые проверяющий
-// не прошёл: второй палец во время листания, прокрутка оглавления, диалог под системной «Назад», смена языка при
-// открытом листе. Находки проверяющего — в gesture_*_test.dart.
+// Decisions A–J of the gesture review of 2026-11-14 (docs/reviews/GESTURE_AUDIT_2026-11-14.md) and the paths the
+// reviewer did not cover: a second finger during a page flip, scrolling the table of contents, a dialog under the
+// system Back, a language change while a sheet is open. The reviewer findings are in gesture_*_test.dart.
 
 import 'dart:math' as math;
 
@@ -15,7 +15,7 @@ import 'gesture_support.dart';
 import 'support/flows.dart';
 import 'support/harness.dart';
 
-/// Те же две сноски рядом, что в gesture_page_test.dart.
+/// The same two adjacent notes as in gesture_page_test.dart.
 Book twoNotesBookForDecisions() {
   const lead = 'Так об этом писали оба автора';
   const text = '${lead}1,2 и спорить с ними никто не стал. Дальше идёт обычный текст абзаца, в котором сносок нет.';
@@ -39,12 +39,12 @@ Book twoNotesBookForDecisions() {
 }
 
 void main() {
-  group('A. касание вдогонку', () {
-    test('порог — именованная константа 350 мс', () {
+  group('A. follow-up tap', () {
+    test('the threshold is a named constant, 350 ms', () {
       expect(layerSettleTime, const Duration(milliseconds: 350));
     });
 
-    testWidgets('обычный темп: «Слушать», через 400 мс «Пауза» — пауза нажата', (tester) async {
+    testWidgets('normal pace: “Listen”, then “Pause” after 400 ms — pause is pressed', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await tapCenter(tester);
@@ -53,10 +53,10 @@ void main() {
       await frames(tester, 400);
       await quickTap(tester, tester.getCenter(find.byKey(const Key('play-pause'))));
       await frames(tester, 100);
-      expect(p.narration.state, NarrationState.paused, reason: 'второе нажатие через 400 мс — осмысленное, работает');
+      expect(p.narration.state, NarrationState.paused, reason: 'a second press after 400 ms is deliberate, it works');
     });
 
-    testWidgets('лист скорости открыт двойным касанием: второе касание не выбирает скорость и не закрывает лист',
+    testWidgets('the speed sheet is opened by a double tap: the second tap neither picks a speed nor closes the sheet',
         (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
@@ -66,15 +66,15 @@ void main() {
       await frames(tester, 200);
       await quickTap(tester, c);
       await frames(tester, 400);
-      expect(find.byKey(const Key('speed-1.0')), findsOneWidget, reason: 'лист открыт');
+      expect(find.byKey(const Key('speed-1.0')), findsOneWidget, reason: 'the sheet is open');
       expect(p.narration.speed, 1);
-      // Через 350 мс лист работает как обычно.
+      // After 350 ms the sheet works as usual.
       await tester.tap(find.byKey(const Key('speed-1.5')));
       await tester.pumpAndSettle();
       expect(p.narration.speed, 1.5);
     });
 
-    testWidgets('после закрытия листа: касание через 400 мс доходит до панели плеера', (tester) async {
+    testWidgets('after the sheet is closed: a tap after 400 ms reaches the player panel', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await startListening(tester);
@@ -89,33 +89,33 @@ void main() {
     });
   });
 
-  group('B. выбор абзаца снимается при смене страницы', () {
-    testWidgets('выбрал абзац → смахнул назад: выбора и подсветки нет', (tester) async {
+  group('B. the paragraph selection is cleared when the page changes', () {
+    testWidgets('picked a paragraph → swiped back: no selection and no highlight', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       final start = await gotoPlainPage(tester);
       final block = wholeParagraphOnPage(tester);
       await tester.longPressAt(blockCenter(tester, block));
       await tester.pumpAndSettle();
-      expect(find.byKey(ValueKey('hl-$block-0')), findsOneWidget, reason: 'предусловие');
+      expect(find.byKey(ValueKey('hl-$block-0')), findsOneWidget, reason: 'precondition');
       await swipe(tester, at(tester, 0.15, 0.5), const Offset(220, 0), ms: 110);
       await tester.pumpAndSettle();
       expect(reader(tester).page, start - 1);
       await jumpTo(tester, start);
       expect(find.byKey(const Key('read-from-here')), findsNothing);
-      expect(find.byKey(ValueKey('hl-$block-0')), findsNothing, reason: 'вернулся на страницу — выбора нет');
+      expect(find.byKey(ValueKey('hl-$block-0')), findsNothing, reason: 'returned to the page — no selection');
     });
   });
 
-  group('C. палец во время автоматического переворота', () {
-    testWidgets('вне автопереворота: малое перетаскивание с возвратом следование не выключает', (tester) async {
+  group('C. a finger during an automatic page turn', () {
+    testWidgets('outside an auto turn: a small drag with a return does not turn following off', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await startListening(tester);
       final f = await Finger.down(tester, at(tester, 0.6, 0.4));
       await f.move(const Offset(-40, 0), ms: 120);
       await f.move(const Offset(40, 0), ms: 120);
-      // Палец остановился — без скорости броска страница встаёт на прежнее место.
+      // The finger stopped — without fling velocity the page settles back in place.
       await f.hold(300);
       await f.up();
       await advance(tester, const Duration(milliseconds: 800));
@@ -124,9 +124,9 @@ void main() {
     });
   });
 
-  group('D. листает только преимущественно горизонтальный жест', () {
+  group('D. only a mostly horizontal gesture flips the page', () {
     for (final (deg, flips) in const [(10, true), (30, true), (44, true), (46, false), (60, false), (80, false)]) {
-      testWidgets('смахивание влево-вверх под $deg° к горизонтали: ${flips ? 'листает' : 'не листает'}', (tester) async {
+      testWidgets('a left-up swipe at $deg° to the horizontal: ${flips ? 'flips' : 'does not flip'}', (tester) async {
         final p = await pumpPrototype(tester);
         await openKapitanskaya(tester, p);
         final start = await gotoPlainPage(tester);
@@ -135,12 +135,12 @@ void main() {
         await swipe(tester, at(tester, 0.75, 0.7), Offset(-length * math.cos(a), -length * math.sin(a)), ms: 110);
         await tester.pumpAndSettle();
         expect(reader(tester).page, flips ? start + 1 : start);
-        expect(reader(tester).panelsVisible, isFalse, reason: 'вертикальный жест не делает ничего');
+        expect(reader(tester).panelsVisible, isFalse, reason: 'a vertical gesture does nothing');
       });
     }
   });
 
-  group('E. ключ сохраняется при уходе с поля и с экрана', () {
+  group('E. the key is saved when leaving the field and the screen', () {
     Future<void> openKeyField(WidgetTester tester) async {
       await tester.tap(find.byTooltip('Настройки'));
       await tester.pumpAndSettle();
@@ -148,7 +148,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('стрелка «Назад» экрана настроек: введённый ключ сохранён', (tester) async {
+    testWidgets('the Back arrow of the settings screen: the entered key is saved', (tester) async {
       final p = await pumpPrototype(tester);
       await openKeyField(tester);
       await tester.enterText(find.byKey(const Key('key-field')), 'AIzaSyD-new-key-1234');
@@ -158,7 +158,7 @@ void main() {
       expect(p.settings.apiKeyTail, '1234');
     });
 
-    testWidgets('ушёл с поля касанием другого пункта: ключ сохранён, поле закрыто', (tester) async {
+    testWidgets('left the field by tapping another item: the key is saved, the field is closed', (tester) async {
       final p = await pumpPrototype(tester);
       await openKeyField(tester);
       await tester.enterText(find.byKey(const Key('key-field')), 'AIzaSyD-new-key-5678');
@@ -169,7 +169,7 @@ void main() {
       expect(find.byKey(const Key('key-field')), findsNothing);
     });
 
-    testWidgets('пустое поле и «Назад»: прежний ключ не тронут', (tester) async {
+    testWidgets('an empty field and Back: the previous key is untouched', (tester) async {
       final p = await pumpPrototype(tester);
       final before = p.settings.apiKeyTail;
       await openKeyField(tester);
@@ -180,8 +180,8 @@ void main() {
     });
   });
 
-  group('G. ближайший знак сноски', () {
-    testWidgets('два знака рядом: касание первого открывает первую', (tester) async {
+  group('G. the nearest note marker', () {
+    testWidgets('two markers next to each other: tapping the first opens the first note', (tester) async {
       final p = await pumpPrototype(tester);
       await openSynthetic(tester, p, twoNotesBookForDecisions());
       await tester.tapAt(noteRefCenter(tester, 'a'));
@@ -190,8 +190,9 @@ void main() {
     });
   });
 
-  group('J. системная «Назад» в чтении', () {
-    testWidgets('слушаю, панели скрыты: «Назад» показывает шапку и ползунок, звук идёт; вторая — закрывает книгу',
+  group('J. the system Back while reading', () {
+    testWidgets('listening, panels hidden: Back shows the header and slider, audio keeps playing; the second one '
+        'closes the book',
         (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
@@ -201,7 +202,7 @@ void main() {
       await advance(tester, const Duration(milliseconds: 500));
       expect(find.byType(ReaderScreen), findsOneWidget);
       expect(reader(tester).panelsVisible, isTrue);
-      expect(find.byKey(const Key('book-slider')), findsOneWidget, reason: 'ползунок над панелью плеера');
+      expect(find.byKey(const Key('book-slider')), findsOneWidget, reason: 'the slider is above the player panel');
       expect(p.narration.state, NarrationState.playing);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
@@ -209,7 +210,7 @@ void main() {
       expect(p.narration.state, NarrationState.idle);
     });
 
-    testWidgets('стрелка «Назад» в шапке закрывает книгу сразу', (tester) async {
+    testWidgets('the Back arrow in the header closes the book at once', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       await tapCenter(tester);
@@ -220,8 +221,8 @@ void main() {
     });
   });
 
-  group('пути, которые проверяющий не прошёл', () {
-    testWidgets('второй палец во время смахивания: одна страница, без исключений', (tester) async {
+  group('paths the reviewer did not cover', () {
+    testWidgets('a second finger during a swipe: one page, no exceptions', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       final start = await gotoPlainPage(tester);
@@ -234,10 +235,10 @@ void main() {
       await first.up();
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(reader(tester).page, inInclusiveRange(start, start + 1), reason: 'не больше одной страницы за жест');
+      expect(reader(tester).page, inInclusiveRange(start, start + 1), reason: 'no more than one page per gesture');
     });
 
-    testWidgets('оглавление: прокрутка пальцем и касание главы — открыта эта глава', (tester) async {
+    testWidgets('table of contents: scrolling by finger and tapping a chapter opens that chapter', (tester) async {
       final p = await pumpPrototype(tester);
       await openDama(tester, p);
       final book = currentBook(tester);
@@ -255,7 +256,8 @@ void main() {
       expect(reader(tester).layout.pages[reader(tester).page].chapter, last);
     });
 
-    testWidgets('диалог удаления книги под системной «Назад»: диалог закрыт, книга на полке', (tester) async {
+    testWidgets('the delete-book dialog under the system Back: the dialog is closed, the book stays on the '
+        'shelf', (tester) async {
       final p = await pumpPrototype(tester);
       await tester.longPress(find.text('Записки охотника'));
       await tester.pumpAndSettle();
@@ -269,7 +271,8 @@ void main() {
       expect(find.byKey(const Key('shelf-title')), findsOneWidget);
     });
 
-    testWidgets('смена языка при открытом листе «Вид текста»: лист открыт и уже на новом языке', (tester) async {
+    testWidgets('a language change while the “Text appearance” sheet is open: the sheet stays open and is already in '
+        'the new language', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       await tapCenter(tester);

@@ -16,7 +16,7 @@ void main() {
     ('ru', 'pl', 'pl'),
   ]) {
     testWidgets(
-      'язык новой книги: система=$system, настройка=$selected → $expected',
+      'new book language: system=$system, setting=$selected → $expected',
       (tester) async {
         final h = AppHarness(tester);
         await h.start();

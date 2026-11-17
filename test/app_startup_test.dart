@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('ошибка запуска показана как есть вместо вечной заставки', (tester) async {
+  testWidgets('a startup error is shown as is instead of an endless splash screen', (tester) async {
     const channel = MethodChannel('plugins.flutter.io/path_provider');
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(channel, (_) async {
@@ -18,7 +18,7 @@ void main() {
         escaped = error;
       }
     });
-    expect(escaped, isNull, reason: 'runApp должен показать ошибку, а не оборваться до первого кадра');
+    expect(escaped, isNull, reason: 'runApp must show the error, not abort before the first frame');
     await tester.pumpAndSettle();
     expect(find.textContaining('storage denied verbatim'), findsOneWidget);
   });

@@ -1,4 +1,4 @@
-// Помощники для путей пользователя (test/journey_*.dart). Существующие test/support/* не меняются.
+// Helpers for user journeys (test/journey_*.dart). The existing test/support/* are unchanged.
 
 import 'package:audiobook_reader/app/app.dart';
 import 'package:audiobook_reader/screens/l10n/app_localizations.dart';
@@ -8,14 +8,14 @@ import 'package:material_ui/material_ui.dart';
 import 'support/flows.dart';
 import 'support/harness.dart';
 
-/// Настенные часы, которые тест двигает сам: таймер сна считает минуты по ним (А§6.6).
+/// A wall clock that the test advances itself: the sleep timer counts minutes by it (А§6.6).
 class TestClock {
   DateTime now = DateTime(2026, 11, 14, 12, 30);
   DateTime call() => now;
   void forward(Duration d) => now = now.add(d);
 }
 
-/// То же, что `pumpPrototype`, но с часами, которые идут по команде теста.
+/// The same as `pumpPrototype`, but with a clock that runs on the test command.
 Future<Prototype> pumpWithClock(WidgetTester tester, TestClock clock, {double demoAcceleration = 1}) async {
   debugDisableShadows = false;
   addTearDown(() => debugDisableShadows = true);
@@ -43,14 +43,14 @@ Future<Prototype> pumpWithClock(WidgetTester tester, TestClock clock, {double de
 
 AppLocalizations get ru => lookupAppLocalizations(const Locale('ru'));
 
-/// «Слушать» из нижней панели и время на «Готовлю голос…».
+/// “Listen” from the bottom panel and the time for “Preparing the voice…”.
 Future<void> listenFromPanel(WidgetTester tester) async {
   await tapCenter(tester);
   await tester.tap(find.byKey(const Key('listen')));
   await advance(tester, const Duration(seconds: 2));
 }
 
-/// Открывает оглавление из шапки (панели должны быть показаны) и выбирает главу по названию.
+/// Opens the table of contents from the header (the panels must be shown) and picks a chapter by title.
 Future<void> chooseChapter(WidgetTester tester, String title) async {
   await tester.tap(find.byTooltip('Оглавление'));
   await advance(tester, const Duration(milliseconds: 800));
@@ -58,7 +58,7 @@ Future<void> chooseChapter(WidgetTester tester, String title) async {
   await advance(tester, const Duration(milliseconds: 1200));
 }
 
-/// Последний абзац текущей страницы, который НАЧИНАЕТСЯ на ней и стоит не первым (у низа страницы).
+/// The last paragraph of the current page that STARTS on it and is not the first one (at the bottom of the page).
 int lowestStartingParagraph(WidgetTester tester) {
   final st = reader(tester);
   final book = st.widget.book;
@@ -68,10 +68,10 @@ int lowestStartingParagraph(WidgetTester tester) {
     final b = book.blocks[f.block];
     if (b.isSpoken && f.start == 0 && b.text.trim().isNotEmpty) return f.block;
   }
-  throw StateError('на странице нет абзаца, начатого ниже первого');
+  throw StateError('the page has no paragraph that starts below the first one');
 }
 
-/// Место стоит на странице, которая сейчас на экране.
+/// The position is on the page that is currently on screen.
 bool onScreen(WidgetTester tester, int block, int offset) {
   final st = reader(tester);
   return st.layout.pages[st.page].contains(block, offset);

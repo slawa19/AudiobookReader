@@ -44,7 +44,7 @@ void main() {
     await root.delete(recursive: true);
   });
 
-  test('ввод ключа удаляет пробелы и невидимые знаки внутри; ASCII и видимые знаки сохраняются', () async {
+  test('key input removes whitespace and invisible characters inside; ASCII and visible characters are kept', () async {
     for (final invisible in [' ', '\n', '\r', '\t', '\u00a0', '\u200b', '\ufeff', '\u202f', '\u2060', '\u034f', '\ufe0f']) {
       library.settings.apiKey = '${invisible}fake$invisible-key$invisible';
       await library.flush();
@@ -63,7 +63,7 @@ void main() {
     expect(store.value, 'fake-é-key');
   });
 
-  test('ключ прочитан до ready; запуск не записывает его обратно', () {
+  test('the key is read before ready; startup does not write it back', () {
     expect(store.reads, 1);
     expect(store.writes, isEmpty);
     expect(library.settings.hasApiKey, isTrue);
@@ -72,7 +72,7 @@ void main() {
   });
 
   test(
-    'изменение пишет секрет и переживает новую библиотеку на той же папке',
+    'a change writes the secret and survives a new library on the same folder',
     () async {
       library.settings.apiKey = '  test-replacement-secret  ';
       await library.flush();
@@ -87,7 +87,7 @@ void main() {
     },
   );
 
-  test('ключ не попадает в settings.json и toString; обычные настройки сохраняются', () async {
+  test('the key does not reach settings.json and toString; ordinary settings are kept', () async {
     library.settings
       ..apiKey = 'test-unique-secret'
       ..voice = 'new-voice';
@@ -106,7 +106,7 @@ void main() {
   });
 
   test(
-    'ошибка чтения не роняет запуск, ключ пуст и допускает повторный ввод',
+    'a read error does not crash startup, the key is empty and allows re-entry',
     () async {
       library.dispose();
       library.settings.dispose();
@@ -121,7 +121,7 @@ void main() {
     },
   );
 
-  test('отсутствующий секрет и пустое хранилище дают пустой ключ', () async {
+  test('a missing secret and an empty store give an empty key', () async {
     for (final value in [null, '', '  ']) {
       library.dispose();
       library.settings.dispose();
@@ -133,7 +133,7 @@ void main() {
   });
 
   test(
-    'flush дожидается секретов; быстрые изменения пишутся по порядку',
+    'flush waits for secrets; rapid changes are written in order',
     () async {
       final entered = Completer<void>();
       final release = Completer<void>();
@@ -159,7 +159,7 @@ void main() {
   );
 
   test(
-    'ошибка записи не содержит ключа и не отравляет следующие записи',
+    'a write error does not contain the key and does not poison later writes',
     () async {
       store.writeError = StateError('test-sensitive-error-value');
       library.settings.apiKey = 'test-sensitive-error-value';
@@ -178,7 +178,7 @@ void main() {
       expect(
         await File('${root.path}/settings.json').readAsString(),
         contains('voice-with-failed-secret'),
-        reason: 'ошибка секрета не должна отменять запись остальных данных',
+        reason: 'a secret error must not cancel writing the rest of the data',
       );
       store.writeError = null;
       library.settings.apiKey = 'test-recovered-secret';
@@ -187,8 +187,8 @@ void main() {
     },
   );
 
-  test('корень сборки принимает хранилище ключа и читает его до возврата', () async {
-    // Отдельный каталог: два экземпляра библиотеки не должны писать одну папку.
+  test('the build root accepts the key store and reads it before returning', () async {
+    // A separate directory: two library instances must not write to one folder.
     final app = await NativeApplication.create(
       root: Directory('${root.path}/native'),
       secretStore: store,

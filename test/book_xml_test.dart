@@ -23,7 +23,7 @@ List<int> cp1251(String text) => [
 ];
 
 void main() {
-  test('FR-B6: UTF-8 fallback действует и в документе EPUB', () {
+  test('FR-B6: the UTF-8 fallback also applies in an EPUB document', () {
     final b = checked(
       epub(raw: {'OPS/text.xhtml': cp1251(fixture('epub_encoding.xhtml'))}),
     ).book;
@@ -31,7 +31,7 @@ void main() {
     expect(chapters(b), [('Первая', 1, 0, 1)]);
     expect(b.notes, isEmpty);
   });
-  test('FR-B6: закрытие предком и концом файла; закрытые теги не поглощают соседей', () {
+  test('FR-B6: closing by an ancestor and by the end of the file; closed tags do not swallow neighbours', () {
     final damaged = checked(utf8.encode(fixture('fb2_unclosed.xml'))).book;
     final good = checked(utf8.encode(fixture('fb2_closed.xml'))).book;
     for (final b in [damaged, good]) {
@@ -44,13 +44,13 @@ void main() {
       expect(b.blocks[1].spans, isEmpty);
     }
   });
-  test('FR-B6: неизвестная сущность сохраняется, известные и числовые раскрываются', () {
+  test('FR-B6: an unknown entity is preserved, known and numeric ones are expanded', () {
     final b = checked(utf8.encode(fixture('fb2_entities.xml'))).book;
     expect(b.blocks.single.text, '& < > " \' A 😀 &unknown;');
     expect(chapters(b), [('', 1, 0, 1)]);
     expect(b.notes, isEmpty);
   });
-  test('FR-B3/B6: windows-1251 из объявления; только объявленный UTF-8 допускает fallback', () {
+  test('FR-B3/B6: windows-1251 from the declaration; only a declared UTF-8 allows the fallback', () {
     final source = fixture('fb2_encoding.xml');
     for (final bytes in [
       cp1251(source),
@@ -80,7 +80,7 @@ void main() {
       ),
     );
   });
-  test('FR-B6: прочие ошибки XML и отсутствие основного текста отклоняются с причиной', () {
+  test('FR-B6: other XML errors and the absence of main text are rejected with a reason', () {
     for (final source in [
       fixture('fb2_bad_attribute.xml'),
       fixture('fb2_empty.xml'),
@@ -112,14 +112,14 @@ void main() {
       );
     }
   });
-  test('FR-B6: корректные декларация, DTD, PI, CDATA, комментарий и namespace не повреждения', () {
+  test('FR-B6: a valid declaration, DTD, PI, CDATA, comment and namespace are not corruption', () {
     final b = checked(utf8.encode(fixture('xml_valid.xml'))).book;
     expect(b.blocks.single.text, 'Текст & < >. A');
     expect(chapters(b), [('', 1, 0, 1)]);
     expect(b.notes, isEmpty);
   });
   test(
-    'FR-B6: те же повреждения и запрет пустого текста действуют в XHTML EPUB',
+    'FR-B6: the same corruption and the ban on empty text apply in EPUB XHTML',
     () {
       final b = checked(epub(content: fixture('epub_unclosed.xhtml'))).book;
       expect(b.blocks.map((b) => b.text), ['Один два', '&unknown;']);

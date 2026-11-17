@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/book_samples.dart';
 
 void main() {
-  test('FR-B2: EPUB прежде FB2.ZIP, содержимое важнее имени файла', () {
+  test('FR-B2: EPUB before FB2.ZIP, content matters more than the file name', () {
     final bytes = epub(extra: {'also.fb2': fixture('fb2_inline.xml')});
     expect(detectFormat(bytes), SourceFormat.epub);
     expect(checked(bytes).format.extension, 'epub');
@@ -26,7 +26,7 @@ void main() {
     expect(result.book.id, hasLength(12));
     expect(result.book.id, isNot(checked(fb).book.id));
   });
-  test('FR-B2: PDF, двоичный файл, посторонний ZIP и два FB2 отклоняются', () {
+  test('FR-B2: PDF, a binary file, a foreign ZIP and two FB2 are rejected', () {
     for (final bytes in [
       utf8.encode('%PDF-1.7'),
       [0, 1, 2, 3],
@@ -58,7 +58,7 @@ void main() {
       );
     }
   });
-  test('FR-B2/B5: TXT определяется по первым 64КБ и разбирается', () {
+  test('FR-B2/B5: TXT is detected by the first 64 KB and parsed', () {
     for (final bytes in [
       utf8.encode('Текст.'),
       [9, 10, 13, 65],
@@ -77,7 +77,7 @@ void main() {
     );
   });
   test(
-    'FR-B2: зашифрованный spine отклоняется, шрифты и неиспользуемое — нет',
+    'FR-B2: an encrypted spine is rejected, fonts and unused items are not',
     () {
       expect(
         () => parseBook(epub(encryption: 'OPS/text.xhtml')),
@@ -96,7 +96,7 @@ void main() {
       }
     },
   );
-  test('FR-B2: зашифрованная картинка и обложка не показываются', () {
+  test('FR-B2: an encrypted image and cover are not shown', () {
     final content = fixture('epub_structures.xhtml');
     final visible = checked(epub(content: content));
     expect(visible.images, isNotEmpty);

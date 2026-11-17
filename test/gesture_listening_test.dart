@@ -1,4 +1,4 @@
-// Жесты во время прослушивания и на паузе (разделы D и G проверки жестов 2026-11-14).
+// Gestures while listening and while paused (sections D and G of the gesture review of 2026-11-14).
 
 import 'package:audiobook_reader/library/library.dart';
 import 'package:audiobook_reader/playback/narration.dart';
@@ -14,7 +14,8 @@ bool onPage(WidgetTester tester, ReadingPosition at) => currentPage(tester).cont
 double scrollPage(WidgetTester tester) => tester.widget<PageView>(find.byType(PageView)).controller!.page!;
 
 void main() {
-  testWidgets('быстрые «вперёд» ×3 и «пауза/слушать» ×4 пальцем: место — третий следующий абзац, звук идёт, экран следует',
+  testWidgets('fast “forward” ×3 and “pause/listen” ×4 by finger: the position is the third next paragraph, audio '
+      'plays, the screen follows',
       (tester) async {
     final p = await pumpPrototype(tester, demoAcceleration: 1);
     await openKapitanskaya(tester, p);
@@ -45,13 +46,14 @@ void main() {
     expect(onPage(tester, reader(tester).soundingPosition!), isTrue);
   });
 
-  testWidgets('«Читать отсюда» на нижней половине абзаца, разорванного страницей: звук — с начала абзаца, экран идёт к '
-      'голосу, «К месту чтения» нет (FR-P3)', (tester) async {
+  testWidgets('“Read from here” on the lower half of a paragraph split by a page: audio starts from the paragraph '
+      'start, the screen goes to '
+      'the voice, there is no “To current spot” (FR-P3)', (tester) async {
     final p = await pumpPrototype(tester, demoAcceleration: 1);
     await openKapitanskaya(tester, p);
     final st = reader(tester);
     final book = currentBook(tester);
-    // Страница, начинающаяся с продолжения абзаца.
+    // A page that starts with the continuation of a paragraph.
     await gotoPageWhere(tester, (i) {
       final f = st.layout.pages[i].fragments.first;
       return f.start > 0 && book.blocks[f.block].kind.name == 'paragraph' && !pageHasNotes(tester, i);
@@ -68,22 +70,23 @@ void main() {
     expect(reader(tester).following, isTrue);
     expect(find.byKey(const Key('to-reading-place')), findsNothing);
     expect(onPage(tester, reader(tester).soundingPosition!), isTrue,
-        reason: 'начало абзаца — на прошлой странице: экран переходит к голосу');
+        reason: 'the paragraph start is on the previous page: the screen moves to the voice');
     expect(find.byKey(ValueKey('hl-${f.block}-0')), findsOneWidget);
   });
 
-  testWidgets('долгое нажатие посреди автоматического переворота за голосом: выбранный абзац — на странице, которая '
-      'осталась на экране; касание мимо — экран догоняет голос', (tester) async {
+  testWidgets('a long press in the middle of an automatic turn after the voice: the selected paragraph is on the page '
+      'that '
+      'stayed on screen; a tap elsewhere — the screen catches up with the voice', (tester) async {
     final p = await pumpPrototype(tester, demoAcceleration: 40);
     await openKapitanskaya(tester, p, at: const ReadingPosition(3, 0));
     await startListening(tester);
     expect(p.narration.state, NarrationState.playing);
-    // Ждём середину автоматического переворота.
+    // Wait for the middle of the automatic turn.
     var guard = 0;
     while ((scrollPage(tester) - scrollPage(tester).round()).abs() < 0.15 && guard++ < 4000) {
       await tester.pump(const Duration(milliseconds: 8));
     }
-    expect(guard, lessThan(4000), reason: 'предусловие: поймана середина переворота');
+    expect(guard, lessThan(4000), reason: 'precondition: the middle of the turn is caught');
 
     final f = await Finger.down(tester, at(tester, 0.5, 0.3));
     await f.hold(700);
@@ -91,14 +94,14 @@ void main() {
     await frames(tester, 400);
     expect(tester.takeException(), isNull);
     final settled = scrollPage(tester);
-    expect((settled - settled.round()).abs(), lessThan(0.001), reason: 'страница не висит между двумя');
+    expect((settled - settled.round()).abs(), lessThan(0.001), reason: 'the page does not hang between two');
     expect(settled.round(), reader(tester).page);
     final button = find.byKey(const Key('read-from-here'));
     if (button.evaluate().isNotEmpty) {
-      // Абзац выбран: он обязан стоять на видимой странице, и кнопка — в пределах экрана.
+      // The paragraph is selected: it must be on the visible page, and the button within the screen.
       expect(button.hitTestable(), findsOneWidget);
     }
-    // Касание мимо снимает выбор; экран следует за голосом.
+    // A tap elsewhere clears the selection; the screen follows the voice.
     await tester.tapAt(at(tester, 0.5, 0.12));
     await advance(tester, const Duration(milliseconds: 900));
     expect(find.byKey(const Key('read-from-here')), findsNothing);
@@ -106,41 +109,42 @@ void main() {
     expect(onPage(tester, reader(tester).soundingPosition!), isTrue);
   });
 
-  testWidgets('страница поехала за голосом, палец вернул её на место: побеждает палец — страница остаётся, следование '
-      'выключено', (tester) async {
+  testWidgets('the page moved after the voice and a finger put it back: the finger wins — the page stays, following is '
+      'off', (tester) async {
     final p = await pumpPrototype(tester, demoAcceleration: 40);
     await openKapitanskaya(tester, p);
     await startListening(tester);
-    // Ждём начало автоматического переворота (первая его треть): читатель ещё дочитывает страницу.
+    // Wait for the start of the automatic turn (its first third): the reader is still finishing the page.
     var guard = 0;
     double frac() => scrollPage(tester) - scrollPage(tester).floor();
     while (!(frac() > 0.1 && frac() < 0.45) && guard++ < 6000) {
       await tester.pump(const Duration(milliseconds: 8));
     }
-    expect(guard, lessThan(6000), reason: 'предусловие: пойман автоматический переворот');
+    expect(guard, lessThan(6000), reason: 'precondition: the automatic turn is caught');
     final from = scrollPage(tester).floor();
-    expect(reader(tester).page, from, reason: 'предусловие: половина переворота не пройдена');
-    // Палец хватает страницу и возвращает её ровно на место: на столько, на сколько она успела уехать.
+    expect(reader(tester).page, from, reason: 'precondition: half of the turn is not passed');
+    // The finger grabs the page and returns it exactly to its place: by as much as it had managed to move.
     final width = pageRect(tester).width;
     final f = await Finger.down(tester, at(tester, 0.3, 0.3));
     await f.move(Offset(frac() * width + 12, 0), ms: 180);
     await f.hold(120);
-    expect(scrollPage(tester), closeTo(from.toDouble(), 0.06), reason: 'предусловие: под пальцем снова прежняя страница');
+    expect(scrollPage(tester), closeTo(from.toDouble(), 0.06), reason: 'precondition: the previous page is under the '
+        'finger again');
     await f.up();
-    // README прототипа, «Жесты»: «побеждает палец: переход отменяется, следование за голосом выключается».
+    // Prototype README, “Gestures”: “the finger wins: the turn is cancelled, following the voice is turned off”.
     await advance(tester, const Duration(seconds: 2));
-    expect(reader(tester).page, from, reason: 'страница, которую читатель удержал, не уезжает за голосом снова');
+    expect(reader(tester).page, from, reason: 'a page the reader held does not move after the voice again');
     expect(reader(tester).following, isFalse);
     expect(find.byKey(const Key('to-reading-place')), findsOneWidget);
   });
 
-  testWidgets('перетаскивание ползунка в момент конца книги: без исключений, после отпускания — выбранное место',
+  testWidgets('dragging the slider at the moment the book ends: no exceptions, after release the selected position',
       (tester) async {
     final p = await pumpPrototype(tester, demoAcceleration: 400);
     await openKapitanskaya(tester, p);
     final st = reader(tester);
     final book = currentBook(tester);
-    // Встаём за страницу до последней и слушаем до конца книги.
+    // Go to the page before the last and listen to the end of the book.
     await jumpTo(tester, st.layout.pages.length - 2);
     await startListening(tester);
     await tapCenter(tester);
@@ -152,7 +156,8 @@ void main() {
     while (p.narration.state != NarrationState.stopped && guard++ < 600) {
       await f.hold(100);
     }
-    expect(p.narration.state, NarrationState.stopped, reason: 'предусловие: книга закончилась, пока палец на ползунке');
+    expect(p.narration.state, NarrationState.stopped, reason: 'precondition: the book ended while the finger is on the '
+        'slider');
     expect(p.narration.stopReason, StopReason.endOfBook);
     await f.move(const Offset(-20, 0), ms: 100);
     await f.up();
@@ -160,7 +165,8 @@ void main() {
     expect(tester.takeException(), isNull);
     final page = currentPage(tester);
     final start = book.fractionAt(page.firstBlock, page.firstOffset);
-    expect(start, lessThan(0.6), reason: 'на экране место, выбранное ползунком (около половины книги), а не конец');
+    expect(start, lessThan(0.6), reason: 'the screen shows the position chosen by the slider (about half of the book), '
+        'not the end');
     expect(reader(tester).following, isFalse);
   });
 }
