@@ -30,8 +30,13 @@ The app's behavior for the reader does not change, except for the fifth interfac
   entry and the two OFL texts with `LicenseRegistry` (`lib/screens/licenses.dart`; the texts are bundled as assets) and
   has one last row in the settings, "Open-source licenses", that opens `showLicensePage`. The version on that page is
   the constant `appVersion`, which `test/licenses_test.dart` keeps equal to `version:` in `pubspec.yaml`.
-- **R5.** English screenshots of the main screens in `README.md` (the English-interface goldens replace the Russian
-  ones in the screenshots section).
+- **R5.** English screenshots of the main screens in `README.md`. Done 2026-11-17. The existing `l10n-en-*` goldens
+  were not enough: the interface was English, but the shelf and the book text were Russian. So the test
+  `test/readme_screenshots_test.dart` takes eight goldens into `docs/screenshots/` (shelf, reading, reading with
+  panels, listening, table of contents with narration state, voice, settings, listening in the dark theme) over an
+  English demo shelf and the opening of *Alice's Adventures in Wonderland* (Project Gutenberg, public domain;
+  `test/fixtures/screenshots_en/`, with `SOURCES.txt` and the script that builds the book JSON). The prototype takes
+  that content through the optional `DemoContent` argument of `Prototype.create`; without it nothing changes.
 - **R6.** The release workflow:
   - a tag-triggered CI build (`vX.Y.Z`) that produces the signed release APK;
   - the signed APK is published in GitHub Releases, with SHA-256 checksums;
@@ -75,6 +80,9 @@ The app's behavior for the reader does not change, except for the fifth interfac
 - 2026-11-17 — R4 done: `LICENSE` (GPL-3.0, the unmodified official text), `assets/demo/SOURCES.txt` (Wikisource page
   names and revision ids; the three editorial notes of the Pushkin text are CC BY-SA 4.0), the in-app license page with
   the font and project entries, the settings row.
+- 2026-11-17 — R5 done: eight English README screenshots in `docs/screenshots/` over an English demo shelf and book
+  (`test/readme_screenshots_test.dart`, `test/fixtures/screenshots_en/`); `README.md` shows them, links
+  `docs/RELEASING.md` and the Releases page in the install section.
 - 2026-11-17 — rule for technical text (the orchestrator's decision for the open-source release, awaiting the owner's
   confirmation): diagnostic text that is not part of a designed interface state is written in English, like Google's
   own error text that the app already shows as is. The hard-coded Russian messages of `lib/tts/gemini.dart`, the

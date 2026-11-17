@@ -6,15 +6,57 @@ import 'package:flutter/services.dart';
 import '../book/model.dart';
 import 'library.dart';
 
+/// Alternative content for the prototype's shelf, used by the README screenshots
+/// (test/readme_screenshots_test.dart). Without it the prototype shows the built-in Russian demo shelf.
+class DemoContent {
+  const DemoContent({
+    required this.entries,
+    required this.books,
+    required this.positions,
+    this.finished = const {},
+    this.voicedChapters = const [],
+    this.audioBytes = const {},
+  });
+
+  /// The shelf; gets the app's "now".
+  final List<ShelfEntry> Function(DateTime now) entries;
+
+  /// Books that have a text, by id; the other shelf entries open a placeholder page.
+  final Map<String, Book> books;
+
+  /// Reading positions by book id.
+  final Map<String, ReadingPosition> positions;
+
+  /// Ids of finished books.
+  final Set<String> finished;
+
+  /// (book id, chapter index) pairs narrated in the default voice and model.
+  final List<(String, int)> voicedChapters;
+
+  /// Bytes of narration on disk by book id.
+  final Map<String, int> audioBytes;
+}
+
 /// The prototype's fake shelf: several books, two of them with real text from assets/demo/.
 /// Writes nothing to disk and goes nowhere. In the real app `Library` on files replaces it (A§4).
 class FakeLibrary extends Library {
-  FakeLibrary({DateTime? now}) : _now = now ?? DateTime(2026, 11, 14, 12, 30) {
-    _entries.addAll(_demoEntries(_now));
-    _positions['kapitanskaya'] = const ReadingPosition(39, 0);
-    _positions['dama'] = const ReadingPosition(40, 0);
-    _finished.add('dushi');
+  FakeLibrary({DateTime? now, DemoContent? content})
+      : _now = now ?? DateTime(2026, 11, 14, 12, 30),
+        _content = content {
+    if (content == null) {
+      _entries.addAll(_demoEntries(_now));
+      _positions['kapitanskaya'] = const ReadingPosition(39, 0);
+      _positions['dama'] = const ReadingPosition(40, 0);
+      _finished.add('dushi');
+    } else {
+      _entries.addAll(content.entries(_now));
+      _positions.addAll(content.positions);
+      _finished.addAll(content.finished);
+      _books.addAll(content.books);
+    }
   }
+
+  final DemoContent? _content;
 
   final DateTime _now;
   final List<ShelfEntry> _entries = [];
@@ -30,10 +72,12 @@ class FakeLibrary extends Library {
 
   /// Loads the texts in advance so that opening a book is instant (and tests do not wait for the platform).
   Future<void> preload() async {
-    for (final e in _textAssets.entries) {
-      final data = await rootBundle.load(e.value);
-      final json = jsonDecode(utf8.decode(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes)));
-      _books[e.key] = Book.fromJson(json as Map<String, Object?>);
+    if (_content == null) {
+      for (final e in _textAssets.entries) {
+        final data = await rootBundle.load(e.value);
+        final json = jsonDecode(utf8.decode(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes)));
+        _books[e.key] = Book.fromJson(json as Map<String, Object?>);
+      }
     }
     for (final entry in _entries) {
       final book = _books[entry.id];

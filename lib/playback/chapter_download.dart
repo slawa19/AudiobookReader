@@ -91,9 +91,10 @@ class FakeChapterDownloads extends ChapterDownloads {
     this.audio,
     this.tick = const Duration(milliseconds: 250),
     this.demoSeconds = 40,
+    List<(String, int)>? voicedChapters,
   }) {
     settings.addListener(profileChanged);
-    for (final (book, chapter) in const [('dama', 1), ('dama', 2), ('kapitanskaya', 0)]) {
+    for (final (book, chapter) in voicedChapters ?? const [('dama', 1), ('dama', 2), ('kapitanskaya', 0)]) {
       _voiced.add(_key(book, chapter, VoiceProfile(voiceId: settings.voice, model: settings.modelId)));
     }
   }
