@@ -478,9 +478,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Озвученное второй раз не оплачивается. После очистки его придётся озвучить и оплатить заново.';
 
   @override
-  String get licenses => 'Лицензии открытого ПО';
-
-  @override
   String get clearTitle => 'Очистить озвучку?';
 
   @override

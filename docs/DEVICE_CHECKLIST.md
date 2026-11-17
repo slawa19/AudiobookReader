@@ -41,12 +41,6 @@ signed with the permanent key.
   Expected: the text is outside the camera cutout, the bottom buttons are above the system bar and can be tapped;
   nothing is cut off. Build: fake. Money: no.
 
-- [ ] **License page.** Settings → the last row, "Open-source licenses". Expected: the app is listed once, as "Book
-  AudioReader"; the other entries include "Demo texts", "Merriweather" and "Roboto"; there is no `audiobook_reader`
-  entry. Build: both. Money: no.
-  *Result, 2026-11-17 (SM-S948B, by an agent over adb): as expected in both the fake and the real app. Not checked: a
-  large system font on this page.*
-
 ## Fake audio: background, service and card
 
 - [ ] **Waiting for the first file in the background.** At a place that has not been narrated press "Listen" and turn

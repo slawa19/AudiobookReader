@@ -68,8 +68,8 @@ narrator, and everything else is built just far enough to make that convenient t
 ### Settings
 
 One screen: the Gemini key (with a link to where to get it), voice, model (3.8 Flash or Flash-Lite), spent this month,
-space used by narration with a "Clear" button. The last row, "Open-source licenses", opens the standard license page
-(the project, the libraries and the fonts).
+space used by narration with a "Clear" button. There is no licenses page in the app (see "Out of scope"): the
+third-party notices are inside the APK and in the release as `NOTICES.txt`.
 
 ### Money in view
 
@@ -159,6 +159,9 @@ Rejected deliberately; comes back only by the owner's decision.
 - PDF, DJVU, comics, DRM.
 - Several voices in one book, roles, editing the text before narration — that is AudiobookStudio's job.
 - Export of narration to mp3 — Studio as well.
+- An in-app licenses page or an "About" screen: the owner removed the settings row "Open-source licenses" on 2026-11-17
+  because the interface keeps only what a reader needs. The notices ship in the APK and next to it in GitHub Releases
+  (`NOTICES.txt`) — [specs/003-open-source.md](specs/003-open-source.md), D7.
 - iOS, tablet layout, publication in Google Play: the app is installed as an APK file. (Since 2026-11-17 signed APKs
   are published on the GitHub Releases page of the open-source repository; Google Play and F-Droid are still out of
   scope — [specs/003-open-source.md](specs/003-open-source.md).)

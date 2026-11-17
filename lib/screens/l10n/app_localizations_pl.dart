@@ -479,9 +479,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Za nagrany dźwięk nie płaci się drugi raz. Po wyczyszczeniu trzeba go nagrać i opłacić od nowa.';
 
   @override
-  String get licenses => 'Licencje open source';
-
-  @override
   String get clearTitle => 'Wyczyścić nagrania?';
 
   @override

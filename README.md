@@ -181,8 +181,11 @@ All source files in this repository are under this license unless stated otherwi
   from Project Gutenberg without its markers and license text), is a test fixture and is not part of the app; see its
   `SOURCES.txt`.
 
-The app shows the notices of what it bundles (the project license, the two font licenses, the demo-text sources with
-the CC BY-SA attribution) and those of the libraries it uses in Settings, "Open-source licenses".
+The app has no licenses page. The notices of everything it bundles (the project license, the two font licenses, the
+demo-text sources with the CC BY-SA attribution, the libraries and the Flutter engine) are inside the APK and are also
+attached to each release as `NOTICES.txt`, extracted from the published APK (since 0.1.1; see
+[docs/RELEASING.md](docs/RELEASING.md)). The project's own part of them is the [`NOTICES`](NOTICES) file in this
+repository.
 
 The author's related projects: DocxAICorrector (translating and preparing books) and AudiobookStudio (narrating a book
 to mp3 by chapters).

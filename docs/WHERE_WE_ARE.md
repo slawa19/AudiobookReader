@@ -23,8 +23,8 @@ ended and a truncated voice name; both were fixed and re-verified on the phone. 
 
 Since 2026-11-17 the repository has been prepared for open-source publication under GPL-3.0 (owner decisions of
 2026-11-17; [specs/003-open-source.md](specs/003-open-source.md)). Merged into `main`: Ukrainian as the fifth interface
-language; documentation, code comments, test names and technical messages in English; the `LICENSE`, the in-app
-"Open-source licenses" page and the demo-text attribution; English README screenshots; the tag-triggered release
+language; documentation, code comments, test names and technical messages in English; the `LICENSE`, the third-party notices
+and the demo-text attribution; English README screenshots; the tag-triggered release
 workflow with the pinned toolchain ([RELEASING.md](RELEASING.md)). The four signing secrets and the variable
 `SIGNING_CERT_SHA256` are set in GitHub. The repository was switched to public and renamed to
 `slawa19/BookAudioReader` on 2026-11-17 (owner decisions), and **the first release, v0.1.0, was published the same day**
@@ -37,12 +37,15 @@ review of spec 003 (REWORK, nine findings) has been landed
 ([reviews/CODEX_REVIEW_003_2026-11-17.md](reviews/CODEX_REVIEW_003_2026-11-17.md)); one finding, the keystore path with
 the Windows user account in two old commits, stays in the history by the owner's decision (spec 003, R7).
 
-The public name of the app is **Book AudioReader** (owner decision of 2026-11-17): the Android label, the license page,
-the web prototype and the README use it. The repository and the release file are named `BookAudioReader`; the Dart package and the
-applicationId keep `audiobook_reader`.
+On 2026-11-17 the owner removed the "Open-source licenses" row from the settings (spec 003, D7): there is no in-app
+licenses page. The notices are inside the APK and, from release 0.1.1 (version `0.1.1+3`, being cut), next to it as
+`NOTICES.txt`, extracted from the APK by the release workflow; only the release run on GitHub can verify that step.
 
-Two defects seen on the owner's phone on 2026-11-17 are fixed: the license page listed the app twice (as "Book
-AudioReader" and as "audiobook_reader"; the app's entries now live in the root `NOTICES` file), and App info showed
+The public name of the app is **Book AudioReader** (owner decision of 2026-11-17): the Android label, the web prototype and the README use it. The
+repository and the release file are named `BookAudioReader`; the Dart package and the applicationId keep `audiobook_reader`.
+
+Two defects seen on the owner's phone on 2026-11-17 are fixed: the license page (since removed, see above) listed the app twice
+(as "Book AudioReader" and as "audiobook_reader"; the app's entries now live in the root `NOTICES` file), and App info showed
 the app's notifications as "Blocked" with a switch that could not be turned on (the app now declares
 `POST_NOTIFICATIONS` and asks once, the first time listening starts; the media card worked without it and still does).
 On the phone (checked by an agent over adb on 2026-11-17), the fake build shows the notification permission dialog on the

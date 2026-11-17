@@ -1,13 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:audiobook_reader/screens/licenses.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 
-import 'support/harness.dart';
-
+const appName = 'Book AudioReader';
+const repositoryUrl = 'https://github.com/slawa19/BookAudioReader';
 const demoTexts = 'Demo texts';
 
 /// The separator of entries in a NOTICES file (`licenseSeparator` of the flutter tool's `license_collector.dart`).
@@ -31,10 +29,10 @@ Map<String, String> noticesEntries() {
   return out;
 }
 
-/// The license entries that the license page shows, by package. The source is the NOTICES that the flutter tool
+/// The license entries bundled into the app, by package. The source is the NOTICES that the flutter tool
 /// built for the test bundle with the same collector as for the APK (`build/unit_test_assets/NOTICES.Z`); the test
 /// binding does not register it, so it is read here and split by the rule of `ServicesBinding._parseLicenses`.
-Future<Map<String, List<String>>> pageEntries() async {
+Future<Map<String, List<String>>> bundledEntries() async {
   final bytes = await rootBundle.load('NOTICES.Z');
   final notices = utf8.decode(gzip.decode(bytes.buffer.asUint8List()));
   final out = <String, List<String>>{};
@@ -90,8 +88,8 @@ void main() {
     });
   });
 
-  test('the license data the page shows: the app once under its name, never under the Dart package name', () async {
-    final entries = await pageEntries();
+  test('the notices bundled into the app: the app once under its name, never under the Dart package name', () async {
+    final entries = await bundledEntries();
     // The other side: the data really is the tool's NOTICES with the dependencies, not an empty registry.
     expect(entries.keys, containsAll(['flutter', 'audio_service', 'just_audio']));
     expect(entries.containsKey(dartPackageName()), isFalse);
@@ -104,49 +102,19 @@ void main() {
     }
   });
 
-  test('appVersion equals the version in pubspec.yaml (without the build number)', () {
-    final match = RegExp(r'^version:\s*(\S+?)(?:\+\d+)?\s*$', multiLine: true)
-        .firstMatch(File('pubspec.yaml').readAsStringSync());
-    expect(match, isNotNull);
-    expect(appVersion, match!.group(1));
-  });
-
-  testWidgets('the last settings row opens the standard license page with the app name and version', (tester) async {
-    await pumpPrototype(tester);
-    await tester.tap(find.byTooltip('Настройки'));
-    await settle(tester);
-    expect(find.byType(LicensePage), findsNothing);
-    final row = find.byKey(const Key('settings-licenses'));
-    await tester.scrollUntilVisible(row, 200, scrollable: find.byType(Scrollable).first);
-    await tester.pumpAndSettle();
-    expect(find.descendant(of: row, matching: find.text('Лицензии открытого ПО')), findsOneWidget);
-    await tester.tap(row);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.byType(LicensePage), findsOneWidget);
-    expect(find.text(appName), findsWidgets);
-    expect(find.text(appVersion), findsOneWidget);
-  });
-
-  group('the row at 320 dp with the text scale 1.3', () {
-    const labels = {
-      'ru': 'Лицензии открытого ПО',
-      'en': 'Open-source licenses',
-      'pl': 'Licencje open source',
-      'de': 'Open-Source-Lizenzen',
-      'uk': 'Ліцензії відкритого ПЗ',
-    };
-    for (final lang in labels.keys) {
-      testWidgets('$lang: the label is shown whole and nothing overflows', (tester) async {
-        await pumpPrototype(tester, size: phone320, textScale: 1.3, locale: lang);
-        await tester.tap(find.byIcon(Icons.settings_outlined));
-        await settle(tester);
-        final row = find.byKey(const Key('settings-licenses'));
-        await tester.scrollUntilVisible(row, 200, scrollable: find.byType(Scrollable).first);
-        await tester.pumpAndSettle();
-        expect(find.descendant(of: row, matching: find.text(labels[lang]!)), findsOneWidget);
-        expect(tester.takeException(), isNull);
-      });
+  test('the app has no license page: the notices ship in the APK and with the release (owner, 2026-11-17)', () {
+    final sources = Directory('lib')
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.dart'))
+        .toList();
+    // The other side: the scan really reads the app's code, so an empty or misplaced scan cannot pass.
+    expect(sources.any((f) => f.readAsStringSync().contains('class SettingsScreen')), isTrue);
+    for (final file in sources) {
+      final text = file.readAsStringSync();
+      expect(text, isNot(contains('showLicensePage')), reason: file.path);
+      expect(text, isNot(contains('LicensePage')), reason: file.path);
+      expect(text, isNot(contains('AboutListTile')), reason: file.path);
     }
   });
 }

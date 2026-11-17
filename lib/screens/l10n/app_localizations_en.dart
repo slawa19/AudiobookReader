@@ -476,9 +476,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Narrated audio is not paid for twice. After clearing, it has to be narrated and paid for again.';
 
   @override
-  String get licenses => 'Open-source licenses';
-
-  @override
   String get clearTitle => 'Clear narration?';
 
   @override

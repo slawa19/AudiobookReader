@@ -264,7 +264,7 @@ The Ukrainian set `l10n-uk-*` (added 2026-11-17) consists of `01-shelf`, `07-rea
 | 18 | 402 "Top up", 404 "Choose model", invalid key "Change key", other | FR-P6, FR-P7 |
 | 19, 20 | speed, sleep timer | FR-P5, FR-D1 |
 | 21, 27 | book voice (a probe is playing), app voice | FR-V1, FR-V2 |
-| 22–25 | settings (including "Language"; the last row, "Open-source licenses", is below the first screen), no key, model, clearing | FR-V3, FR-M1–M3, FR-P7, FR-I1 |
+| 22–25 | settings (including "Language"; there is no licenses row since 0.1.1), no key, model, clearing | FR-V3, FR-M1–M3, FR-P7, FR-I1 |
 | 26 | the "Downloading chapter" row on the reading screen | FR-D2 (owner's decision 2026-11-14) |
 | n320-* | shelf, reading, `playing` player with panels, 402, settings, text appearance, timer (on), model, table of contents, voice | FR-R8 |
 | l10n-* | shelf, reading with panels, player, 402, settings in en, pl, de, uk; narrow de (player) and pl (settings), uk (player and settings) | FR-I1, FR-R8 |
