@@ -68,7 +68,8 @@ narrator, and everything else is built just far enough to make that convenient t
 ### Settings
 
 One screen: the Gemini key (with a link to where to get it), voice, model (3.8 Flash or Flash-Lite), spent this month,
-space used by narration with a "Clear" button.
+space used by narration with a "Clear" button. The last row, "Open-source licenses", opens the standard license page
+(the project, the libraries and the fonts).
 
 ### Money in view
 

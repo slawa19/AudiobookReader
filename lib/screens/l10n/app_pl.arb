@@ -110,6 +110,7 @@
   "storage": "Nagrania na telefonie",
   "clear": "Wyczyść",
   "storageNote": "Za nagrany dźwięk nie płaci się drugi raz. Po wyczyszczeniu trzeba go nagrać i opłacić od nowa.",
+  "licenses": "Licencje open source",
   "clearTitle": "Wyczyścić nagrania?",
   "clearBody": "Usunięte zostanie {size} dźwięku wszystkich książek i próbek głosu. Aby posłuchać ponownie, trzeba go nagrać i opłacić od nowa.",
   "megabytes": "{size} MB",

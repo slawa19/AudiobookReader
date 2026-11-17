@@ -5,9 +5,11 @@ import 'package:material_ui/material_ui.dart';
 import 'app/app.dart';
 import 'app/native_application.dart';
 import 'app/prototype/device_frame.dart';
+import 'screens/licenses.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerLicenses();
   if (kIsWeb) {
     final prototype = await Prototype.create();
     // Prototype in the browser: the app inside a phone frame.

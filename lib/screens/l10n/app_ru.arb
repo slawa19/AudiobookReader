@@ -346,6 +346,10 @@
   "storage": "Озвучка на телефоне",
   "clear": "Очистить",
   "storageNote": "Озвученное второй раз не оплачивается. После очистки его придётся озвучить и оплатить заново.",
+  "licenses": "Лицензии открытого ПО",
+  "@licenses": {
+    "description": "Settings row at the bottom: opens the standard Flutter license page (third-party licenses)"
+  },
   "clearTitle": "Очистить озвучку?",
   "clearBody": "Удалится {size} звука всех книг и проб голоса. Чтобы послушать снова, его придётся озвучить и оплатить заново.",
   "@clearBody": {

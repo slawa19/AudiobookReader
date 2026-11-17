@@ -22,6 +22,9 @@ following the review and the full phone check of 2026-11-16.
   chapter" with a price estimate.
 - The interface in Russian, English, Polish, German and Ukrainian (Ukrainian added on 2026-11-17).
 - The app icon: an open book whose lines turn into sound.
+- The last row of the settings, "Open-source licenses", opens the standard Flutter license page: the notices of the
+  libraries and the engine, the licenses of the Merriweather and Roboto fonts, and the project's own license
+  (GPL-3.0-or-later; the repository has the `LICENSE` file).
 
 ### Fixed
 

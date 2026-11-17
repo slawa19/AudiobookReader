@@ -478,6 +478,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Vertonter Ton wird nicht zweimal bezahlt. Nach dem Leeren muss er neu vertont und bezahlt werden.';
 
   @override
+  String get licenses => 'Open-Source-Lizenzen';
+
+  @override
   String get clearTitle => 'Vertonung leeren?';
 
   @override
