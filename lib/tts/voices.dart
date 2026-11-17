@@ -1,8 +1,8 @@
 // Gemini TTS voices and models. The voice set and tariffs — docs/GEMINI_TTS.md. Pure Dart.
 
 /// The voice character. The label in the interface language is provided by the screen (strings are in the ARB); only
-/// the key is here. The keys follow the Russian descriptions from GEMINI_TTS.md: where Google names two voices with one
-/// word but the Russian description differs ("спокойный" and "непринуждённый"), there are two keys.
+/// the key is here. The keys follow the descriptions in GEMINI_TTS.md, "Voices": where Google names two voices with one
+/// word ("easy-going") but the descriptions there differ ("calm" and "easygoing"), there are two keys.
 enum VoiceCharacter {
   soft,
   breezy,

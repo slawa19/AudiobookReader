@@ -142,7 +142,8 @@ minut"); money, percentages, megabytes and speed use the locale's format with a 
 labels are the `material_ui` delegates. Google's texts are not translated. Titles of books, authors and chapters are
 the book's text, not the interface's. The en, pl, de translations were made by the implementer and accepted as is
 (owner's decision 2026-11-14), then proofread by an editor the same day: the edits are point ones, and the glossary
-terms below are after the proofreading.
+terms below are after the proofreading. The uk translation was made by an agent on 2026-11-17 and has not yet been read
+by a native speaker.
 
 The voice-probe phrase and the reading style depend on the **book's** language (`lib/tts/book_language.dart`, FR-T7):
 ru, en, pl, de, uk; English for the others; the style has no gender. For the app's voice from the settings (there is no
@@ -150,26 +151,26 @@ book) the phrase is in the interface language.
 
 Glossary (what the reader sees; within a language, one word):
 
-| Russian | English | Polski | Deutsch |
-|---|---|---|---|
-| Книги (полка) | Books | Książki | Bücher |
-| Слушать | Listen | Słuchaj | Anhören |
-| Проба | Sample | Próbka | Hörprobe |
-| Озвучка | Narration | Nagranie / nagrania | Vertonung |
-| озвучена (глава) | narrated | nagrany | vertont |
-| Оглавление | Contents | Spis treści | Inhaltsverzeichnis |
-| Голос | Voice | Głos | Stimme |
-| Глава | Chapter | Rozdział | Kapitel |
-| Скачать главу | Download chapter | Pobierz rozdział | Kapitel herunterladen |
-| Вид текста | Text appearance | Wygląd tekstu | Textdarstellung |
-| Таймер сна | Sleep timer | Wyłącznik czasowy | Schlaftimer |
-| Скорость | Speed | Prędkość | Tempo |
-| Читать отсюда | Read from here | Czytaj stąd | Ab hier lesen |
-| Продолжить (карточка книги) | Continue | Czytaj dalej | Weiterlesen |
-| К месту чтения | To current spot | Do bieżącego miejsca | Zur aktuellen Stelle |
-| Ключ Gemini | Gemini key | Klucz Gemini | Gemini-Schlüssel |
-| Потрачено | Spent | Wydano | Ausgegeben |
-| Как в системе | System default | Jak w systemie | Systemstandard |
+| Russian | English | Polski | Deutsch | Українська |
+|---|---|---|---|---|
+| Книги (полка) | Books | Książki | Bücher | Книги |
+| Слушать | Listen | Słuchaj | Anhören | Слухати |
+| Проба | Sample | Próbka | Hörprobe | Проба |
+| Озвучка | Narration | Nagranie / nagrania | Vertonung | Озвучення |
+| озвучена (глава) | narrated | nagrany | vertont | озвучена |
+| Оглавление | Contents | Spis treści | Inhaltsverzeichnis | Зміст |
+| Голос | Voice | Głos | Stimme | Голос |
+| Глава | Chapter | Rozdział | Kapitel | Розділ |
+| Скачать главу | Download chapter | Pobierz rozdział | Kapitel herunterladen | Завантажити розділ |
+| Вид текста | Text appearance | Wygląd tekstu | Textdarstellung | Вигляд тексту |
+| Таймер сна | Sleep timer | Wyłącznik czasowy | Schlaftimer | Таймер сну |
+| Скорость | Speed | Prędkość | Tempo | Швидкість |
+| Читать отсюда | Read from here | Czytaj stąd | Ab hier lesen | Читати звідси |
+| Продолжить (карточка книги) | Continue | Czytaj dalej | Weiterlesen | Продовжити |
+| К месту чтения | To current spot | Do bieżącego miejsca | Zur aktuellen Stelle | До місця читання |
+| Ключ Gemini | Gemini key | Klucz Gemini | Gemini-Schlüssel | Ключ Gemini |
+| Потрачено | Spent | Wydano | Ausgegeben | Витрачено |
+| Как в системе | System default | Jak w systemie | Systemstandard | Як у системі |
 
 ## Palette
 
