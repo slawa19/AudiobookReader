@@ -1,115 +1,135 @@
-# Ревью прототипа — Codex, 2026-11-14
+# Prototype review — Codex, 2026-11-14
 
-Предмет: кликабельный прототип интерфейса на Flutter (`lib/`, `test/`, `scripts/`, `docs/prototype/`, коммит
-`53c78d3`), 35 снимков экранов приложены к промпту; сверка со спекой 001 и `ARCHITECTURE.md`. Codex
-0.167.0-alpha.4.1, модель `gpt-6-astra`, `--sandbox read-only`, 318 668 токенов. Вердикт: **ДОРАБОТАТЬ**.
+Subject: the clickable interface prototype in Flutter (`lib/`, `test/`, `scripts/`, `docs/prototype/`, commit `53c78d3`),
+35 screenshots attached to the prompt; checked against spec 001 and `ARCHITECTURE.md`. Codex 0.167.0-alpha.4.1, model
+`gpt-6-astra`, `--sandbox read-only`, 318,668 tokens. Verdict: **REWORK**.
 
-Этот файл — запись ревью, а не источник правды; им остаются спека, `ARCHITECTURE.md`, код прототипа и его README.
+This file is a record of the review, not a source of truth; the spec, `ARCHITECTURE.md`, the prototype code and its
+README remain so.
 
-Решения по находкам принял оркестратор: все 21 приняты. Исполнитель проверил каждую по коду до правки — все
-подтвердились, неверных нет. Тесты на находки — `test/review_fixes_test.dart`, `test/review_fixes_more_test.dart`,
-`test/pagination_test.dart`. Тесты на №1, 2, 3, 5, 11, 12 запущены на коде `53c78d3` до исправления и падали по
-заявленной причине (№1 — `RangeError`; №2 — `playing` вместо `paused`; №3 — звук с блока 39 вместо 46; №5 —
-глава осталась «озвучена»; №11 — блок 39 вместо 38; №12 — сноска не открылась). Номера находок — порядок строк
-таблицы в ответе Codex.
+The orchestrator took the decisions on the findings: all 21 were accepted. The executor checked each one against the code
+before the fix — all were confirmed, none was wrong. The tests for the findings are `test/review_fixes_test.dart`,
+`test/review_fixes_more_test.dart`, `test/pagination_test.dart`. The tests for #1, 2, 3, 5, 11, 12 were run on the code
+at `53c78d3` before the fix and failed for the stated reason (#1 — `RangeError`; #2 — `playing` instead of `paused`; #3 —
+audio from block 39 instead of 46; #5 — the chapter stayed "narrated"; #11 — block 39 instead of 38; #12 — the footnote
+did not open). The finding numbers are the order of the rows of the table in Codex's answer.
 
-## Поднято / вердикт / что сделано
+## Raised / verdict / what was done
 
-| № | Поднято | Вердикт | Что сделано |
+| # | Raised | Verdict | What was done |
 |---|---|---|---|
-| 1 | ключ короче четырёх знаков роняет настройки (`RangeError`) | принято | `AppSettings.apiKeyTail` отдаёт хвост любой длины; тест |
-| 2 | «Читать отсюда» из паузы снимает паузу | принято | контракт контроллера: `readFrom` меняет место с прежним намерением, пауза остаётся паузой; тест |
-| 3 | после ошибки и ручного листания «Слушать» начинает с прежнего места | принято | `resume` из `stopped` берёт актуальную сохранённую позицию, из `paused` — место паузы; тест |
-| 4 | «Закрыть» пишет позицию при ещё активном контроллере | принято | одна команда `close(screenPosition:)`: сеанс завершён, затем позиция экрана отдана писателю; тест, что поздние шаги её не переписывают |
-| 5 | очистка не сбрасывает готовность глав, пробы и скачивание; удаление книги собрано экраном | принято | команды контроллера `clearAllNarration`, `deleteBookNarration`, `deleteBook`: останавливают задачи, сбрасывают готовность и пробы, обновляют библиотеку; тест |
-| 6 | длинный заголовок не делится; длинная подпись картинки рисуется за страницей | принято | общая разбивка по строкам для заголовка и подписи; картинка вписывается вместе с первой строкой подписи; тест на синтетической книге 320 dp ×1,3, ступень 6, с проверкой отрисованной высоты |
-| 7 | глава без блоков и пустая книга ломают страницы | принято; выбрано простейшее | раздел без блоков в главы не попадает (модель `Book`); книга без блоков не создаётся (`EmptyBookException`, отказ при добавлении — FR-B6); тест |
-| 8 | «Читать отсюда» может уйти за край или под плеер | принято | положение ограничено видимой областью над панелью; тест с абзацем длиннее страницы |
-| 9 | «К месту чтения» перекрывает текст (снимок 15) | принято | кнопка внутри панели плеера; страница кончается над измеренной высотой панели; тест |
-| 10 | листы «Вид текста» и таймера не прокручиваются на 320 dp | принято | все листы — ограниченные экраном и прокручиваемые; узкие снимки листов; тест без переполнения |
-| 11 | «Слушать» пропускает видимый хвост абзаца | принято (решение оркестратора: как в FR-P3) | старт с первого отображаемого озвучиваемого места, включая хвост; страница не уезжает назад; тест. **Заменено правилом владельца 2026-11-14 (FR-P3, А§5):** чтение хвоста не спасало от перелистывания назад и не помнило, где человек остановился; теперь продолжение с места прослушивания, если оно на странице, иначе с первого предложения, начинающегося на странице, — хвост предложения с прошлой страницы не читается |
-| 12 | при открытых панелях знак сноски только прячет панели | принято | сноска проверяется раньше скрытия панелей; тест |
-| 13 | общие флаги автоматического перелистывания без номера операции | принято | номер перехода; начало перетаскивания пальцем отменяет автоматический переход и следование; тест прерывания |
-| 14 | голос книги не выбрать до первого прослушивания | принято | чип голоса в нижней панели чтения; тест |
-| 15 | названия глав обрезаются многоточием и повторяются трижды | принято | глава — только в шапке чтения, переносится; над ползунком и в плеере убрана; при перетаскивании ползунка шапка показывает главу назначения; тест |
-| 16 | «Проба» 44 dp, область сноски не гарантирует 48 | принято | «Проба» не ниже 48 dp, на узком экране — кнопка-значок; область знака сноски не меньше 48 × 48; тесты |
-| 17 | «озвучена» у выбранной главы — ink2 на hl, в сепии 4,2 | принято | у выбранной строки основной цвет текста; тест в сепии |
-| 18 | дата тарифа зашита в экранах | принято | цену и оценку экраны получают готовыми (`Tariffs`, `ChapterDownloads.estimate`), дата — из часов приложения; тесты |
-| 19 | строка скачивания прячется при панелях; цена внутри кнопки; нет «Скачать снова» | принято | строка видна всегда (подвал, нижняя панель, панель плеера); оценка отдельной строкой; после ошибки — «Скачать снова»; тест |
-| 20 | текст 402 обещает автопродолжение | принято | «Пополните счёт и нажмите „Слушать“ — продолжим с этого абзаца»; тест |
-| 21 | цитата и стихи оформлены одинаково | принято (решение оркестратора) | стихи — курсив с отступом; цитата — прямое начертание, отступ и линия цвета `line`; правило в README прототипа и FR-R3; тест |
+| 1 | a key shorter than four characters crashes the settings (`RangeError`) | accepted | `AppSettings.apiKeyTail` returns a tail of any length; a test |
+| 2 | "Read from here" from a pause releases the pause | accepted | the controller contract: `readFrom` changes the place with the previous intent, a pause stays a pause; a test |
+| 3 | after an error and manual paging, "Listen" starts from the old place | accepted | `resume` from `stopped` takes the current saved position, from `paused` — the place of the pause; a test |
+| 4 | "Close" writes the position while the controller is still active | accepted | a single command `close(screenPosition:)`: the session is finished, then the screen's position is given to the writer; a test that late steps do not overwrite it |
+| 5 | clearing does not reset chapter readiness, samples and downloading; book deletion is assembled by the screen | accepted | controller commands `clearAllNarration`, `deleteBookNarration`, `deleteBook`: they stop tasks, reset readiness and samples, update the library; a test |
+| 6 | a long heading is not split; a long image caption is drawn beyond the page | accepted | a general line-by-line split for the heading and the caption; the image is fitted together with the first caption line; a test on a synthetic book at 320 dp ×1.3, step 6, checking the rendered height |
+| 7 | a chapter without blocks and an empty book break the pages | accepted; the simplest chosen | a section without blocks does not become a chapter (the `Book` model); a book without blocks is not created (`EmptyBookException`, refusal on adding — FR-B6); a test |
+| 8 | "Read from here" may go past the edge or under the player | accepted | the position is limited to the visible area above the panel; a test with a paragraph longer than the page |
+| 9 | "To current spot" overlaps text (screenshot 15) | accepted | the button inside the player panel; the page ends above the measured panel height; a test |
+| 10 | the "Text appearance" and timer sheets do not scroll at 320 dp | accepted | all sheets are limited by the screen and scrollable; narrow sheet screenshots; a test with no overflow |
+| 11 | "Listen" skips the visible tail of a paragraph | accepted (orchestrator's decision: as in FR-P3) | start from the first displayed narratable place, including the tail; the page does not go back; a test. **Replaced by the owner's rule of 2026-11-14 (FR-P3, A§5):** reading the tail did not save from paging back and did not remember where the person stopped; now the continuation is from the listening place if it is on the page, otherwise from the first sentence that starts on the page — the tail of a sentence from the previous page is not read |
+| 12 | with the panels open a footnote mark only hides the panels | accepted | the footnote is checked before hiding the panels; a test |
+| 13 | shared flags of automatic paging with no operation number | accepted | a transition number; the start of a finger drag cancels the automatic transition and following; an interruption test |
+| 14 | the book's voice cannot be chosen before the first listening | accepted | a voice chip in the bottom reading panel; a test |
+| 15 | chapter titles are cut by an ellipsis and repeated three times | accepted | the chapter only in the reading header, wrapped; removed above the slider and in the player; while the slider is dragged the header shows the destination chapter; a test |
+| 16 | the "Sample" is 44 dp, the footnote area does not guarantee 48 | accepted | the "Sample" at least 48 dp, on a narrow screen an icon button; the footnote mark area at least 48 × 48; tests |
+| 17 | "narrated" on the chosen chapter — ink2 on hl, 4.2 in sepia | accepted | the chosen row has the main text color; a test in sepia |
+| 18 | the tariff date is hard-coded in the screens | accepted | the screens get the price and the estimate ready-made (`Tariffs`, `ChapterDownloads.estimate`), the date comes from the app clock; tests |
+| 19 | the download row hides with the panels; the price is inside the button; there is no "Download again" | accepted | the row is always visible (footer, bottom panel, player panel); the estimate as a separate row; after an error — "Download again"; a test |
+| 20 | the 402 text promises auto-continuation | accepted | "Top up your balance and tap “Listen” — we’ll continue from this paragraph."; a test |
+| 21 | the quotation and the poetry are styled identically | accepted (orchestrator's decision) | poetry — italic with an indent; a quotation — upright, an indent and a line of the `line` color; the rule in the prototype README and FR-R3; a test |
 
-Дополнительно по разделу ответа «что придётся переписать»: у пробы голоса появилось состояние ошибки с текстом
-Google; открытие книги защищено от двойного нажатия (тест с медленным `loadBook`). Слабые тесты из таблицы «Что
-доказывают тесты» усилены: место после смены шрифта — по блоку и смещению; следование — по звучащему месту внутри
-блока; очистка — готовность глав, пробы и остановка скачивания; узкий снимок «плеер играет» снят в `playing`.
+Additionally on the "what will have to be rewritten" part of the answer: the voice sample got an error state with Google's
+text; opening a book is protected against a double tap (a test with a slow `loadBook`). The weak tests from the "What the
+tests prove" table were strengthened: the place after a font change — by block and offset; following — by the sounding
+place inside a block; clearing — chapter readiness, samples and stopping the download; the narrow "player plays"
+screenshot was taken in `playing`.
 
-Не сделано из ответа: порционная разбивка, отрезки вместо блоков, настоящие `AudioStore` (`has/file/put`) и
-`Library` на диске — это реализация этапов 1–2, а не прототип; суррогатные пары, RTL и комбинируемые знаки в
-разбивке не проверены (в демонстрационных книгах их нет).
+Not done from the answer: chunked pagination, segments instead of blocks, the real `AudioStore` (`has/file/put`) and the
+`Library` on disk — this is the implementation of stages 1–2, not the prototype; surrogate pairs, RTL and combining marks
+in pagination are not checked (there are none in the demo books).
 
-## Ответ Codex
+## Codex's answer
 
-Прочитаны целиком `lib/` — 31 файл, `test/` — 7 файлов, `scripts/` — 6 файлов, README, спека, архитектура и AGENTS. Проверен коммит `53c78d3`; изменений не вносил, `git diff --check` пуст. Просмотрены **все 42 PNG**, фактически находящиеся в каталоге: 34 обычных, 6 узких, по одному 360 и 393 dp.
+*Translated from the Russian original.*
 
-Flutter не запускал. **76 пройденных тестов и чистый анализатор — свидетельство оператора**, не мой прогон. Ниже «по коду» означает проверенную цепочку исполнения; «прогноз» требует указанного воспроизведения.
+`lib/` — 31 files, `test/` — 7 files, `scripts/` — 6 files, the README, the spec, the architecture and AGENTS were read in
+full. Commit `53c78d3` was checked; I made no changes, `git diff --check` is empty. **All 42 PNGs** actually present in
+the directory were viewed: 34 regular, 6 narrow, one each of 360 and 393 dp.
 
-**Находки, в порядке важности.** Частота — оценка условий возникновения, не статистика использования.
+I did not run Flutter. **76 passed tests and a clean analyzer are the operator's evidence**, not my run. Below "by the
+code" means a verified execution chain; "forecast" requires the stated reproduction.
 
-| № | Место и требование | Дефект, конкретный вход и последствие | Частота и основание | Уверенность | Минимальная правка |
+**Findings, in order of importance.** Frequency is an estimate of the conditions of occurrence, not usage statistics.
+
+| # | Place and requirement | Defect, concrete input and consequence | Frequency and basis | Confidence | Minimal fix |
 |---|---|---|---|---|---|
-| 1 | [settings.dart:42](D:/Work/Projects/AudiobookReader/lib/library/settings.dart:42), [settings_screen.dart:87](D:/Work/Projects/AudiobookReader/lib/screens/settings_screen.dart:87); FR-P7 | Ввести или вставить ключ `abc`: он принимается, затем `substring(length - 4)` получает отрицательный индекс. Построение настроек завершается `RangeError`. | Всегда для непустого ключа короче четырёх символов; код. | Высокая | Безопасно получать хвост любой длины. Проверка формата не должна быть единственной защитой отображения. |
-| 2 | [reader_screen.dart:258](D:/Work/Projects/AudiobookReader/lib/screens/reader_screen.dart:258), [fake_narration.dart:65](D:/Work/Projects/AudiobookReader/lib/playback/fake_narration.dart:65); А§6.4, А§6.6 | Пауза → долгое нажатие → «Читать отсюда» вызывает `start`, который снимает паузу и переходит в `preparing`, затем `playing`. Требуется сохранить намерение «пауза». | Каждый такой переход; код. | Высокая | Отдельная команда смены места с сохранением намерения внутри контроллера. Не исправлять последовательностью `start(); pause()` в экране. |
-| 3 | [player_panel.dart:55](D:/Work/Projects/AudiobookReader/lib/screens/player_panel.dart:55), [fake_narration.dart:81](D:/Work/Projects/AudiobookReader/lib/playback/fake_narration.dart:81); А§5 | После ошибки перелистать книгу, затем нажать «Слушать» в панели ошибки: экран уже записал новое место, но `resume()` запускает прежний `_block`. Явное перемещение после `stopped` игнорируется. | Каждый такой сценарий; код. | Высокая | Для `stopped` брать актуальную сохранённую позицию; для `paused` продолжать место паузы. Различие принадлежит контроллеру. |
-| 4 | [reader_screen.dart:267](D:/Work/Projects/AudiobookReader/lib/screens/reader_screen.dart:267); А§5 | «Закрыть» сначала записывает позицию **при ещё активном контроллере**, затем вызывает `close`. Нарушен порядок передачи владения. При настоящих отложенных записях позиция контроллера может затереть страницу пользователя. | Порядок нарушается всегда; потеря позиции — прогноз для асинхронного хранения. | Высокая для нарушения; средняя для гонки | Одна операция контроллера: завершить сеанс и передать позицию экрана сериализованному писателю. |
-| 5 | [app.dart:61](D:/Work/Projects/AudiobookReader/lib/app/app.dart:61), [shelf_screen.dart:123](D:/Work/Projects/AudiobookReader/lib/screens/shelf_screen.dart:123); А§4, FR-M3, FR-D3 | Очистка меняет только счётчик `audio`, не отменяет скачивание и не сбрасывает готовность глав/кэш проб. После очистки ранее озвученная глава остаётся «озвучена»; начатая задача продолжает работать. Удаление книги разделено между независимыми вызовами экрана. | Каждый соответствующий сценарий; код. Это уже несогласованность прототипа, не отсутствие настоящего звука. | Высокая | Провести очистку/удаление через одну операцию контроллера; согласованно обновлять задачи, готовность, пробы и библиотеку. |
-| 6 | [pagination.dart:119](D:/Work/Projects/AudiobookReader/lib/reader/pagination.dart:119), [pagination.dart:135](D:/Work/Projects/AudiobookReader/lib/reader/pagination.dart:135), [book_page.dart:89](D:/Work/Projects/AudiobookReader/lib/reader/book_page.dart:89); FR-R3 | Заголовок выше колонки не делится. Для картинки с длинной подписью ограничивается только **учётная** высота фрагмента, а `Column` рисует картинку и подпись полностью. Текст выходит за страницу и может оказаться под панелью. | Редкие, но допустимые длинные заголовки/подписи; усиление на 320 dp и ступени 6. Следует из расчёта и отрисовки. | Высокая | Разбивать длинный заголовок; картинку вписывать с учётом подписи, длинную подпись переносить фрагментами. |
-| 7 | [pagination.dart:67](D:/Work/Projects/AudiobookReader/lib/reader/pagination.dart:67), [pagination.dart:107](D:/Work/Projects/AudiobookReader/lib/reader/pagination.dart:107), [reader_screen.dart:116](D:/Work/Projects/AudiobookReader/lib/screens/reader_screen.dart:116); А§3, А§5 | Глава с `blockCount == 0` не получает страницы: её индекс указывает на следующую главу либо за конец списка. Книга без отображаемых блоков даёт пустой `pages`, затем обращение `pages[_page]`. | Только пустые структурные разделы/пустая модель; код. В демонстрационных книгах таких глав нет. | Высокая | Определить контракт: пустой раздел превращается в заголовок либо исключается; полностью пустая книга отклоняется до открытия. |
-| 8 | [reader_screen.dart:491](D:/Work/Projects/AudiobookReader/lib/screens/reader_screen.dart:491); FR-P3, FR-R8 | Долгое нажатие на абзац, занимающий почти всю страницу от её верха: кнопка размещается в `bottom + 8`, без ограничения экраном. Она может попасть за низ или под плеер. | Длинные абзацы, особенно крупный шрифт; прогноз по координатам. | Высокая для отсутствия ограничения | Ограничить положение доступной областью; проверить абзац длиннее страницы с плеером и без него. |
-| 9 | **Снимок 15-listening-own-page**, [reader_screen.dart:321](D:/Work/Projects/AudiobookReader/lib/screens/reader_screen.dart:321), [reader_screen.dart:405](D:/Work/Projects/AudiobookReader/lib/screens/reader_screen.dart:405); FR-P4, решение 4 | «К месту чтения» перекрывает строки «Что ж за беда!» и следующую реплику. В высоте страницы учтён основной плеер, но не кнопка возврата и другие добавочные элементы. | Уже видно на снимке; повторяется на заполненных страницах при отключённом следовании. | Высокая | Встроить возврат в зарезервированную область управления либо учитывать его высоту при раскладке. |
-| 10 | [reader_sheets.dart:29](D:/Work/Projects/AudiobookReader/lib/screens/reader_sheets.dart:29), [reader_sheets.dart:270](D:/Work/Projects/AudiobookReader/lib/screens/reader_sheets.dart:270); FR-R8 | «Вид текста» и таймер — непрокручиваемые `Column` в листах с ограничением высоты по умолчанию. На 320×640 ×1,3, особенно при активном таймере с дополнительной строкой и кнопкой выключения, прогнозируется переполнение. Узких снимков этих состояний нет. | Зависит от высоты и масштаба; прогноз по дереву и контракту Flutter. | Средняя–высокая | Ограниченный по экрану прокручиваемый лист; снять оба состояния на 320 dp. |
-| 11 | [reader_screen.dart:248](D:/Work/Projects/AudiobookReader/lib/screens/reader_screen.dart:248); FR-P3 | Если сверху продолжение абзаца A, а ниже начинается B, «Слушать» выбирает B. Видимый хвост A пропускается. Это изменение требования, а не техническая необходимость. | Каждая такая граница страницы; код. | Высокая | До решения владельца выбирать первый отображаемый озвучиваемый блок, как требует FR-P3. |
-| 12 | [reader_screen.dart:193](D:/Work/Projects/AudiobookReader/lib/screens/reader_screen.dart:193); FR-R3 | При открытых панелях нажатие на видимый знак сноски сначала прячет панели и возвращается, не проверив сноску. Приоритет ссылки не соблюдён. | Каждый такой тап; код. | Высокая | Проверять сноску раньше ветки скрытия панелей. Тестировать центр знака и расширенную область. |
-| 13 | [reader_screen.dart:124](D:/Work/Projects/AudiobookReader/lib/screens/reader_screen.dart:124); А§5, FR-R2, FR-P4 | Общие `_programmatic` и `_animatingTo` обслуживают несколько асинхронных переходов без номера операции. Прервать автоматическое перелистывание жестом/новым переходом — старое завершение может сбросить признаки нового перехода; пользовательский жест может быть принят за автоматический. | Быстрые действия в пределах 320 мс; прогноз гонки. | Средняя | Номер операции/поколения и отключение следования при начале пользовательского drag. Тест с промежуточными `pump`, без ожидания завершения каждого действия. |
-| 14 | [reader_screen.dart:611](D:/Work/Projects/AudiobookReader/lib/screens/reader_screen.dart:611), **снимок 07**; FR-V2 | В нижней панели до старта есть только ползунок и «Слушать». Выбрать голос **этой книги до первого прослушивания** нельзя. | Всегда в `idle`; код и снимок. | Высокая | Добавить вход выбора голоса книги в эту панель, используя существующий экран. |
-| 15 | [reader_screen.dart:464](D:/Work/Projects/AudiobookReader/lib/screens/reader_screen.dart:464), [reader_screen.dart:595](D:/Work/Projects/AudiobookReader/lib/screens/reader_screen.dart:595), [player_panel.dart:162](D:/Work/Projects/AudiobookReader/lib/screens/player_panel.dart:162); FR-R8 | Названия глав ограничены одной строкой с многоточием. На **n320-07** и **n320-14** это видно. Исключение FR-R8 разрешает многоточие только названию и автору книги. | Обычные длинные главы на узком экране; снимки. | Высокая | Переносить главу, позволять панели расти; убрать дублирующую подпись там, где она уже показана. |
-| 16 | [voice_screen.dart:173](D:/Work/Projects/AudiobookReader/lib/screens/voice_screen.dart:173), [book_page.dart:159](D:/Work/Projects/AudiobookReader/lib/reader/book_page.dart:159); FR-R8 | Для «Пробы» заданы `minimumSize.height = 44` и `VisualDensity.compact`: гарантия 48 dp отсутствует. Для сноски `inflate(20)` гарантирует лишь размер глифа +40, а не минимум 48. Маленькая видимая кнопка сама по себе не доказывает маленькую hit-area, поэтому точный размер здесь не выдаю за измерение. | Все пробы при обычном масштабе; узкие знаки сносок. Прогноз по коду и устройству Flutter. | Средняя для фактической площади; высокая для отсутствия гарантии | Для кнопки стандартная плотность и минимум 48; для сноски явный минимум прямоугольника 48×48. Проверить hit-test по краям. |
-| 17 | [toc_screen.dart:98](D:/Work/Projects/AudiobookReader/lib/screens/toc_screen.dart:98), [architecture_test.dart:100](D:/Work/Projects/AudiobookReader/test/architecture_test.dart:100); контраст README | Выбранная **озвученная** глава рисует «озвучена» цветом `ink2` на `hl`. В сепии контраст **4,1956:1**, а тест исключает эту пару под ошибочным объяснением «не используется». | Всякий раз при выбранной озвученной главе в сепии; код и собственный расчёт. | Высокая | Для выбранной строки использовать `ink`; вернуть проверку реально используемых пар. Палитру менять не требуется. |
-| 18 | [settings_screen.dart:188](D:/Work/Projects/AudiobookReader/lib/screens/settings_screen.dart:188), [settings_screen.dart:266](D:/Work/Projects/AudiobookReader/lib/screens/settings_screen.dart:266), [toc_screen.dart:126](D:/Work/Projects/AudiobookReader/lib/screens/toc_screen.dart:126); FR-V3, FR-M1 | Дата тарифа `2026-11-14` зашита в настоящие экраны. После указанной в проекте смены тарифа 01.01.2027 цены останутся прежними даже при замене fake-сервисов. | Постоянно после смены тарифа; код. | Высокая | Передавать часы/дату через простой callback или получать готовую оценку от сервиса. |
-| 19 | [reader_screen.dart:422](D:/Work/Projects/AudiobookReader/lib/screens/reader_screen.dart:422), [toc_screen.dart:173](D:/Work/Projects/AudiobookReader/lib/screens/toc_screen.dart:173); FR-D2 | Открытие панелей скрывает строку скачивания и её «Стоп». В оглавлении стоимость находится только внутри кнопки, а после ошибки остаётся «Скачать главу» вместо «Скачать снова». | Каждый соответствующий режим; код, снимки 10/11. | Высокая | Сохранять статус скачивания при панелях; вынести оценку перед кнопкой и различать повтор. |
-| 20 | [strings.dart:69](D:/Work/Projects/AudiobookReader/lib/screens/strings.dart:69), **снимки 18-player-402 и n320-18-player-402**; FR-P6 | «После пополнения чтение продолжится…» обещает автоматическое продолжение, прямо запрещённое спекой. Наличие отдельной кнопки не исправляет обещание текста. | Каждая ошибка 402; снимки. | Высокая | «После пополнения нажмите „Слушать“. Продолжим с этого абзаца». |
-| 21 | [page_style.dart:64](D:/Work/Projects/AudiobookReader/lib/reader/page_style.dart:64), [pagination.dart:266](D:/Work/Projects/AudiobookReader/lib/reader/pagination.dart:266); FR-R3 | `verse` и `cite` имеют одинаковые курсив и отступ. Внутреннее представление различает их, визуальное — нет. | Любая книга с обоими видами блоков; код. | Высокая | Утвердить одно различающее правило для цитаты; применить и в измерении, и в отрисовке. |
+| 1 | [settings.dart:42](../../lib/library/settings.dart), [settings_screen.dart:87](../../lib/screens/settings_screen.dart); FR-P7 | Enter or paste the key `abc`: it is accepted, then `substring(length - 4)` gets a negative index. Building the settings ends with `RangeError`. | Always for a non-empty key shorter than four characters; code. | High | Safely obtain a tail of any length. A format check must not be the only protection of the display. |
+| 2 | [reader_screen.dart:258](../../lib/screens/reader_screen.dart), [fake_narration.dart:65](../../lib/playback/fake_narration.dart); A§6.4, A§6.6 | Pause → long press → "Read from here" calls `start`, which releases the pause and goes to `preparing`, then `playing`. The "pause" intent must be kept. | Every such transition; code. | High | A separate place-change command that keeps the intent inside the controller. Do not fix with a `start(); pause()` sequence in the screen. |
+| 3 | [player_panel.dart:55](../../lib/screens/player_panel.dart), [fake_narration.dart:81](../../lib/playback/fake_narration.dart); A§5 | After an error page through the book, then tap "Listen" in the error panel: the screen has already written the new place, but `resume()` starts the old `_block`. An explicit move after `stopped` is ignored. | Every such scenario; code. | High | For `stopped` take the current saved position; for `paused` continue the place of the pause. The difference belongs to the controller. |
+| 4 | [reader_screen.dart:267](../../lib/screens/reader_screen.dart); A§5 | "Close" first writes the position **while the controller is still active**, then calls `close`. The order of handing over ownership is violated. With real deferred writes the controller's position may overwrite the user's page. | The order is always violated; the loss of the position is a forecast for asynchronous storage. | High for the violation; medium for the race | One controller operation: finish the session and hand the screen's position to a serialized writer. |
+| 5 | [app.dart:61](../../lib/app/app.dart), [shelf_screen.dart:123](../../lib/screens/shelf_screen.dart); A§4, FR-M3, FR-D3 | Clearing changes only the `audio` counter, does not cancel the download and does not reset chapter readiness / the sample cache. After clearing, a previously narrated chapter stays "narrated"; a started task keeps running. Book deletion is split between independent screen calls. | Every corresponding scenario; code. This is already an inconsistency of the prototype, not the absence of real audio. | High | Route clearing/deletion through one controller operation; update tasks, readiness, samples and the library consistently. |
+| 6 | [pagination.dart:119](../../lib/reader/pagination.dart), [pagination.dart:135](../../lib/reader/pagination.dart), [book_page.dart:89](../../lib/reader/book_page.dart); FR-R3 | A heading taller than the column is not split. For an image with a long caption only the **accounted** height of the fragment is limited, while `Column` draws the image and the caption in full. The text goes beyond the page and may end up under the panel. | Rare but allowed long headings/captions; amplified at 320 dp and step 6. Follows from the computation and rendering. | High | Split a long heading; fit the image with the caption taken into account, break a long caption into fragments. |
+| 7 | [pagination.dart:67](../../lib/reader/pagination.dart), [pagination.dart:107](../../lib/reader/pagination.dart), [reader_screen.dart:116](../../lib/screens/reader_screen.dart); A§3, A§5 | A chapter with `blockCount == 0` gets no pages: its index points to the next chapter or past the end of the list. A book with no displayable blocks gives an empty `pages`, then an access `pages[_page]`. | Only empty structural sections/an empty model; code. There are no such chapters in the demo books. | High | Define the contract: an empty section turns into a heading or is excluded; a fully empty book is rejected before opening. |
+| 8 | [reader_screen.dart:491](../../lib/screens/reader_screen.dart); FR-P3, FR-R8 | A long press on a paragraph that takes almost the whole page from its top: the button is placed at `bottom + 8`, with no limit by the screen. It may end up beyond the bottom or under the player. | Long paragraphs, especially a large font; a forecast from coordinates. | High for the absence of the limit | Limit the position to the available area; check a paragraph longer than the page with and without the player. |
+| 9 | **Screenshot 15-listening-own-page**, [reader_screen.dart:321](../../lib/screens/reader_screen.dart), [reader_screen.dart:405](../../lib/screens/reader_screen.dart); FR-P4, decision 4 | "To current spot" overlaps the lines "Что ж за беда!" (What kind of trouble is that!) and the next line of dialogue. The page height accounts for the main player but not the return button and other additional elements. | Already visible in the screenshot; repeats on filled pages with following turned off. | High | Build the return into the reserved control area or account for its height in the layout. |
+| 10 | [reader_sheets.dart:29](../../lib/screens/reader_sheets.dart), [reader_sheets.dart:270](../../lib/screens/reader_sheets.dart); FR-R8 | "Text appearance" and the timer are non-scrollable `Column`s in sheets with the default height limit. At 320×640 ×1.3, especially with an active timer with an extra row and a turn-off button, an overflow is forecast. There are no narrow screenshots of these states. | Depends on height and scale; a forecast from the tree and the Flutter contract. | Medium–high | A screen-limited scrollable sheet; take both states at 320 dp. |
+| 11 | [reader_screen.dart:248](../../lib/screens/reader_screen.dart); FR-P3 | If at the top there is a continuation of paragraph A, and below B begins, "Listen" chooses B. The visible tail of A is skipped. This is a change of the requirement, not a technical necessity. | Every such page boundary; code. | High | Until the owner decides, choose the first displayed narratable block, as FR-P3 requires. |
+| 12 | [reader_screen.dart:193](../../lib/screens/reader_screen.dart); FR-R3 | With the panels open, a tap on a visible footnote mark first hides the panels and returns, without checking the footnote. The priority of the link is not observed. | Every such tap; code. | High | Check the footnote before the branch that hides the panels. Test the center of the mark and the extended area. |
+| 13 | [reader_screen.dart:124](../../lib/screens/reader_screen.dart); A§5, FR-R2, FR-P4 | The shared `_programmatic` and `_animatingTo` serve several asynchronous transitions with no operation number. If an automatic paging is interrupted by a gesture/a new transition, the old completion may reset the flags of the new transition; a user gesture may be taken for an automatic one. | Quick actions within 320 ms; a race forecast. | Medium | An operation/generation number and turning following off at the start of a user drag. A test with intermediate `pump`s, without waiting for each action to finish. |
+| 14 | [reader_screen.dart:611](../../lib/screens/reader_screen.dart), **screenshot 07**; FR-V2 | In the bottom panel before the start there is only the slider and "Listen". The voice **of this book before the first listening** cannot be chosen. | Always in `idle`; code and screenshot. | High | Add an entry for choosing the book voice to this panel, using the existing screen. |
+| 15 | [reader_screen.dart:464](../../lib/screens/reader_screen.dart), [reader_screen.dart:595](../../lib/screens/reader_screen.dart), [player_panel.dart:162](../../lib/screens/player_panel.dart); FR-R8 | Chapter titles are limited to one line with an ellipsis. On **n320-07** and **n320-14** this is visible. The FR-R8 exception allows an ellipsis only for the book title and author. | Ordinary long chapters on a narrow screen; screenshots. | High | Wrap the chapter, allow the panel to grow; remove the duplicate caption where it is already shown. |
+| 16 | [voice_screen.dart:173](../../lib/screens/voice_screen.dart), [book_page.dart:159](../../lib/reader/book_page.dart); FR-R8 | For the "Sample" `minimumSize.height = 44` and `VisualDensity.compact` are set: there is no 48 dp guarantee. For the footnote `inflate(20)` guarantees only the glyph size +40, not a minimum of 48. A small visible button does not by itself prove a small hit area, so I do not present the exact size here as a measurement. | All samples at ordinary scale; narrow footnote marks. A forecast from the code and the Flutter design. | Medium for the actual area; high for the absence of a guarantee | For the button standard density and a minimum of 48; for the footnote an explicit minimum rectangle of 48×48. Check hit-testing at the edges. |
+| 17 | [toc_screen.dart:98](../../lib/screens/toc_screen.dart), [architecture_test.dart:100](../../test/architecture_test.dart); README contrast | The chosen **narrated** chapter draws "narrated" in the `ink2` color on `hl`. In sepia the contrast is **4.1956:1**, and the test excludes this pair under the wrong explanation "not used". | Whenever a narrated chapter is chosen in sepia; code and my own computation. | High | For the chosen row use `ink`; restore the check of the pairs actually used. Changing the palette is not required. |
+| 18 | [settings_screen.dart:188](../../lib/screens/settings_screen.dart), [settings_screen.dart:266](../../lib/screens/settings_screen.dart), [toc_screen.dart:126](../../lib/screens/toc_screen.dart); FR-V3, FR-M1 | The tariff date `2026-11-14` is hard-coded in the real screens. After the tariff change on 01.01.2027 stated in the project, the prices will stay the old ones even when the fake services are replaced. | Permanently after the tariff change; code. | High | Pass the clock/date through a simple callback or get a ready estimate from the service. |
+| 19 | [reader_screen.dart:422](../../lib/screens/reader_screen.dart), [toc_screen.dart:173](../../lib/screens/toc_screen.dart); FR-D2 | Opening the panels hides the download row and its "Stop". In the table of contents the price is only inside the button, and after an error "Download chapter" remains instead of "Download again". | Every corresponding mode; code, screenshots 10/11. | High | Keep the download status with the panels; move the estimate before the button and distinguish a repeat. |
+| 20 | [strings.dart:69](../../lib/screens/strings.dart), **screenshots 18-player-402 and n320-18-player-402**; FR-P6 | "После пополнения чтение продолжится…" (After the top-up, reading will continue…) promises an automatic continuation, directly forbidden by the spec. A separate button does not fix the promise of the text. | Every 402 error; screenshots. | High | "After the top-up tap “Listen”. We will continue from this paragraph." |
+| 21 | [page_style.dart:64](../../lib/reader/page_style.dart), [pagination.dart:266](../../lib/reader/pagination.dart); FR-R3 | `verse` and `cite` have the same italic and indent. The internal representation distinguishes them, the visual one does not. | Any book with both kinds of blocks; code. | High | Approve one distinguishing rule for a quotation; apply it in both measurement and rendering. |
 
-Для прогнозов №10, №13 и №16 использованы первичные источники: [ограничения modal bottom sheet](https://api.flutter.dev/flutter/material/showModalBottomSheet.html), [завершение и прерывание анимации прокрутки](https://api.flutter.dev/flutter/widgets/ScrollPositionWithSingleContext/animateTo.html), [расчёт области кнопки с visual density](https://raw.githubusercontent.com/flutter/flutter/master/packages/flutter/lib/src/material/button_style_button.dart). Это обоснование проверок, а не результат запуска установленной версии `material_ui`.
+For forecasts #10, #13 and #16 primary sources were used: [modal bottom sheet constraints](https://api.flutter.dev/flutter/material/showModalBottomSheet.html), [completion and interruption of the scroll animation](https://api.flutter.dev/flutter/widgets/ScrollPositionWithSingleContext/animateTo.html), [computing a button's area with visual density](https://raw.githubusercontent.com/flutter/flutter/master/packages/flutter/lib/src/material/button_style_button.dart). This is the justification of the checks, not the result of running the installed version of `material_ui`.
 
-**Что придётся переписать при замене подставных реализаций.** Оценки объёма относятся к затронутым частям кода, не к измеренным трудозатратам.
+**What will have to be rewritten when the fake implementations are replaced.** The volume estimates refer to the affected
+parts of the code, not to measured labor.
 
-| Часть | Объём и необходимые изменения |
+| Part | Volume and necessary changes |
 |---|---|
-| Порционная пагинация | **Существенный:** `BookLayout` и навигационная часть `ReaderScreen`. Сейчас экран требует полный `pages`, окончательные номера страниц, `chapterFirstPage` и синхронный `pageOf`. Потребуются окно страниц вокруг позиции, уведомления о готовности, отмена расчёта и переходы по позиции без знания всех предыдущих страниц. `_Paginator` и геометрия фрагментов в значительной части сохранятся. |
-| Отрезки вместо блоков | **Средний:** [narration.dart:53](D:/Work/Projects/AudiobookReader/lib/playback/narration.dart:53), следование и подсветка в `ReaderScreen`. Пара `block + blockProgress` не описывает отрезок из нескольких блоков и часть длинного блока. Нужны соответствия отрезка тексту, его сохранённое начало и оценка текущего места. `BookPage.highlightBlocks` уже принимает множество — саму отрисовку подсветки переписывать не требуется. |
-| Настоящий контроллер | **Средний:** команды начала/смены места, главы, профиля и закрытия. Сейчас экран выбирает паузу после `start` при смене главы ([reader_screen.dart:282](D:/Work/Projects/AudiobookReader/lib/screens/reader_screen.dart:282)), сам передаёт позицию при закрытии и собирает положение из прогресса блока. Сохранение намерения, сеанса и позиции должно уйти в контроллер. Визуальные ветки шести состояний плеера сохраняются. |
-| Позиция на диске и `Library` | **Небольшой в экранах, средний в контракте хранения.** Синхронный `positionOf` допустим как чтение памяти; `savePosition` может ставить запись в очередь. Но нужны явная гарантия завершения/сброса записи и сериализация. `charsBefore` и `anchorText` можно вычислять внутри библиотеки — отсутствие их в UI-объекте само по себе не требует переписывать экраны. Удаление необходимо убрать из самостоятельных действий полки. |
-| `AudioStore` | **Расширение интерфейса, небольшая правка экранов.** [audio_store.dart:3](D:/Work/Projects/AudiobookReader/lib/audio/audio_store.dart:3) — сейчас только счётчик размеров, не контракт А§6.5: нет `has/file/put/clear`. Для очереди нужны эти операции; для настроек — уведомление об изменившемся размере и завершении очистки. |
-| Пробы голоса | **Локальный, но обязательный:** [voice_sample.dart:5](D:/Work/Projects/AudiobookReader/lib/playback/voice_sample.dart:5) содержит только `idle/loading/playing`, без ошибки и текста Google. Настоящему сервису некуда сообщить постоянную ошибку. Придётся расширить состояние и строку пробы в `VoiceScreen`. |
-| Открытие книги с диска | **Локальный:** [shelf_screen.dart:89](D:/Work/Projects/AudiobookReader/lib/screens/shelf_screen.dart:89). При медленном `loadBook` нет защиты от повторного открытия и обработки отказа. Двойное нажатие потенциально создаст два перехода. Проверить управляемым незавершённым `Future`. |
+| Chunked pagination | **Substantial:** `BookLayout` and the navigation part of `ReaderScreen`. Now the screen requires a full `pages`, final page numbers, `chapterFirstPage` and a synchronous `pageOf`. A window of pages around the position, readiness notifications, cancellation of the computation and transitions by position without knowing all the previous pages will be needed. `_Paginator` and the fragment geometry will largely be kept. |
+| Segments instead of blocks | **Medium:** [narration.dart:53](../../lib/playback/narration.dart), following and highlighting in `ReaderScreen`. The pair `block + blockProgress` does not describe a segment of several blocks and a part of a long block. Mappings of a segment to text, its saved start and an estimate of the current place are needed. `BookPage.highlightBlocks` already takes a set — the highlight rendering itself need not be rewritten. |
+| The real controller | **Medium:** the commands for starting/changing the place, the chapter, the profile and closing. Now the screen chooses a pause after `start` on a chapter change ([reader_screen.dart:282](../../lib/screens/reader_screen.dart)), passes the position itself on closing and assembles the position from the block progress. Keeping the intent, the session and the position must move into the controller. The visual branches of the six player states are kept. |
+| The position on disk and `Library` | **Small in the screens, medium in the storage contract.** A synchronous `positionOf` is acceptable as a memory read; `savePosition` may queue a write. But an explicit guarantee of completion/flushing of the write and serialization are needed. `charsBefore` and `anchorText` can be computed inside the library — their absence in the UI object does not by itself require rewriting the screens. Deletion must be removed from the shelf's independent actions. |
+| `AudioStore` | **An extension of the interface, a small change of the screens.** [audio_store.dart:3](../../lib/audio/audio_store.dart) — now only a size counter, not the A§6.5 contract: there is no `has/file/put/clear`. The queue needs these operations; the settings need a notification of a changed size and of the completion of clearing. |
+| Voice samples | **Local but mandatory:** [voice_sample.dart:5](../../lib/playback/voice_sample.dart) contains only `idle/loading/playing`, with no error and no Google text. The real service has nowhere to report a permanent error. The state and the sample row in `VoiceScreen` will have to be extended. |
+| Opening a book from disk | **Local:** [shelf_screen.dart:89](../../lib/screens/shelf_screen.dart). With a slow `loadBook` there is no protection against repeated opening and no handling of a refusal. A double tap will potentially create two transitions. Check with a controllable unfinished `Future`. |
 
-`ChangeNotifier`, передача зависимостей через конструкторы и `AppServices` для этого достаточны. Вводить DI-фреймворк или новую систему состояния не требуется.
+`ChangeNotifier`, passing dependencies through constructors and `AppServices` are sufficient for this. Introducing a DI
+framework or a new state system is not required.
 
-**Что с настоящим модулем чтения.**
+**On the real reader module.**
 
-- Для обычного текста демонстрационных книг подтверждённого пропуска или дублирования из файлов не установлено. Измерение и отрисовка используют общий `fragmentSpan`; тест высоты имеет полезную отрицательную проверку на другой ширине.
-- Очень длинный абзац не создаёт очевидного бесконечного цикла: [pagination.dart:158](D:/Work/Projects/AudiobookReader/lib/reader/pagination.dart:158) принудительно продвигается минимум на строку. Это не доказывает правильность всех границ.
-- **Суррогатные пары не проверены:** Python насчитал ноль символов вне BMP в обеих тестовых книгах. Утверждать, что пары ломаются, оснований нет; утверждать, что проверены, тоже нельзя.
-- Слабое место определения границ — [pagination.dart:244](D:/Work/Projects/AudiobookReader/lib/reader/pagination.dart:244): ближайшая позиция к левому краю принимается за начало строки. [Flutter гарантирует ближайшую текстовую позицию](https://api.flutter.dev/flutter/painting/TextPainter/getPositionForOffset.html), не логическое начало строки. Нужны случаи RTL/смешанного направления, явного `\n` на границе, emoji и комбинируемых знаков; начало брать через границу строки, затем проверять монотонность диапазонов.
-- Картинка сама по себе при известных натуральных размерах ограничивается по высоте и сохраняет пропорции. Дефект — совместный размер с подписью, указанный выше.
-- Пустые главы не обработаны; главы только с заголовком обработаны отдельно. Это разные случаи.
-- При смене шрифта в обычном чтении используется точный `_anchor.block/offset`, а не процент. Но при следовании за голосом сохранённый экранный якорь — начало прежней страницы; после пересчёта корректировка к голосу зависит от следующего уведомления контроллера. Для паузы посреди длинного блока нужен отдельный тест.
-- Базовые tap/swipe и long press разведены стандартными распознавателями Flutter. Подтверждённого общего конфликта этих жестов нет; конкретные проблемы — приоритет сноски и прерывание анимации.
+- For the ordinary text of the demo books no confirmed skipping or duplication from the files was established. Measurement
+  and rendering use the shared `fragmentSpan`; the height test has a useful negative check at another width.
+- A very long paragraph does not create an obvious infinite loop: [pagination.dart:158](../../lib/reader/pagination.dart)
+  forcibly advances by at least a line. This does not prove the correctness of all boundaries.
+- **Surrogate pairs are not checked:** Python counted zero characters outside the BMP in both test books. There is no
+  ground to claim the pairs break; nor can it be claimed they were checked.
+- The weak spot of boundary determination is [pagination.dart:244](../../lib/reader/pagination.dart): the position nearest
+  to the left edge is taken as the start of a line.
+  [Flutter guarantees the nearest text position](https://api.flutter.dev/flutter/painting/TextPainter/getPositionForOffset.html),
+  not the logical start of a line. Cases of RTL/mixed direction, an explicit `\n` at the boundary, emoji and combining
+  marks are needed; take the start through the line boundary, then check the monotonicity of the ranges.
+- An image by itself, with known natural sizes, is limited in height and keeps its proportions. The defect is the joint
+  size with the caption, described above.
+- Empty chapters are not handled; chapters with only a heading are handled separately. These are different cases.
+- On a font change in ordinary reading the exact `_anchor.block/offset` is used, not a percentage. But while following the
+  voice the saved screen anchor is the start of the previous page; after the recomputation the correction toward the voice
+  depends on the next controller notification. A separate test is needed for a pause in the middle of a long block.
+- Basic tap/swipe and long press are separated by the standard Flutter recognizers. There is no confirmed general conflict
+  of these gestures; the concrete problems are the footnote priority and the interruption of the animation.
 
-**Граф зависимостей проверен независимо по импортам.** Нарушений межмодульного графа А§2 не обнаружено:
+**The dependency graph was independently checked by imports.** No violations of the inter-module graph of A§2 were found:
 
-| Модуль | Фактические внешние модули |
+| Module | Actual external modules |
 |---|---|
 | `app` | `audio`, `library`, `playback`, `screens`, `tts` |
 | `screens` | `audio`, `book`, `library`, `playback`, `reader`, `tts` |
@@ -117,114 +137,134 @@ Flutter не запускал. **76 пройденных тестов и чис�
 | `playback` | `book`, `library`, `tts` |
 | `library` | `book` |
 
-`book` и `tts` не импортируют Flutter. Однако правильный граф импортов не доказывает правильное распределение ответственности: находки №4–5 остаются нарушениями А§4–6.
+`book` and `tts` do not import Flutter. However, a correct import graph does not prove a correct distribution of
+responsibility: findings #4–5 remain violations of A§4–6.
 
-**Что доказывают тесты.**
+**What the tests prove.**
 
-Число объявленных тестов с разворачиванием циклов сходится с 76: **7 архитектурных, 6 пагинации, 28 поведения, 35 golden-тестов**, создающих 42 снимка.
+The number of declared tests with loops unrolled adds up to 76: **7 architectural, 6 pagination, 28 behavior, 35 golden
+tests**, creating 42 screenshots.
 
-Не считаю весь набор вакуумным. Проверки жестов, удаления из полки, отображения состояний и высоты текста действительно проверяют поведение. Недостатки конкретнее:
+I do not consider the whole set vacuous. The checks of gestures, deletion from the shelf, display of states and text
+height do check behavior. The shortcomings are more specific:
 
-| Место | Что проверяется слабее заявленного |
+| Place | What is checked more weakly than declared |
 |---|---|
-| [reader_behavior_test.dart:105](D:/Work/Projects/AudiobookReader/test/reader_behavior_test.dart:105) | «Место сохраняется» проверяет присутствие прежнего **блока**, но не смещения. На абзаце в несколько страниц тест допускает скачок внутри него. Нужна принадлежность исходного `(block, offset)` новой странице. |
-| [reader_behavior_test.dart:188](D:/Work/Projects/AudiobookReader/test/reader_behavior_test.dart:188) | Следование проверяется через `containsBlock`. Неверная страница того же длинного блока пройдёт. Нужна ожидаемая позиция внутри отрезка. |
-| [reader_behavior_test.dart:142](D:/Work/Projects/AudiobookReader/test/reader_behavior_test.dart:142) | Сноска проверяется нажатием на знак; нет соседней области, открытых панелей и конкурирующего листания. Поэтому находка №12 незаметна. |
-| [reader_behavior_test.dart:262](D:/Work/Projects/AudiobookReader/test/reader_behavior_test.dart:262) | `demoShow` проверяет отображение уже установленного состояния. Это полезный тест панели, но не перехода после ошибки, исчерпания буфера или восстановления сети. |
-| [reader_behavior_test.dart:243](D:/Work/Projects/AudiobookReader/test/reader_behavior_test.dart:243) | Проверяется установка 30 минут, не истечение таймера, настенные часы, сохранение таймера при смене сеанса и конец главы. |
-| [reader_behavior_test.dart:353](D:/Work/Projects/AudiobookReader/test/reader_behavior_test.dart:353) | Очистка проверяет `totalBytes == 0`. Не проверяет исчезновение готовности главы, очистку проб и остановку скачивания — находка №5 проходит. |
-| [pagination_test.dart:61](D:/Work/Projects/AudiobookReader/test/pagination_test.dart:61) | Проверка смежности диапазонов полезна, но не требует положительного продвижения каждого непустого фрагмента и не доказывает корректную границу строки. Проверка отрисованной высоты не охватывает все страницы и пропускает изображения/заголовки. |
-| [screens_golden_test.dart:251](D:/Work/Projects/AudiobookReader/test/screens_golden_test.dart:251) | Узкий тест называется «плеер играет», но вызывает `demoShow('sleep')`: снимок показывает паузу с таймером. Состояние `playing` на 320 dp этим тестом не проверено. |
+| [reader_behavior_test.dart:105](../../test/reader_behavior_test.dart) | The "place is kept" check verifies the presence of the old **block**, but not the offsets. On a paragraph of several pages the test allows a jump inside it. The belonging of the source `(block, offset)` to the new page is needed. |
+| [reader_behavior_test.dart:188](../../test/reader_behavior_test.dart) | Following is checked through `containsBlock`. A wrong page of the same long block will pass. The expected position inside the segment is needed. |
+| [reader_behavior_test.dart:142](../../test/reader_behavior_test.dart) | The footnote is checked by tapping the mark; there is no neighboring area, open panels or competing paging. Therefore finding #12 goes unnoticed. |
+| [reader_behavior_test.dart:262](../../test/reader_behavior_test.dart) | `demoShow` checks the display of an already set state. This is a useful panel test, but not of a transition after an error, buffer exhaustion or network recovery. |
+| [reader_behavior_test.dart:243](../../test/reader_behavior_test.dart) | Setting 30 minutes is checked, not the timer expiry, wall-clock time, keeping the timer on a session change and the end of the chapter. |
+| [reader_behavior_test.dart:353](../../test/reader_behavior_test.dart) | Clearing checks `totalBytes == 0`. It does not check the disappearance of chapter readiness, the clearing of samples and stopping the download — finding #5 passes. |
+| [pagination_test.dart:61](../../test/pagination_test.dart) | The check of range adjacency is useful, but does not require positive progress of each non-empty fragment and does not prove a correct line boundary. The check of the rendered height does not cover all pages and skips images/headings. |
+| [screens_golden_test.dart:251](../../test/screens_golden_test.dart) | The narrow test is called "player plays" but calls `demoShow('sleep')`: the screenshot shows a pause with a timer. The `playing` state at 320 dp is not checked by this test. |
 
-Нет проверок короткого ключа, паузы → «Читать отсюда», ошибки → ручного перехода → «Слушать», прерывания анимации, пустой главы, длинной подписи, очень длинного заголовка и размеров областей касания. На 320 dp отсутствуют листы внешнего вида/таймера/модели, оглавление и выбор голоса.
+There are no checks of a short key, pause → "Read from here", error → manual transition → "Listen", animation
+interruption, an empty chapter, a long caption, a very long heading and the sizes of touch areas. At 320 dp the
+appearance/timer/model sheets, the table of contents and the voice choice are absent.
 
-**Признаков незагрузившегося основного шрифта нет.** `flutter_test_config.dart:9` ожидает загрузку шрифтов из манифеста; внутренние имена семейств и SHA-256 всех семи TTF проверены, суммы совпали с `SOURCES.txt`. На снимках читаемые Roboto/Merriweather. Golden-тесты здесь маскируют другое: они закрепляют уже имеющиеся перекрытия и усечения, а не подтверждают соответствие требованиям.
+**There are no signs of the main font failing to load.** `flutter_test_config.dart:9` waits for the fonts from the manifest
+to load; the internal family names and the SHA-256 of all seven TTFs were checked, the sums match `SOURCES.txt`. In the
+screenshots Roboto/Merriweather are readable. The golden tests here mask something else: they pin down overlaps and
+truncations already present, rather than confirm conformance to the requirements.
 
-**Внешний вид.** По снимкам это уже интерфейс Material 3: листы, кнопки, чипы, ползунки, состояния и диалоги согласованы. Оснований называть экраны в целом «нарисованными прямоугольниками» нет. Самодельные плитки темы и кнопка воспроизведения используют Material/InkWell и не требуют замены только ради стандартного класса.
+**Appearance.** From the screenshots this is already a Material 3 interface: the sheets, buttons, chips, sliders, states
+and dialogs are consistent. There is no ground to call the screens as a whole "drawn rectangles". The home-made theme
+tiles and the play button use Material/InkWell and need no replacement merely for the sake of a standard class.
 
-Полка и настройки на 320 dp в основном перестраиваются нормально; длинное название книги сокращается в пределах разрешённого исключения. Ошибка 402 правильно переводит кнопки в столбец. Реальные визуальные недостатки — перекрытие текста кнопкой возврата и усечение глав. Переполнение отсутствующих узких листов пока остаётся прогнозом.
+The shelf and settings at 320 dp are mostly rebuilt normally; a long book title is shortened within the allowed
+exception. The 402 error correctly puts the buttons into a column. The real visual shortcomings are the overlap of the text
+by the return button and the truncation of chapters. The overflow of the absent narrow sheets remains a forecast for now.
 
-**Мнение по 18 решениям README.**
+**Opinion on the 18 README decisions.**
 
-| № | Решение |
+| # | Decision |
 |---|---|
-| 1 | **Согласен:** рамка с размерами полезна для веб-прототипа и изолирована от приложения. |
-| 2 | **Согласен:** сдвиг страницы прост и достаточен; требуется корректная обработка прерывания. |
-| 3 | **Не согласен в текущей формулировке:** панели могут перекрывать текст, но видимая сноска должна сохранять приоритет касания. |
-| 4 | **Согласен:** постоянный плеер должен уменьшать страницу; считать нужно всю занятую область, включая дополнительные элементы. |
-| 5 | **Не согласен:** пропуск первого видимого блока противоречит FR-P3 и теряет часть текста при переходе к слушанию. |
-| 6 | **Согласен:** ползунок во время слушания нужен; три одновременные подписи главы не нужны. |
-| 7 | **Согласен:** форма центральной кнопки различает состояния, иконка остаётся основным сигналом. |
-| 8 | **Согласен:** чип и наследование голоса понятны; дополнительно нужен предусмотренный спекой вход до старта. |
-| 9 | **Согласен:** шесть скоростей и короткий список таймера достаточны; лист таймера должен прокручиваться при нехватке места. |
-| 10 | **Не согласен с текущим размещением:** кнопка без ограничения экраном может стать недоступной; один цвет подсветки сам по себе допустим. |
-| 11 | **Согласен:** завершение при выходе из книги соответствует А§6.6; это уже записанное поведение. |
-| 12 | **Согласен:** группы настроек и карандаш экономят место без потери функции. |
-| 13 | **Согласен:** состояния «Продолжить», «новая», «100 %» различимы и не перегружают полку. |
-| 14 | **Согласен:** постоянные строки ошибок добавления с явным закрытием подходят задаче. |
-| 15 | **Согласен для эпиграфа:** не следует угадывать автора по словам; это не отменяет требования различать цитату и стихи. |
-| 16 | **Согласен:** отдельная страница заглавия структурного раздела предсказуема; нулевой `blockCount` нужно обработать отдельно. |
-| 17 | **Согласен для прототипа:** встроенный Roboto обеспечивает воспроизводимость; менять идентификатор приложения без причины не требуется. |
-| 18 | **Согласен:** имеющегося набора rounded-иконок достаточно, дополнительная зависимость не нужна. |
+| 1 | **Agree:** the frame with the sizes is useful for the web prototype and isolated from the app. |
+| 2 | **Agree:** a page shift is simple and sufficient; correct handling of interruption is required. |
+| 3 | **Disagree in the current wording:** the panels may overlap the text, but a visible footnote must keep the touch priority. |
+| 4 | **Agree:** a permanent player must reduce the page; the whole occupied area must be counted, including additional elements. |
+| 5 | **Disagree:** skipping the first visible block contradicts FR-P3 and loses part of the text on moving to listening. |
+| 6 | **Agree:** the slider during listening is needed; three simultaneous chapter captions are not. |
+| 7 | **Agree:** the shape of the central button distinguishes the states, the icon stays the main signal. |
+| 8 | **Agree:** the chip and the inheritance of the voice are clear; the entry before start provided by the spec is additionally needed. |
+| 9 | **Agree:** six speeds and a short timer list are sufficient; the timer sheet must scroll when there is not enough room. |
+| 10 | **Disagree with the current placement:** a button with no limit by the screen may become inaccessible; a single highlight color is acceptable by itself. |
+| 11 | **Agree:** finishing on leaving the book conforms to A§6.6; this is already recorded behavior. |
+| 12 | **Agree:** the settings groups and the pencil save room without loss of function. |
+| 13 | **Agree:** the states "Continue", "new", "100 %" are distinguishable and do not overload the shelf. |
+| 14 | **Agree:** permanent add-error rows with an explicit close suit the task. |
+| 15 | **Agree for the epigraph:** the author should not be guessed from the words; this does not cancel the requirement to distinguish a quotation from poetry. |
+| 16 | **Agree:** a separate title page of a structural section is predictable; a zero `blockCount` needs separate handling. |
+| 17 | **Agree for the prototype:** the built-in Roboto ensures reproducibility; changing the application identifier without a reason is not required. |
+| 18 | **Agree:** the available set of rounded icons is sufficient, an additional dependency is not needed. |
 
-**Противоречий в README фактически пять, не четыре.**
+**There are actually five contradictions in the README, not four.**
 
-| № | Мнение |
+| # | Opinion |
 |---|---|
-| 1. Строки в `app`, запрещённом для `screens` | **Согласен:** расположение в `screens/strings.dart` разумно; А§2 следует уточнить. Палитры через переданные значения сохраняют границу модулей. |
-| 2. Модуль настроек | **Согласен:** `library` подходит для хранения настроек; строковый идентификатор модели не требует зависимости от `tts`. |
-| 3. Старые NOTES против новых решений | **Согласен:** масштаб книги, ползунок при слушании и «100 %» должны следовать позднейшему решению владельца и спеке. |
-| 4. Контраст | **Согласен с числом, не согласен с утверждением об отсутствии использования:** 4,1956:1 подтверждено, выбранная озвученная глава использует эту пару. |
-| 5. FigCraft в AGENTS | **Согласен:** если Flutter-прототип заменил макет по решению владельца, это нужно записать в AGENTS; правило нельзя считать отменённым только из README агента. |
+| 1. Strings in `app`, which is forbidden for `screens` | **Agree:** placing them in `screens/strings.dart` is reasonable; A§2 should be clarified. Palettes through passed values keep the module boundary. |
+| 2. The settings module | **Agree:** `library` suits storing settings; a string model identifier does not require a dependency on `tts`. |
+| 3. The old NOTES versus new decisions | **Agree:** the book scale, the slider during listening and "100 %" must follow the later decision of the owner and the spec. |
+| 4. Contrast | **Agree with the number, disagree with the claim of non-use:** 4.1956:1 is confirmed, the chosen narrated chapter uses this pair. |
+| 5. FigCraft in AGENTS | **Agree:** if the Flutter prototype replaced the mock-up by the owner's decision, this must be recorded in AGENTS; the rule cannot be considered cancelled merely by the agent's README. |
 
-Дополнительно FR-R3 требует отдельного оформления цитат, ссылаясь на NOTES, где определяющего различия нет. Это нужно решить явно, а не сохранять одинаковый стиль молча.
+In addition FR-R3 requires a separate styling of quotations, referring to NOTES, where there is no defining difference.
+This must be decided explicitly, not kept as an identical style silently.
 
-**Что можно убрать без потери функции.**
+**What can be removed without loss of function.**
 
-- Повтор названия главы в шапке, над ползунком и в строке плеера одновременно — особенно заметен на **n320-14**. Оставить подпись там, где она объясняет соответствующее управление.
-- Расчёт тарифа и фиксированную дату из экранов: экрану достаточно готовой оценки.
-- Экранные последовательности управления сеансом вроде `start → pause`: заменить одной командой контроллера.
-- Дублирование состояния очистки между счётчиком аудио, скачиваниями и пробами: один источник готовности уменьшит код и устранит №5.
-- При выпуске — демонстрационное меню, браузерную рамку и fake-реализации. Сейчас они полезны для проверки, удалять их из прототипа незачем.
+- The repetition of the chapter title in the header, above the slider and in the player row at once — especially visible
+  on **n320-14**. Keep the caption where it explains the corresponding control.
+- The tariff computation and the fixed date from the screens: the screen needs only a ready estimate.
+- The screen-level session control sequences like `start → pause`: replace with one controller command.
+- The duplication of the clearing state between the audio counter, the downloads and the samples: one readiness source
+  will reduce the code and eliminate #5.
+- At release — the demo menu, the browser frame and the fake implementations. Now they are useful for checking, there is
+  no reason to remove them from the prototype.
 
-Палитру, встроенные шрифты, простую передачу сервисов и основную композицию экранов сохранять. Главные доработки — контракт позиции/контроллера, границы страниц и проверки неудобных состояний, доступные без телефона.
+Keep the palette, the built-in fonts, the simple passing of services and the main composition of the screens. The main
+rework items are the position/controller contract, the page boundaries and the checks of awkward states available without
+a phone.
 
-ДОРАБОТАТЬ
+REWORK
 
-## Промпт
+## Prompt
+
+*The prompt was given in Russian; translated here.*
 
 ````text
-Ты в том же окружении, что и оператор: читай файлы по абсолютным путям и считай сам, Python у тебя есть. WSL тебе закрыт, поэтому Flutter, тесты и сборку ты не запустишь. НЕ ВЫДУМЫВАЙ измерений; чего нет в файлах — называй прогнозом и говори, чем проверить. Ничего не изменяй.
+You are in the same environment as the operator: read files by their paths and compute yourself, you have Python. WSL is closed to you, so you will not run Flutter, tests and the build. DO NOT INVENT measurements; what is not in the files is called a forecast, and you say how to check it. Change nothing.
 
-ЗАДАЧА. Независимое ревью кликабельного прототипа интерфейса на Flutter. Приложение — читалка книг для Android с озвучкой Google Gemini TTS, один пользователь. Прототип — настоящий код экранов с подставными данными: его экраны и модуль разбивки на страницы станут частью приложения, а подставные реализации (fake_*) будут заменены. К сообщению приложены снимки экранов (412×915 dp и несколько 320×640 при масштабе шрифта 1,3); все 35 лежат в D:\Work\Projects\AudiobookReader\docs\prototype\screens\.
+TASK. An independent review of the clickable interface prototype in Flutter. The app is a book reader for Android with Google Gemini TTS narration, a single user. The prototype is real screen code with fake data: its screens and the pagination module will become part of the app, and the fake implementations (fake_*) will be replaced. Screenshots of the screens are attached to the message (412×915 dp and several 320×640 at font scale 1.3); all 35 are in docs/prototype/screens/.
 
-Диапазон: репозиторий D:\Work\Projects\AudiobookReader, коммит 53c78d3 (git у тебя есть: `git show --stat 53c78d3`).
+Range: the repository root, commit 53c78d3 (you have git: `git show --stat 53c78d3`).
 
-ЧТО ЧИТАТЬ ЦЕЛИКОМ:
-- D:\Work\Projects\AudiobookReader\docs\prototype\README.md — что сделано, что упрощено, 18 решений на подтверждение, найденные противоречия
-- весь D:\Work\Projects\AudiobookReader\lib\ (31 файл, ≈ 210 КБ) и D:\Work\Projects\AudiobookReader\test\
-- D:\Work\Projects\AudiobookReader\scripts\
-- D:\Work\Projects\AudiobookReader\docs\specs\001-first-version.md, D:\Work\Projects\AudiobookReader\docs\ARCHITECTURE.md (версия 3), D:\Work\Projects\AudiobookReader\AGENTS.md
+WHAT TO READ IN FULL:
+- docs/prototype/README.md — what is done, what is simplified, 18 decisions for confirmation, the contradictions found
+- all of lib/ (31 files, ≈ 210 KB) and test/
+- scripts/
+- docs/specs/001-first-version.md, docs/ARCHITECTURE.md (version 3), AGENTS.md
 
-ЧТО ИЗМЕРЕНО ОПЕРАТОРОМ: `scripts/test.sh` в WSL — анализатор без замечаний, 76 тестов прошли (перезапущено оркестратором после агента); веб-сборка отвечает 200 на 127.0.0.1:8642. На телефоне ничего не запускалось. Агент заявляет, что просмотрел каждый снимок; оркестратор просмотрел два.
+WHAT THE OPERATOR MEASURED: `scripts/test.sh` in WSL — the analyzer clean, 76 tests passed (re-run by the orchestrator after the agent); the web build answers 200 on 127.0.0.1:8642. Nothing was run on the phone. The agent claims that it viewed every screenshot; the orchestrator viewed two.
 
-ИЗВЕСТНЫЕ УПРОЩЕНИЯ (не сообщай о них как о находках, но скажи, если упрощение заложено так, что его замена потребует переписать экраны): книга разбивается на страницы целиком, а не порциями (А§5); позиция только в памяти; единица озвучки — блок, а не отрезок А§6.1; звука и медиасессии нет; системные подписи Material не локализованы.
+KNOWN SIMPLIFICATIONS (do not report them as findings, but say if a simplification is built in such a way that replacing it will require rewriting the screens): the book is split into pages whole, not in chunks (A§5); the position is only in memory; the narration unit is a block, not a segment of A§6.1; there is no audio and no media session; the Material system captions are not localized.
 
-ПРИНЦИПЫ ВЛАДЕЛЬЦА: простота (без фреймворков состояния, DI, генерации кода — А§8, А§10); минимум элементов интерфейса; сбой показывается состоянием панели, а не всплывающим окном; всё, что можно, проверяется без телефона; тесты не должны проходить вакуумно.
+THE OWNER'S PRINCIPLES: simplicity (no state frameworks, DI, code generation — A§8, A§10); the minimum of interface elements; a failure is shown by a panel state, not a pop-up window; everything that can be, is checked without a phone; tests must not pass vacuously.
 
-ВОПРОСЫ:
-1. Переиспользуемость. Какие части кода экранов и `reader` придётся переписать, когда подставные реализации заменят настоящими (разбивка порциями, отрезки вместо блоков, настоящий NarrationController с состояниями А§6.6, позиция на диске, хозяин позиции А§5)? Где экран сам принимает решения, которые по А§6.6 принадлежат контроллеру? Где интерфейсы (`lib/playback/narration.dart`, `lib/library/library.dart`, `lib/audio/audio_store.dart`) не выдержат настоящей реализации?
-2. Корректность того, что уже настоящее: `lib/reader/pagination.dart` и `book_page.dart` (потеря или дублирование текста на границе страниц, суррогатные пары, очень длинный абзац, картинка выше страницы, пустая глава, смена размера шрифта с сохранением позиции); жесты листания в `reader_screen.dart` (конфликт касания, долгого нажатия, смахивания и ссылки-сноски; листание во время анимации); следование за голосом и «К месту чтения».
-3. Соответствие спеке и архитектуре: что реализовано вопреки FR-* или А§ (назови идентификатор); граф зависимостей А§2 — проверь импорты сам по файлам.
-4. Тесты: какие из 76 проходят вакуумно или проверяют подставную реализацию вместо поведения экрана; какое заявленное поведение не покрыто; не маскируют ли golden-снимки дефект (например, шрифт не загрузился).
-5. Вид по приложенным снимкам: обрезанный или наезжающий текст, цели касания меньше 48 dp, несогласованность одинаковых элементов, место, где на 320 dp экран ломается. Владелец назвал прежний статический макет «устаревшим по элементам» (палитру и шрифты оставил): есть ли экраны, которые по-прежнему выглядят как нарисованные от руки прямоугольники, а не компоненты Material 3?
-6. Восемнадцать решений из README и четыре противоречия в документах: по каждому — согласен / не согласен, одной строкой с причиной.
-7. Лишнее: что в коде и на экранах можно убрать без потери функции.
+QUESTIONS:
+1. Reusability. Which parts of the screen code and `reader` will have to be rewritten when the fake implementations are replaced with real ones (chunked pagination, segments instead of blocks, a real NarrationController with the states of A§6.6, the position on disk, the position owner of A§5)? Where does the screen itself take decisions that per A§6.6 belong to the controller? Where will the interfaces (`lib/playback/narration.dart`, `lib/library/library.dart`, `lib/audio/audio_store.dart`) not withstand a real implementation?
+2. Correctness of what is already real: `lib/reader/pagination.dart` and `book_page.dart` (loss or duplication of text at a page boundary, surrogate pairs, a very long paragraph, an image taller than the page, an empty chapter, a font size change with keeping the position); the paging gestures in `reader_screen.dart` (a conflict of tap, long press, swipe and footnote link; paging during an animation); following the voice and "To current spot".
+3. Conformance to the spec and the architecture: what is implemented contrary to FR-* or A§ (name the identifier); the dependency graph of A§2 — check the imports yourself by files.
+4. Tests: which of the 76 pass vacuously or check the fake implementation instead of the screen behavior; which declared behavior is not covered; do the golden screenshots mask a defect (for example, the font did not load).
+5. Appearance from the attached screenshots: cut off or overlapping text, touch targets smaller than 48 dp, inconsistency of identical elements, a place where the screen breaks at 320 dp. The owner called the previous static mock-up "outdated in its elements" (he kept the palette and fonts): are there screens that still look like hand-drawn rectangles rather than Material 3 components?
+6. Eighteen decisions from the README and four contradictions in the documents: for each — agree / disagree, in one line with the reason.
+7. Superfluous: what in the code and on the screens can be removed without loss of function.
 
-ФОРМАТ ОТВЕТА (по-русски):
-Таблица находок от самой важной к наименее важной: файл:строка (или номер снимка), требование или раздел, в чём дефект, при каком конкретном входе или действии проявится и чем кончится, как часто (оценка и чем обоснована: код, документация Flutter или предположение), уверенность, минимальная правка. Находка без file:line или номера снимка не считается.
-Отдельно: что придётся переписать (вопрос 1) — списком с оценкой объёма; мнение по 18 решениям и 4 противоречиям; лишнее.
-Если часть в порядке — одной строкой. Возражение с конкретной ссылкой ценнее согласия.
+ANSWER FORMAT (in Russian):
+A table of findings from the most important to the least important: file:line (or screenshot number), requirement or section, what the defect is, under what concrete input or action it will show up and how it will end, how often (an estimate and what it rests on: code, Flutter documentation or assumption), confidence, minimal fix. A finding with no file:line or screenshot number does not count.
+Separately: what will have to be rewritten (question 1) — as a list with a volume estimate; the opinion on the 18 decisions and 4 contradictions; superfluous.
+If a part is fine — one line. An objection with a concrete reference is worth more than agreement.
 
-Последней строкой — вердикт, ровно одно слово заглавными: ПРИНЯТЬ или ДОРАБОТАТЬ.
+The last line — the verdict, exactly one word in capitals: ACCEPT or REWORK.
 ````

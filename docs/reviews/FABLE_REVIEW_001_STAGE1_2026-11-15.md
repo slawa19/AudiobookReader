@@ -1,49 +1,50 @@
-# Внешнее ревью этапа 1 спеки 001 — Fable 5.2, 2026-11-15
+# External review of stage 1 of spec 001 — Fable 5.2, 2026-11-15
 
-По решению владельца 2026-11-15 (эксперимент, [EXPERIMENT_CODEX_IMPL.md](EXPERIMENT_CODEX_IMPL.md)) код этапа 1
-писали агенты Codex, а внешнее ревью пачки делали два отдельных агента Fable 5.2 — не Codex, как требует `AGENTS.md`
-в обычном порядке. Ревью шло на `main` в состоянии `af08efe`, в отдельном дереве; ревьюерам было разрешено
-доказывать находки временными тестами. Источником правды этот файл не является: им остаются спека и код.
+By the owner's decision of 2026-11-15 (an experiment, [EXPERIMENT_CODEX_IMPL.md](EXPERIMENT_CODEX_IMPL.md)), the stage 1
+code was written by Codex agents, and the external review of the batch was done by two separate Fable 5.2 agents — not
+Codex, as `AGENTS.md` requires in the usual order. The review ran on `main` at `af08efe`, in a separate worktree; the
+reviewers were allowed to prove findings with temporary tests. This file is not a source of truth: the spec and the code
+remain so.
 
-Постановка обоим: код писал другой движок, оркестратор принял его по отчётам и зелёным тестам; найти ошибки
-корректности против А§2–8 и FR этапа 1; каждую находку — с `файл:строка`, конкретным входом, пометкой
-«подтверждено тестом / прогноз» и оценкой частоты; вердикт СЛИВАТЬ или ДОРАБОТАТЬ.
+The brief to both: the code was written by another engine, the orchestrator accepted it from reports and green tests;
+find correctness errors against A§2–8 and the stage 1 FRs; each finding with `file:line`, a concrete input, a
+"confirmed by test / forecast" mark and a frequency estimate; verdict MERGE or REWORK.
 
-Оба вердикта — **ДОРАБОТАТЬ**. Вакуумных тестов в разборщиках не найдено, в приложении — одна проверка.
+Both verdicts — **REWORK**. No vacuous tests were found in the parsers, one check in the app.
 
-## Ревьюер 1: `lib/book`
+## Reviewer 1: `lib/book`
 
-| № | Поднято | Подтверждено | Решение оркестратора |
+| # | Raised | Confirmed | Orchestrator's decision |
 |---|---|---|---|
-| 1 | EPUB: именованные сущности XHTML (`&nbsp;`, `&mdash;`…) остаются в тексте и уходят в озвучку; `<p>&nbsp;</p>` — читаемый абзац | тест | исправить; А§3 уточнена: неизвестная — сущность не из набора XML и XHTML |
-| 2 | незакрытый пустой элемент (`br`, `hr`, `empty-line`, `image`) молча теряет остаток раздела | тест | исправить |
-| 3 | FB2: `binary` с неверным base64 отклоняет всю книгу | тест | исправить: картинка считается отсутствующей |
-| 4 | FB2: название главы из нескольких `<p>` склеено без пробела; знак сноски в названии | тест | исправить |
-| 5 | EPUB: `mimetype` с переводом строки — «формат не поддерживается» | тест | исправить |
-| 6 | EPUB: текст в `div`/`li`/`td` дробится на блоки по строчным тегам вне короткого списка | тест | исправить: блок рвут только блочные элементы |
-| 7 | EPUB: запись оглавления на документ без блоков отдаёт название следующей главе | тест | исправить; А§3 уточнена |
-| 8 | EPUB: внешняя ссылка в оглавлении отклоняет всю книгу | тест | исправить: запись пропускается |
-| 9 | EPUB: фрагмент с не-ASCII идентификатором не находится | тест | исправить |
-| 10 | FB2: windows-1250, windows-1252, koi8-r — отказ | тест | 1250 и 1252 добавить (интерфейс на pl и de); koi8-r — отказ, ждёт настоящей книги |
-| 11 | строгость XML: необъявленный префикс, голый `&`, `--` в комментарии, `doctype` строчными, пустая строка перед `<?xml`, управляющий знак, `itemref` без пункта | тест | **отказ**: по А§3 новое повреждение добавляется правилом и образцом, когда встретится на книге владельца |
-| 12а | EPUB: ссылка без `noteref` на элемент-сноску — текст сноски недостижим | тест | исправить: ссылка на элемент-сноску — `noteRef` |
-| 12б | `<br/>` и пробел в начале следующей строки | тест | исправить |
-| 12в | документ дважды в `spine`; квадратичность на абзаце в мегабайт; архив целиком в памяти; `body name="comments"`; строфы | тест / оценка | **отказ**: редкость или буква спеки; размер файла ограничен на входе (находка 4 ревьюера 2) |
+| 1 | EPUB: named XHTML entities (`&nbsp;`, `&mdash;`…) stay in the text and go into narration; `<p>&nbsp;</p>` is a readable paragraph | test | fix; A§3 clarified: an unknown entity is one outside the XML and XHTML sets |
+| 2 | an unclosed empty element (`br`, `hr`, `empty-line`, `image`) silently loses the rest of the section | test | fix |
+| 3 | FB2: a `binary` with invalid base64 rejects the whole book | test | fix: the image is considered absent |
+| 4 | FB2: a chapter title made of several `<p>` is glued without a space; a footnote mark in the title | test | fix |
+| 5 | EPUB: `mimetype` with a line feed — "format not supported" | test | fix |
+| 6 | EPUB: text in `div`/`li`/`td` is split into blocks by inline tags outside a short list | test | fix: only block elements break a block |
+| 7 | EPUB: a table-of-contents entry for a document without blocks gives its title to the next chapter | test | fix; A§3 clarified |
+| 8 | EPUB: an external link in the table of contents rejects the whole book | test | fix: the entry is skipped |
+| 9 | EPUB: a fragment with a non-ASCII identifier is not found | test | fix |
+| 10 | FB2: windows-1250, windows-1252, koi8-r — rejected | test | add 1250 and 1252 (the interface is in pl and de); koi8-r — rejected, waits for a real book |
+| 11 | XML strictness: an undeclared prefix, a bare `&`, `--` in a comment, a lowercase `doctype`, a blank line before `<?xml`, a control character, an `itemref` without an item | test | **rejected**: per A§3 a new corruption is added as a rule and a sample when it turns up on the owner's book |
+| 12a | EPUB: a link without `noteref` to a footnote element — the footnote text is unreachable | test | fix: a link to a footnote element is a `noteRef` |
+| 12b | `<br/>` and a space at the start of the next line | test | fix |
+| 12c | a document twice in `spine`; quadratic behavior on a one-megabyte paragraph; the whole archive in memory; `body name="comments"`; stanzas | test / estimate | **rejected**: rarity or the letter of the spec; the file size is limited at input (finding 4 of reviewer 2) |
 
-## Ревьюер 2: `library`, `platform`, `app`, `reader`
+## Reviewer 2: `library`, `platform`, `app`, `reader`
 
-| № | Поднято | Подтверждено | Решение оркестратора |
+| # | Raised | Confirmed | Orchestrator's decision |
 |---|---|---|---|
-| 1 | одна повреждённая папка книги или `settings.json` — приложение не запускается; удаление книги не симметрично добавлению | тест | исправить всё: пропуск книги, умолчания настроек, удаление через `tmp/`, экран ошибки запуска |
-| 2 | `singleTop`: «Открыть с помощью» при живом приложении создаёт вторую Activity и вторую библиотеку над той же папкой | Dart — тест; Android — прогноз | исправить (`singleTask`); проверить на телефоне |
-| 3 | одна ошибка записи отравляет писателя: повтор старой ошибки, три строки отказа и закрытая книга на каждый уход в фон, потерянное изменение | тест | исправить |
-| 4 | добавление: ≈ 22 МБ памяти на 1 МБ файла, размер не ограничен | тест (память) | исправить: добавление по пути, предел размера |
-| 5 | системный «жирный шрифт»: отрисовка шире измерения, строка уходит под низ страницы | виджет-тест; Samsung — прогноз | исправить в `reader` после перевода экрана |
-| 6 | граница страницы внутри слова длиннее строки: кусок рисуется на строку выше посчитанного | тест | исправить в `reader` после перевода экрана |
-| 7 | FB2 из «Моих файлов» с непрозрачным URI не предложит приложение | прогноз | добавлены два MIME; остальное — приёмка FR-L2 на телефоне, обход — «+» |
-| 8 | intent запуска обрабатывается при каждом пересоздании Activity | прогноз | исправить; проверить на телефоне |
-| 9 | мелкое: «+» молчит во время разбора; требование `DISPLAY_NAME`; копии в `cacheDir` не чистятся; `deletionBytes` без потребителя; вакуумная проверка диалога удаления; удаление без обработки ошибки; позиция в самом конце блока | тест / прогноз | исправить |
-| 9 | потерянный результат выбора файла при пересоздании Activity; `loadBook` сразу после `deleteBook`; CRLF в `.env` | прогноз / тест | **отказ**: редкость либо недостижимо с экрана |
+| 1 | one corrupted book folder or `settings.json` — the app does not start; deleting a book is not symmetric with adding | test | fix all: skip the book, default settings, deletion via `tmp/`, a startup error screen |
+| 2 | `singleTop`: "Open with" while the app is alive creates a second Activity and a second library over the same folder | Dart — test; Android — forecast | fix (`singleTask`); check on the phone |
+| 3 | one write error poisons the writer: a repeat of the old error, three failure lines and a closed book on every move to the background, a lost change | test | fix |
+| 4 | adding: ≈ 22 MB of memory per 1 MB of file, size not limited | test (memory) | fix: adding by path, a size limit |
+| 5 | the system "bold font": drawing is wider than the measurement, a line goes under the bottom of the page | widget test; Samsung — forecast | fix in `reader` after the screen is ported |
+| 6 | a page boundary inside a word longer than a line: the piece is drawn one line above the computed one | test | fix in `reader` after the screen is ported |
+| 7 | an FB2 from "My Files" with an opaque URI will not offer the app | forecast | two MIME types added; the rest is acceptance FR-L2 on the phone, the workaround is "+" |
+| 8 | the launch intent is processed on every Activity recreation | forecast | fix; check on the phone |
+| 9 | minor: "+" is silent during parsing; the `DISPLAY_NAME` requirement; copies in `cacheDir` are not cleaned; `deletionBytes` has no consumer; a vacuous check of the deletion dialog; deletion without error handling; the position at the very end of a block | test / forecast | fix |
+| 9 | a lost file-pick result on Activity recreation; `loadBook` right after `deleteBook`; CRLF in `.env` | forecast / test | **rejected**: rarity, or unreachable from the screen |
 
-Что сделано по принятым находкам — в истории git (ветки `s001-bookfix`, `s001-storefix`, `s001-pages` и следующая
-за ней правка `reader`) и в Changelog спеки 001.
+What was done for the accepted findings is in the git history (branches `s001-bookfix`, `s001-storefix`, `s001-pages`
+and the `reader` fix that followed it) and in the Changelog of spec 001.
