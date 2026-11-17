@@ -49,7 +49,7 @@ void main() {
     await tapRightThird(tester);
     await advance(tester, const Duration(milliseconds: 600));
     final saved = p.library.positionOf('kapitanskaya')!;
-    expect(saved.block, greaterThan(39), reason: 'the screen saves the position itself after an explicit turn (А§5)');
+    expect(saved.block, greaterThan(39), reason: 'the screen saves the position itself after an explicit turn (A§5)');
     await tester.tap(find.byKey(const Key('error-listen')));
     await tester.pump();
     expect(p.narration.block, saved.block);
@@ -94,7 +94,7 @@ void main() {
     expect(page.firstOffset, greaterThan(0), reason: 'the page begins with a paragraph tail');
     final book = st.widget.book;
     // The expected place is the first sentence start on the page, found by an independent check against the text of
-    // rules А§6.1, not by the same `sentenceStarts` (logic review of 2026-11-14).
+    // rules A§6.1, not by the same `sentenceStarts` (logic review of 2026-11-14).
     final expected = firstSentenceStartOnPage(book, page);
     expect(expected, isNotNull);
     expect(expected, isNot(ReadingPosition(page.firstBlock, page.firstOffset)),

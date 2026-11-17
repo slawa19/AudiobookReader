@@ -21,7 +21,7 @@ void main() {
       'where I stopped',
       (tester) async {
     // FR-L4 and CONCEPT §3: the “Continue” card shows the chapter of the reading position. During listening the
-    // position is written by the controller (А§5) — the chapter title must go together with it.
+    // position is written by the controller (A§5) — the chapter title must go together with it.
     final p = await pumpPrototype(tester, demoAcceleration: 1);
     await openKapitanskaya(tester, p); // the saved position is in chapter II
     await listenFromPanel(tester);

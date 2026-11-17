@@ -8,7 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'support/flows.dart';
 import 'support/harness.dart';
 
-/// A wall clock that the test advances itself: the sleep timer counts minutes by it (А§6.6).
+/// A wall clock that the test advances itself: the sleep timer counts minutes by it (A§6.6).
 class TestClock {
   DateTime now = DateTime(2026, 11, 14, 12, 30);
   DateTime call() => now;

@@ -338,7 +338,7 @@ void main() {
     expect(h.engine.calls, isEmpty);
     h.clock.advance(const Duration(milliseconds: 100));
     await ioSettled();
-    // Ready audio beyond the gap also limits the purchase (А§6.3).
+    // Ready audio beyond the gap also limits the purchase (A§6.3).
     expect(h.engine.calls, isEmpty);
     h.clock.advance(const Duration(seconds: 60));
     await h.calls(2);

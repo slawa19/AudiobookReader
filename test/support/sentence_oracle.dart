@@ -1,5 +1,5 @@
 // Independent check of a sentence start for the start-position tests (FR-P3). Written anew with regular
-// expressions from the text of rules А§6.1 ("end mark and a space"; (i) not after a one-letter word; (ii) next
+// expressions from the text of rules A§6.1 ("end mark and a space"; (i) not after a one-letter word; (ii) next
 // comes an uppercase letter, a digit or an opening quote, including after a dash and a space), rather than by
 // calling `lib/tts/sentences.dart`: otherwise the test would compare the production function with itself
 // (logic review 2026-11-14).

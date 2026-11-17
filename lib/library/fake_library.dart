@@ -7,7 +7,7 @@ import '../book/model.dart';
 import 'library.dart';
 
 /// The prototype's fake shelf: several books, two of them with real text from assets/demo/.
-/// Writes nothing to disk and goes nowhere. In the real app `Library` on files replaces it (А§4).
+/// Writes nothing to disk and goes nowhere. In the real app `Library` on files replaces it (A§4).
 class FakeLibrary extends Library {
   FakeLibrary({DateTime? now}) : _now = now ?? DateTime(2026, 11, 14, 12, 30) {
     _entries.addAll(_demoEntries(_now));
@@ -183,7 +183,7 @@ class FakeLibrary extends Library {
   ];
 
   /// Books produced from the simulated picker's "files" (id — like the first characters of sha256 in the real one,
-  /// А§4).
+  /// A§4).
   static final _demoFileBooks = <String, ShelfEntry Function(DateTime addedAt)>{
     'duplicate': (at) => ShelfEntry(
         id: 'zapiski', title: 'Записки охотника', author: 'Иван Тургенев', addedAt: at, bookBytes: 1300 * 1024),

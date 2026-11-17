@@ -20,9 +20,9 @@ const defaultFontStep = 2;
 /// Player speeds (FR-P5).
 const speeds = <double>[0.75, 1, 1.25, 1.5, 1.75, 2];
 
-/// App settings (А§4). FileLibrary saves them to settings.json; the prototype — in memory.
+/// App settings (A§4). FileLibrary saves them to settings.json; the prototype — in memory.
 ///
-/// The voice and model are stored as strings: `library` does not know the `tts` module (А§2). Defaults are passed by
+/// The voice and model are stored as strings: `library` does not know the `tts` module (A§2). Defaults are passed by
 /// `app`.
 class AppSettings extends ChangeNotifier {
   AppSettings({

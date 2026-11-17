@@ -61,7 +61,7 @@ class Block {
     if (imageId != null) 'imageId': imageId,
   };
 
-  /// Blocks that are read aloud (А§3).
+  /// Blocks that are read aloud (A§3).
   bool get isSpoken =>
       kind == BlockKind.heading ||
       kind == BlockKind.paragraph ||
@@ -142,7 +142,7 @@ class EmptyBookException implements Exception {
 }
 
 class Book {
-  /// A section without blocks of its own (`blockCount == 0`) does not become a chapter: the linear partition of А§3 —
+  /// A section without blocks of its own (`blockCount == 0`) does not become a chapter: the linear partition of A§3 —
   /// each block in exactly one chapter — is not violated without it, and such a section has no page. Its heading, if it
   /// is in the file, is a block of the neighboring chapter.
   Book({
@@ -197,7 +197,7 @@ class Book {
     'notes': [for (final n in notes.values) n.toJson()],
   };
 
-  /// Number of characters before the start of block [block] (А§4, `charsBefore`).
+  /// Number of characters before the start of block [block] (A§4, `charsBefore`).
   int charsBefore(int block) => _charsBefore[block.clamp(0, blocks.length)];
 
   /// Fraction of the book by characters for a place (block, offset).

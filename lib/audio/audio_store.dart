@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 // Storage for the audio of segments and probes (ARCHITECTURE.md, section 6.5). Screens only need the space used from
-// here; only `playback` deletes audio (А§2, А§4).
+// here; only `playback` deletes audio (A§2, A§4).
 
 abstract class AudioStore extends ChangeNotifier {
   String get formatId;

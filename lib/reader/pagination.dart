@@ -37,7 +37,7 @@ class PageFragment {
   bool get isImage => imageSize != null;
 }
 
-/// A page: a "start" and "end" pair (А§5) plus the layout of the pieces.
+/// A page: a "start" and "end" pair (A§5) plus the layout of the pieces.
 class BookPageLayout {
   const BookPageLayout({required this.chapter, required this.fragments});
 

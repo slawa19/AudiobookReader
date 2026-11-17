@@ -1,4 +1,4 @@
-// User journeys of “Download chapter” (FR-D2, А§6.7) and the “narrated” mark.
+// User journeys of “Download chapter” (FR-D2, A§6.7) and the “narrated” mark.
 
 import 'package:audiobook_reader/library/library.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,7 +20,7 @@ void main() {
   testWidgets('chapter narrated → changed the book voice → table of contents: the chapter is no longer “narrated”, '
       'there is an estimate',
       (tester) async {
-    // FR-D2: “narrated” follows the readiness rule А§6.1 for the CURRENT voice profile. Chapter audio in another voice
+    // FR-D2: “narrated” follows the readiness rule A§6.1 for the CURRENT voice profile. Chapter audio in another voice
     // is no good for the new voice: while listening it will be synthesized and paid for again.
     final p = await pumpPrototype(tester);
     await openKapitanskaya(tester, p, at: const ReadingPosition(3, 0)); // chapter I is narrated in the demo data
@@ -46,7 +46,7 @@ void main() {
 
   testWidgets('“Download chapter” → half is ready → “Stop”: the estimate is the remainder, not the whole '
       'chapter', (tester) async {
-    // FR-D2: "after a manual stop, an offer to download again with the estimate of the remainder"; А§6.7: the estimate
+    // FR-D2: "after a manual stop, an offer to download again with the estimate of the remainder"; A§6.7: the estimate
     // is based on the missing fingerprints of the chapter.
     final p = await pumpPrototype(tester);
     await openKapitanskaya(tester, p); // chapter II, not narrated

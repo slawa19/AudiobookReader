@@ -8,7 +8,7 @@ class IncomingFile {
   final String name;
 }
 
-/// Receiving files without knowing Android (А§2, А§7).
+/// Receiving files without knowing Android (A§2, A§7).
 ///
 /// The receiver owns every copy it is handed: after adding (including a failure
 /// or a detected duplicate) it deletes the file [IncomingFile.path] in `finally`.

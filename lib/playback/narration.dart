@@ -5,7 +5,7 @@ import '../library/library.dart';
 import '../tts/segments.dart';
 import '../tts/sentences.dart';
 
-/// The listening states are exactly the table of А§6.6, there are no others.
+/// The listening states are exactly the table of A§6.6, there are no others.
 enum NarrationState { idle, preparing, playing, waiting, paused, stopped }
 
 enum StopReason { error, endOfBook }
@@ -67,7 +67,7 @@ int? spokenBlockFrom(Book book, int from, {required bool forward}) {
 
 enum SleepKind { minutes, endOfChapter }
 
-/// The sleep timer belongs to the controller, not the session (А§6.6); minutes — by the wall clock since it was set.
+/// The sleep timer belongs to the controller, not the session (A§6.6); minutes — by the wall clock since it was set.
 @immutable
 class SleepTimer {
   const SleepTimer.minutes(this.minutes, this.setAt) : kind = SleepKind.minutes;
@@ -85,10 +85,10 @@ class SleepTimer {
   }
 }
 
-/// The single place where the queue, player, session and position meet (А§6.6). The screen subscribes to it and decides
+/// The single place where the queue, player, session and position meet (A§6.6). The screen subscribes to it and decides
 /// nothing itself: every user action is one command, not a sequence of calls.
 ///
-/// The prototype's fake implementation and the real one (А§6.3–6.6) fulfill the same contract.
+/// The prototype's fake implementation and the real one (A§6.3–6.6) fulfill the same contract.
 abstract class NarrationController extends ChangeNotifier {
   NarrationState get state;
   StopReason? get stopReason;
@@ -97,7 +97,7 @@ abstract class NarrationController extends ChangeNotifier {
   /// The book of the current listening.
   String? get bookId;
 
-  /// The voiced block and the fraction played in it (for highlighting and following the voice, А§5).
+  /// The voiced block and the fraction played in it (for highlighting and following the voice, A§5).
   int? get block;
   double get blockProgress;
 
@@ -105,19 +105,19 @@ abstract class NarrationController extends ChangeNotifier {
   ReadingPosition? get sounding;
 
   /// The start of the voiced unit (a segment; in the prototype — a block or its part from the chosen sentence). This is
-  /// the listening place that the controller saves (А§4, А§5).
+  /// the listening place that the controller saves (A§4, A§5).
   ReadingPosition? get unitStart;
 
   double get speed;
   SleepTimer? get sleepTimer;
   DateTime now();
 
-  /// "Active" in the sense of А§5: the controller writes the position.
+  /// "Active" in the sense of A§5: the controller writes the position.
   bool get isActive => state != NarrationState.idle && state != NarrationState.stopped;
 
   /// A counter of explicit user commands that start audio or change its place: "Listen" (from `idle`, a pause,
   /// a stop), "Read from here", "back", "forward", chapter selection — wherever they come from: the screen, the
-  /// notification, the headset. The screen turns following the voice on when the counter changed (А§5, А§6.6).
+  /// notification, the headset. The screen turns following the voice on when the counter changed (A§5, A§6.6).
   /// Automatic transitions (the next segment, end of chapter, a voice or model change) do not change it.
   int get commandRevision;
 
@@ -131,7 +131,7 @@ abstract class NarrationController extends ChangeNotifier {
   void listen(Book book, PageRange page);
 
   /// "Listen" in the player panel: from `paused` — from the pause place; from `stopped` — a new session from the
-  /// current saved position (the screen may have rewritten it after an explicit move, А§5).
+  /// current saved position (the screen may have rewritten it after an explicit move, A§5).
   void resume();
 
   void pause();
@@ -142,17 +142,17 @@ abstract class NarrationController extends ChangeNotifier {
   void readFrom(Book book, int block);
 
   /// Navigation via the table of contents: if a session of this book is running — a place change with the previous
-  /// intent (А§5, А§6.6); without a session it does nothing.
+  /// intent (A§5, A§6.6); without a session it does nothing.
   void moveIfListening(Book book, int block);
 
-  /// The player's "Back" and "forward" — by paragraphs (А§6.6): to the start of the next readable block; to the start
+  /// The player's "Back" and "forward" — by paragraphs (A§6.6): to the start of the next readable block; to the start
   /// of the current one, and from its start — of the previous one. The intent is kept.
   void next();
   void previous();
 
   /// "Close" (FR-P8) or closing the book: the session ends (`idle`), the sleep timer is cleared, then
   /// [screenPosition] — the place on the screen — is passed to the reading-position writer; from then on the screen
-  /// writes it (А§5). The listening place is not forgotten in this: the next "Listen" continues from it if it is on the
+  /// writes it (A§5). The listening place is not forgotten in this: the next "Listen" continues from it if it is on the
   /// screen.
   void close({ReadingPosition? screenPosition});
 
@@ -168,13 +168,13 @@ abstract class NarrationController extends ChangeNotifier {
   /// model does not come here (rule j).
   void restartSession();
 
-  /// "Clear narration" (FR-M3, А§4): the session ends, "Download chapter" stops, chapter readiness and
+  /// "Clear narration" (FR-M3, A§4): the session ends, "Download chapter" stops, chapter readiness and
   /// probes are reset, the audio of all books and probes is deleted. One operation.
   void clearAllNarration();
 
-  /// "Delete narration" of a book (FR-D3, А§4).
+  /// "Delete narration" of a book (FR-D3, A§4).
   void deleteBookNarration(String bookId);
 
-  /// Deleting a book (FR-L5, А§4): the same as [deleteBookNarration], plus the book folder from the shelf.
+  /// Deleting a book (FR-L5, A§4): the same as [deleteBookNarration], plus the book folder from the shelf.
   void deleteBook(String bookId);
 }

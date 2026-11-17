@@ -1,4 +1,4 @@
-// The start rule of “Listen” A–E (owner remark of 2026-11-14; spec 001, FR-P3; А§5).
+// The start rule of “Listen” A–E (owner remark of 2026-11-14; spec 001, FR-P3; A§5).
 // (а) and (д) are in listen_owner_scenario_test.dart.
 
 import 'package:audiobook_reader/audio/audio_store.dart';
@@ -43,7 +43,7 @@ Book bookOf(List<String> paragraphs) => Book(
     );
 
 void main() {
-  group('sentence boundaries (А§6.1, rule 2)', () {
+  group('sentence boundaries (A§6.1, rule 2)', () {
     test('an end mark and a space; closing quotes and brackets do not interfere', () {
       // “пять” after an ellipsis is lowercase: a continuation of the sentence (rule (ii)).
       const t = 'Раз. Два! «Три?» Четыре… пять (шесть.) Семь';

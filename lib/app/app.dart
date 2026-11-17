@@ -35,7 +35,7 @@ Locale resolveLocale(List<Locale>? preferred, Iterable<Locale> supported) {
   return const Locale('en');
 }
 
-/// The whole prototype: all implementations are fakes (А§2 — behind the module interfaces), no network.
+/// The whole prototype: all implementations are fakes (A§2 — behind the module interfaces), no network.
 class Prototype extends AppAssembly {
   Prototype._({
     required this.library,
@@ -142,7 +142,7 @@ class _AudiobookAppState extends State<AudiobookApp> with WidgetsBindingObserver
   @override
   void initState() {
     super.initState();
-    // First version is portrait only (gesture review decision F, А§7); the manifest says the same.
+    // First version is portrait only (gesture review decision F, A§7); the manifest says the same.
     lockPortrait();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {

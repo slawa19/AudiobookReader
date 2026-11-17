@@ -94,7 +94,7 @@ class ReaderScreenState extends State<ReaderScreen> {
   /// item 3).
   ReadingPosition? _selectedAt;
 
-  /// The last seen counter of explicit controller commands (А§5): if it changed — following is turned on.
+  /// The last seen counter of explicit controller commands (A§5): if it changed — following is turned on.
   int _seenCommands = 0;
   ReadingPosition? _lastSounding;
 
@@ -102,7 +102,7 @@ class ReaderScreenState extends State<ReaderScreen> {
   /// the page came back (gesture review decision C).
   bool _grabbedAuto = false;
 
-  /// Protection against a follow-up touch (gesture review decision A, А§8.1): after the layer under the finger changes,
+  /// Protection against a follow-up touch (gesture review decision A, A§8.1): after the layer under the finger changes,
   /// the screen does not accept touches for [layerSettleTime].
   bool _guarded = true;
   Timer? _guardTimer;
@@ -148,7 +148,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     s.downloads.removeListener(_rebuild);
     s.settings.removeListener(_rebuild);
     s.library.removeListener(_rebuild);
-    // Closing the book ends listening (А§6.6); the controller already writes the position by this time.
+    // Closing the book ends listening (A§6.6); the controller already writes the position by this time.
     if (narration.bookId == book.id && narration.state != NarrationState.idle) narration.close();
     unawaited(s.flush());
     setImmersive(false);
@@ -314,7 +314,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     _resetPages();
     _markLastAfterFrame();
     final generation = _generation;
-    // In stopped the controller position stays until the reader explicitly moves (А§5).
+    // In stopped the controller position stays until the reader explicitly moves (A§5).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || generation != _generation) return;
       if (move) _reportShownPage();
@@ -384,7 +384,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     final changingMetrics = _pendingLayout != null && _pendingMetrics != _shownMetrics;
     if (!changingMetrics && target != null &&
         (!user || target == _page)) {
-      // Returning to any already computed place keeps the page and the text position (А§5).
+      // Returning to any already computed place keeps the page and the text position (A§5).
       _goToCalculatedPage(target, user: user);
       return;
     }
@@ -610,7 +610,7 @@ class ReaderScreenState extends State<ReaderScreen> {
   }
 
   /// The user changed the page themselves. With this book's panel open — including in `stopped` — following
-  /// is turned off: the place on screen is now chosen by the user (А§5, logic review item 1).
+  /// is turned off: the place on screen is now chosen by the user (A§5, logic review item 1).
   void _userMoved() {
     if (_mine) {
       _following = false;
@@ -696,13 +696,13 @@ class ReaderScreenState extends State<ReaderScreen> {
     }
   }
 
-  /// The screen writes the position only while listening is not active (А§5).
+  /// The screen writes the position only while listening is not active (A§5).
   void _saveScreenPosition() {
     if (narration.bookId == book.id && narration.isActive) return;
     s.library.savePosition(book.id, _pagePosition, fraction: _fraction);
   }
 
-  // --- following the voice (А§5, FR-P4) ---------------------------------------------------------------
+  // --- following the voice (A§5, FR-P4) ---------------------------------------------------------------
 
   /// The place that is voiced now in this book — as the controller reports it.
   ReadingPosition? get soundingPosition {
@@ -717,7 +717,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     final at = soundingPosition;
     _lastSounding = at;
     // An explicit user command — wherever it comes from (screen, notification, headset) — turns following on
-    // (А§5, logic review item 5). Automatic transitions do not change the counter.
+    // (A§5, logic review item 5). Automatic transitions do not change the counter.
     final command = narration.commandRevision != _seenCommands;
     if (command) {
       _seenCommands = narration.commandRevision;
@@ -725,7 +725,7 @@ class ReaderScreenState extends State<ReaderScreen> {
         _following = true;
         // An explicit audio command cancels the previous paging, even if the voice stayed
         // on the current page: the completion of that animation is no longer the reader's choice.
-        // While a finger holds the page, its gesture keeps priority (А§5).
+        // While a finger holds the page, its gesture keeps priority (A§5).
         if (_dragStartPage == null) {
           _cancelPageRequest();
           if (_pc != null && _animatingTo != null) _resetPages();
@@ -870,7 +870,7 @@ class ReaderScreenState extends State<ReaderScreen> {
 
   // "Listen" from a pause and from the error panel, "back", "forward" — controller commands; following is turned on by
   // its counter of explicit commands (_onNarration), the same for the screen, the notification and the headset (rule a,
-  // А§5).
+  // A§5).
   void _play() => narration.resume();
   void _previous() => narration.previous();
   void _next() => narration.next();
@@ -930,7 +930,7 @@ class ReaderScreenState extends State<ReaderScreen> {
     final downloading = task != null && task.bookId == book.id && task.status == DownloadStatus.running;
     final downloadLine = downloading ? DownloadLine(task: task, onStop: s.downloads.stop) : null;
     // A layer change under the finger — the reading bottom panel ↔ the player panel, the player panel view (controls,
-    // error, end of book), the download row — protection against a follow-up touch (gesture review decision A, А§8.1).
+    // error, end of book), the download row — protection against a follow-up touch (gesture review decision A, A§8.1).
     // Showing and hiding the reading panels by a tap in the center is not counted as a layer under the finger: they
     // appear at the edges, not under the finger.
     final playerKind = !_mine
@@ -946,7 +946,7 @@ class ReaderScreenState extends State<ReaderScreen> {
       _messageBody = null;
       _guardLayer();
     }
-    // The system "Back" (gesture review decision J, А§8.1): 1) clear the paragraph selection; 2) a sheet, dialog or
+    // The system "Back" (gesture review decision J, A§8.1): 1) clear the paragraph selection; 2) a sheet, dialog or
     // footnote is closed by the navigator — they are their own routes; 3) the reading panels are hidden — show them,
     // the book is not closed; 4) the panels are shown — close the book. The Android edge gesture is "Back": an
     // accidental swipe from the edge in immersive reading only shows the panels. The "Back" arrow in the header closes

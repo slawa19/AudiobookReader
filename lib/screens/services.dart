@@ -9,8 +9,8 @@ import '../playback/tariffs.dart';
 import '../playback/voice_sample.dart';
 import 'reader_sheets.dart';
 
-/// Everything the screens get from the assembly root (`app`): dependencies are passed into constructors (А§8).
-/// Deleting audio and books are [narration] commands (А§4): the screen does not assemble them from several calls.
+/// Everything the screens get from the assembly root (`app`): dependencies are passed into constructors (A§8).
+/// Deleting audio and books are [narration] commands (A§4): the screen does not assemble them from several calls.
 class AppServices {
   AppServices({
     required this.library,

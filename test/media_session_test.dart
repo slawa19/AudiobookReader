@@ -74,7 +74,7 @@ void main() {
     (NarrationState.stopped, false, false, false, AudioProcessingState.idle, 'Ended'),
   ];
   for (final row in rows) {
-    test('А§6.6: ${row.$1.name}', () {
+    test('A§6.6: ${row.$1.name}', () {
       final actual = mediaStateFor(row.$1, strings, reason: StopReason.endOfBook);
       expect(
         (actual.session, actual.foreground, actual.playing, actual.processing, actual.message),

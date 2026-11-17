@@ -1,4 +1,4 @@
-// A small XML tree. Recovers only unclosed elements and unknown entities (А§3).
+// A small XML tree. Recovers only unclosed elements and unknown entities (A§3).
 // The DTD is neither loaded nor executed: the parser makes no external requests.
 import 'dart:convert';
 

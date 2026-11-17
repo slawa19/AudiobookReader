@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 import '../library/incoming_files.dart';
 
-/// Receiving files on Android (А§7). Created in app; the prototype does not use this implementation.
+/// Receiving files on Android (A§7). Created in app; the prototype does not use this implementation.
 class AndroidIncomingFiles implements IncomingFiles {
   static const _methods = MethodChannel('audiobook_reader/incoming_files');
   static const _events = EventChannel('audiobook_reader/incoming_files/events');

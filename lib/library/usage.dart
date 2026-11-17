@@ -1,4 +1,4 @@
-/// Paid tokens of one model for a month. The library does not know the tariffs (А§2).
+/// Paid tokens of one model for a month. The library does not know the tariffs (A§2).
 class UsageTokens {
   const UsageTokens({required this.audioTokens, required this.inputTokens});
 

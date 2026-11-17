@@ -54,7 +54,7 @@ class PlayerPanel extends StatelessWidget {
 
   /// "Listen" (from a pause and from the error panel), "back" and "forward": actions with which the user starts
   /// or changes the audio place themselves. These are controller commands; the screen turns following on by the counter
-  /// of explicit controller commands (rule a, А§5) — the same as for commands from the notification and the headset.
+  /// of explicit controller commands (rule a, A§5) — the same as for commands from the notification and the headset.
   final VoidCallback onPlay;
   final VoidCallback onPrevious;
   final VoidCallback onNext;

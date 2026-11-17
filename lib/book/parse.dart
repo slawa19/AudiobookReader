@@ -82,7 +82,7 @@ bool _fb2(String text) =>
           .replaceFirst(RegExp(r'<!DOCTYPE[^>]*>'), ''),
     );
 
-/// Determines the format by content, regardless of the file name (А§3).
+/// Determines the format by content, regardless of the file name (A§3).
 SourceFormat detectFormat(List<int> bytes) {
   try {
     if (_zip(bytes)) return _archiveFormat(_unzip(bytes));

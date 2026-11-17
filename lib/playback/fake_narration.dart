@@ -15,9 +15,9 @@ const _blockStartWindow = Duration(seconds: 3);
 
 /// The prototype's fake narration: no audio, a timer moves the "voiced" block through the book.
 ///
-/// The unit is a block, not a segment of А§6.1: the prototype has no splitting of long paragraphs or merging of short
+/// The unit is a block, not a segment of A§6.1: the prototype has no splitting of long paragraphs or merging of short
 /// lines. A start from a sentence inside a block is a fraction of the block elapsed; in the real app it is the start
-/// segment of А§6.1. Block duration is characters × 0.069 s ÷ speed ÷ [demoAcceleration], so that following the voice
+/// segment of A§6.1. Block duration is characters × 0.069 s ÷ speed ÷ [demoAcceleration], so that following the voice
 /// is visible in a minute rather than ten.
 class FakeNarrationController extends NarrationController {
   FakeNarrationController({
@@ -55,7 +55,7 @@ class FakeNarrationController extends NarrationController {
   Timer? _timer;
   Timer? _prepare;
 
-  /// Session number (А§6.4): a response of a previous session does not touch the new one.
+  /// Session number (A§6.4): a response of a previous session does not touch the new one.
   int _session = 0;
 
   /// The offset of the start of the voiced unit in the block: 0 or the start of the sentence the block was started
@@ -102,7 +102,7 @@ class FakeNarrationController extends NarrationController {
   @override
   int get commandRevision => _commands;
 
-  /// An explicit user command (А§5, А§6.6): a counter for the screen, and an expired sleep timer is not inherited by
+  /// An explicit user command (A§5, A§6.6): a counter for the screen, and an expired sleep timer is not inherited by
   /// the new start (FR-D1, logic review item 7).
   void _userCommand() {
     _commands++;
@@ -122,7 +122,7 @@ class FakeNarrationController extends NarrationController {
     _book = book;
   }
 
-  /// A new session from place [p]: from a block and an offset inside it (the start segment from a sentence, А§6.1).
+  /// A new session from place [p]: from a block and an offset inside it (the start segment from a sentence, A§6.1).
   void _startAt(Book book, ReadingPosition p) {
     _enterBook(book);
     final block = spokenBlockFrom(_book!, p.block, forward: true) ?? p.block;
@@ -136,7 +136,7 @@ class FakeNarrationController extends NarrationController {
     // The timer expired while there was no audio: it has nothing to stop — cleared, "Listen" plays (rule c).
     _userCommand();
     if (_state == NarrationState.stopped) {
-      // A new session from the current saved position: after a stop the screen may have rewritten it (А§5).
+      // A new session from the current saved position: after a stop the screen may have rewritten it (A§5).
       final saved = library.positionOf(book.id) ?? ReadingPosition(_block ?? 0, 0);
       _startAt(book, saved);
       return;
@@ -193,7 +193,7 @@ class FakeNarrationController extends NarrationController {
     _moveKeepingIntent(target);
   }
 
-  /// A place change within a session: a new session, the intent stays the same (А§6.6). A pause stays a pause. [offset]
+  /// A place change within a session: a new session, the intent stays the same (A§6.6). A pause stays a pause. [offset]
   /// — the start of the unit inside the block (the start segment from a sentence).
   void _moveKeepingIntent(int block, {int offset = 0}) {
     final target = spokenBlockFrom(_book!, block, forward: true) ?? block;
@@ -208,7 +208,7 @@ class FakeNarrationController extends NarrationController {
     if (_state == NarrationState.paused) {
       notifyListeners();
     } else {
-      // In the prototype the audio of the "neighboring" segment is always ready: playing at once (А§6.6: or preparing
+      // In the prototype the audio of the "neighboring" segment is always ready: playing at once (A§6.6: or preparing
       // if there is no audio).
       _enter(NarrationState.playing);
     }
@@ -219,7 +219,7 @@ class FakeNarrationController extends NarrationController {
     final book = _book;
     _endSession();
     // First the session is ended — then the screen position goes to the writer. Later no controller write
-    // will overwrite it: the session number has already changed (А§5).
+    // will overwrite it: the session number has already changed (A§5).
     if (book != null && screenPosition != null) {
       library.savePosition(book.id, screenPosition, fraction: book.fractionAt(screenPosition.block, screenPosition.offset));
     }
@@ -449,9 +449,9 @@ class FakeNarrationController extends NarrationController {
 
   int _lastSpoken() => spokenBlockFrom(_book!, _book!.blocks.length - 1, forward: false) ?? 0;
 
-  /// While the session is active, the controller writes the reading position: the voiced place (А§5). The listening
+  /// While the session is active, the controller writes the reading position: the voiced place (A§5). The listening
   /// place — the start of the voiced unit — is always written and is erased by neither a pause, nor a stop, nor "Close"
-  /// (А§4).
+  /// (A§4).
   void _savePosition() {
     final book = _book;
     final block = _block;

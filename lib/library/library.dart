@@ -6,7 +6,7 @@ import 'usage.dart';
 
 export 'usage.dart';
 
-/// Reading position (А§5): block, offset in it, number of characters before the block.
+/// Reading position (A§5): block, offset in it, number of characters before the block.
 @immutable
 class ReadingPosition {
   const ReadingPosition(
@@ -49,7 +49,7 @@ class ReadingPosition {
   String toString() => 'ReadingPosition($block, $offset)';
 }
 
-/// A shelf row: everything the shelf needs without loading the book (А§4, `meta.json` + `state.json`).
+/// A shelf row: everything the shelf needs without loading the book (A§4, `meta.json` + `state.json`).
 class ShelfEntry {
   ShelfEntry({
     required this.id,
@@ -106,7 +106,7 @@ class AddJob {
   String? technical;
 }
 
-/// The shelf and book storage (А§2, `library`). The only writer of a book's position and settings.
+/// The shelf and book storage (A§2, `library`). The only writer of a book's position and settings.
 abstract class Library extends ChangeNotifier {
   /// A usage snapshot: local month start → model identifier → tokens.
   /// Immutable; in the file library available after ready.
@@ -152,7 +152,7 @@ abstract class Library extends ChangeNotifier {
 
   ImageProvider image(String bookId, String imageId);
 
-  /// Reading position (А§5): the start of the first line on screen or, while narration is active, the place being
+  /// Reading position (A§5): the start of the first line on screen or, while narration is active, the place being
   /// voiced.
   ReadingPosition? positionOf(String bookId);
 
@@ -171,7 +171,7 @@ abstract class Library extends ChangeNotifier {
 
   void setFinished(String bookId, bool finished);
 
-  /// The listening place (А§4, `state.json`): the start of the last unit that was voiced. Stored separately from the
+  /// The listening place (A§4, `state.json`): the start of the last unit that was voiced. Stored separately from the
   /// reading position and not forgotten on pause, stop and "Close" — "Listen" continues from it (FR-P3).
   ReadingPosition? listeningPositionOf(String bookId);
 

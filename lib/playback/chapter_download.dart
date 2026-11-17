@@ -20,7 +20,7 @@ VoiceProfile bookVoiceProfile(Book book, Library library, AppSettings settings) 
 
 enum DownloadStatus { running, failed }
 
-/// The "Download chapter" task (А§6.7, FR-D2): one per app. Belongs to the chapter and the voice profile it was
+/// The "Download chapter" task (A§6.7, FR-D2): one per app. Belongs to the chapter and the voice profile it was
 /// started with; changing the voice or model stops it (what is ready is kept).
 class ChapterDownloadTask {
   ChapterDownloadTask({
@@ -60,10 +60,10 @@ class DownloadEstimate {
 abstract class ChapterDownloads extends ChangeNotifier {
   ChapterDownloadTask? get task;
 
-  /// The book's effective profile: its own voice or the app voice, the model from settings (FR-V2, А§6.2).
+  /// The book's effective profile: its own voice or the app voice, the model from settings (FR-V2, A§6.2).
   VoiceProfile profileFor(String bookId);
 
-  /// The chapter is ready for [profile] by the readiness rule of А§6.1: audio in another voice or model does not count.
+  /// The chapter is ready for [profile] by the readiness rule of A§6.1: audio in another voice or model does not count.
   bool isVoiced(String bookId, int chapter, VoiceProfile profile);
 
   /// A ready estimate of the remainder: only what [profile] does not have yet (after "Stop" and after an error — not
@@ -77,7 +77,7 @@ abstract class ChapterDownloads extends ChangeNotifier {
   /// "Stop". What is ready is kept.
   void stop();
 
-  /// Audio deleted (А§4): the task of the affected book is stopped, chapter readiness is reset. `null` — all books.
+  /// Audio deleted (A§4): the task of the affected book is stopped, chapter readiness is reset. `null` — all books.
   /// Called only by `NarrationController` as part of a single delete operation.
   void forget({String? bookId});
 }

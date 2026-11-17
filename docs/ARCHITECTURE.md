@@ -668,7 +668,7 @@ documentation; on the owner's phone they are checked by the manual checklist (se
 
 The minimum Android version is 12 (`minSdk 31`); the owner's phone is a Samsung Galaxy S26 Ultra (spec 001, section 1).
 
-**Orientation is portrait only** (spec 001, Р10; decision F of the gesture audit). It is fixed in the manifest
+**Orientation is portrait only** (spec 001, D10; decision F of the gesture audit). It is fixed in the manifest
 (`android:screenOrientation="portrait"`) and in code (`SystemChrome.setPreferredOrientations` at startup). There is no
 landscape in the first version: the camera cutout at the side and the "home" gesture zone are unresolved in landscape.
 A window-size change (split screen) recomputes the layout, the reading place is kept (section 5).
@@ -692,14 +692,14 @@ A window-size change (split screen) recomputes the layout, the reading place is 
 
 - The table of contents, text appearance, voice, speed and timer open over reading and do not close the book.
 - The table of contents does not stop the sound. The "Voice" screen pauses listening (6.8).
-- **The system "Back" on the reading screen** (spec 001, Р11; decision J of the gesture audit, replaces rule f of the
+- **The system "Back" on the reading screen** (spec 001, D11; decision J of the gesture audit, replaces rule f of the
   journey audit): 1) clears the paragraph selection; 2) closes a sheet, dialog, footnote; 3) if the reading panels are
   hidden, shows them, and the book is not closed; 4) if the panels are shown, closes the book: listening → `idle`, the
   sleep timer cleared (6.6). During listening it is the same: the first "Back" shows the header and the slider above
   the player panel, the sound goes on. **The reason is the Android edge gesture:** with gesture navigation a swipe from
   the screen edge is "Back"; a reader who turns pages from the edge would otherwise close the book and cut off the
   sound. The "Back" arrow in the reading header closes the book at once. Checked only on the phone (spec 001, FR-P9).
-- **Protection against a follow-up tap** (spec 001, Р12; decision A of the gesture audit). After the layer under the
+- **Protection against a follow-up tap** (spec 001, D12; decision A of the gesture audit). After the layer under the
   finger has changed (reading bottom panel ↔ player panel, the player panel's view (controls, error, end of the book),
   the download row, a sheet, dialog or screen over reading closed, a sheet opened), the new controls and the page under
   them do not accept taps for `layerSettleTime` = 350 ms. There is one mechanism: the reading screen absorbs taps after

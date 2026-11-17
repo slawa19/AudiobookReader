@@ -224,7 +224,7 @@ void main() {
       await tester.tap(find.byKey(const Key('next')));
       await tester.pump();
       expect(p.narration.block, greaterThan(first));
-      expect(p.narration.state, NarrationState.paused, reason: '"forward" from pause leaves it paused (А§6.6)');
+      expect(p.narration.state, NarrationState.paused, reason: '"forward" from pause leaves it paused (A§6.6)');
       await tester.tap(find.byKey(const Key('previous')));
       await tester.pump();
       expect(p.narration.block, first);

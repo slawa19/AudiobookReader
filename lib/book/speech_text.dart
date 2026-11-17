@@ -1,8 +1,8 @@
 // Text for speech (ARCHITECTURE.md, section 3): the block text without structural footnote marks (`noteRef`) and
 // without the stress mark U+0301, with a mapping of offsets back into `Block.text`. Pure Dart.
 //
-// It is used to find sentence boundaries (start of "Listen", А§5) — a footnote mark after a period does not hide the
-// start of the next sentence. It is also used to build narration segments (А§6.1).
+// It is used to find sentence boundaries (start of "Listen", A§5) — a footnote mark after a period does not hide the
+// start of the next sentence. It is also used to build narration segments (A§6.1).
 
 import 'model.dart';
 

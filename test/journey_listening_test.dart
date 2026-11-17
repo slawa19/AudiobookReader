@@ -17,8 +17,8 @@ void main() {
     testWidgets('turned pages myself → table of contents → another chapter: the voice and the page are in the new '
         'chapter, following is on',
         (tester) async {
-      // А§5: following is turned off "until “To current spot” is pressed or until a new start"; changing the chapter in
-      // the table of contents is a new start (А§5, А§6.4). The reader expects the pages to follow the voice again from
+      // A§5: following is turned off "until “To current spot” is pressed or until a new start"; changing the chapter in
+      // the table of contents is a new start (A§5, A§6.4). The reader expects the pages to follow the voice again from
       // then on.
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
@@ -65,7 +65,7 @@ void main() {
     });
 
     testWidgets('the timer expired during a pause → “Listen”: audio continues', (tester) async {
-      // The timer is a "pause by time" (А§6.6). If a pause is already in place by its deadline, there is nothing for it
+      // The timer is a "pause by time" (A§6.6). If a pause is already in place by its deadline, there is nothing for it
       // to stop; “Listen” pressed afterwards continues from the pause position (FR-P3) and does not pause again after
       // 0.1 s.
       final clock = TestClock();
@@ -135,7 +135,7 @@ void main() {
   group('page re-layout while the audio is stopped', () {
     testWidgets('pause on a paragraph at the bottom of the page → larger font: the listening position is on '
         'screen', (tester) async {
-      // А§5: while listening is active (a pause too), the position is the controller position; following is on, so
+      // A§5: while listening is active (a pause too), the position is the controller position; following is on, so
       // the screen shows the page with it. FR-R6/FR-R7: a font change does not lose the position.
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
@@ -166,7 +166,7 @@ void main() {
 
     testWidgets('pause on a paragraph at the bottom of the page → error 402: the stop position is on '
         'screen', (tester) async {
-      // А§5: "On entering stopped the screen first shows the page with the saved position". The error panel is taller
+      // A§5: "On entering stopped the screen first shows the page with the saved position". The error panel is taller
       // than the player panel — the page becomes shorter, but the stop position must stay on screen.
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
@@ -191,7 +191,7 @@ void main() {
   group('the “Voice” screen', () {
     testWidgets('pause → “Voice” → tapping an already selected row: the position inside the paragraph is not '
         'lost', (tester) async {
-      // FR-V2/А§6.4: a new session starts on a voice CHANGE. Tapping a row that is already selected does not change the
+      // FR-V2/A§6.4: a new session starts on a voice CHANGE. Tapping a row that is already selected does not change the
       // voice — “Listen” after returning continues from the pause position (FR-P3).
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
@@ -248,7 +248,7 @@ void main() {
         (tester) async {
       // Prototype README: the paragraph selection is cancelled by a "tap elsewhere". On Android the system Back first
       // removes the temporary selection mode and does not close the screen under it; closing the book here interrupts
-      // listening (А§8.1).
+      // listening (A§8.1).
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await listenFromPanel(tester);
@@ -340,7 +340,7 @@ void main() {
     testWidgets('“Read from here” on a paragraph at the bottom of the page (without listening): while “Preparing the '
         'voice…”, the paragraph is on screen',
         (tester) async {
-      // FR-P3/А§5: “Read from here” starts from the selected paragraph, following is on — the screen shows the position
+      // FR-P3/A§5: “Read from here” starts from the selected paragraph, following is on — the screen shows the position
       // from which the voice will start. The player panel appears and shortens the page; the paragraph must not leave
       // the screen.
       final p = await pumpPrototype(tester, demoAcceleration: 1);

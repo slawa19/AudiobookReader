@@ -11,10 +11,10 @@ features.
 
 | No. | Decision | Who and when |
 |---|---|---|
-| Р1 | The architecture does not change: the module graph matches the declared one; no new layers, ports or libraries | orchestrator, from the two reviews, 2026-11-16 |
-| Р2 | A change enters the spec only if it reduces code or removes a defect or duplication confirmed in the code. Cases that have not occurred on a real book are not handled | owner, 2026-11-16 ("avoid edge cases and overengineering") |
-| Р3 | This spec does not touch the reading screen (`reader_screen.dart`, `pagination.dart`, `player_panel.dart`), except for one replacement in FR-4: the owner has not yet checked it on the phone after the 2026-11-15 work | orchestrator, 2026-11-16 |
-| Р4 | Three stages, each a separate branch and merge: defects → one rule in one place → removal of the superfluous | orchestrator, 2026-11-16 |
+| D1 | The architecture does not change: the module graph matches the declared one; no new layers, ports or libraries | orchestrator, from the two reviews, 2026-11-16 |
+| D2 | A change enters the spec only if it reduces code or removes a defect or duplication confirmed in the code. Cases that have not occurred on a real book are not handled | owner, 2026-11-16 ("avoid edge cases and overengineering") |
+| D3 | This spec does not touch the reading screen (`reader_screen.dart`, `pagination.dart`, `player_panel.dart`), except for one replacement in FR-4: the owner has not yet checked it on the phone after the 2026-11-15 work | orchestrator, 2026-11-16 |
+| D4 | Three stages, each a separate branch and merge: defects → one rule in one place → removal of the superfluous | orchestrator, 2026-11-16 |
 
 ## 2. Requirements
 
@@ -83,12 +83,12 @@ Recorded so that it does not come back.
 - Rewriting the reading screen's navigation as a single operation: 3–5 days, high risk; the frame-by-frame property
   test is green. Return to the question only if the phone shows a new defect of the same kind.
 - Merging the six fields of the reading screen's "pending layout" into one record (finding 15): postponed until the
-  screen is checked on the phone (Р3).
+  screen is checked on the phone (D3).
 - Cancelling the Gemini request on timeout (finding 14): Google charges for an accepted request even when it is
   cancelled; the case has not occurred.
 - Removing the voice comparison from the voice selection screen (finding 16).
 - Moving the deletion of a corrupted audio file from the controller into the storage (finding 11): the change adds
-  15–30 lines and removes neither a defect nor a duplication, so it does not pass Р2.
+  15–30 lines and removes neither a defect nor a duplication, so it does not pass D2.
 - Replacing the prototype's fake controller with the real one in the prototype and in ~300 tests. New screen tests
   are written against the real controller (`AppHarness`); old ones are not migrated.
 - Splitting `controller.dart`, `file_library.dart`, `parse.dart`, `native_application.dart` by size.
@@ -106,7 +106,7 @@ Recorded so that it does not come back.
 - 2026-11-16 — spec written from the two reviews (Opus 5.5 and gpt-6-astra); the orchestrator checked each finding
   against the code. Findings 14 and 16 rejected, 15 postponed.
 - 2026-11-16 — the owner started the spec with the condition "do not polish edge cases". The orchestrator re-read the
-  requirements against Р2 and withdrew FR-11: it added code for the sake of port purity.
+  requirements against D2 and withdrew FR-11: it added code for the sake of port purity.
 - 2026-11-16 — stage 1 merged (`s005-defects`): FR-1…FR-4, 26 lines in `lib`, each defect closed by a test that
   failed before the fix. `blockProgress` stays in the contract: the media session and the tests use it.
 - 2026-11-16 — stage 2 merged (`s006-single-rule`): FR-5…FR-7 and a trimmed FR-8, 127 lines fewer in `lib`. FR-8 was

@@ -1,4 +1,4 @@
-// Sentence boundaries — the same rule as in splitting into segments (ARCHITECTURE.md, А§6.1, rule 2). The rule
+// Sentence boundaries — the same rule as in splitting into segments (ARCHITECTURE.md, A§6.1, rule 2). The rule
 // is general, by text form, without word lists. Pure Dart.
 //
 // A boundary is where, after an ending mark (. ! ? …), possibly closing quotes and brackets, comes a whitespace
@@ -10,7 +10,7 @@
 // Residual errors — abbreviations longer than one letter («см. рис. 3») — are an accepted limitation: the start a bit
 // earlier or a bit later, the text is not lost.
 //
-// Boundaries are searched in the speech text (without footnote marks, `speechText`, А§3) and translated back into block
+// Boundaries are searched in the speech text (without footnote marks, `speechText`, A§3) and translated back into block
 // offsets.
 
 import '../book/model.dart';

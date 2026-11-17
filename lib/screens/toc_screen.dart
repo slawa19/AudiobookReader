@@ -6,7 +6,7 @@ import '../tts/voices.dart';
 import 'common.dart';
 import 'services.dart';
 
-/// The table of contents (FR-R4) and "Download chapter" for the current chapter (FR-D2, А§6.7). Returns the chosen
+/// The table of contents (FR-R4) and "Download chapter" for the current chapter (FR-D2, A§6.7). Returns the chosen
 /// chapter.
 class TocScreen extends StatefulWidget {
   const TocScreen({super.key, required this.services, required this.book, required this.current});

@@ -8,7 +8,7 @@ import '../tts/voices.dart';
 
 enum SampleState { idle, loading, playing, failed }
 
-/// A voice "probe" (А§6.8): one phrase, a separate short player, the second time — without a request. A permanent error
+/// A voice "probe" (A§6.8): one phrase, a separate short player, the second time — without a request. A permanent error
 /// is shown in the voice row with Google's text as is.
 abstract class VoiceSampler extends ChangeNotifier {
   /// The voice whose probe is now being prepared, is playing or has failed.
@@ -26,11 +26,11 @@ abstract class VoiceSampler extends ChangeNotifier {
 
   /// A probe of the full profile [profile] (voice and model) with the phrase and style in the language of the book
   /// [bookLanguage] (FR-T7). The audio is cached by everything that affects the sound: voice, model, language (phrase
-  /// and style) — another profile is synthesized again (А§6.8, logic review item 10).
+  /// and style) — another profile is synthesized again (A§6.8, logic review item 10).
   void play(VoiceProfile profile, {required String bookLanguage});
   void stop();
 
-  /// Probes deleted by "Clear narration" (А§4): the next probe is synthesized again. Called only by
+  /// Probes deleted by "Clear narration" (A§4): the next probe is synthesized again. Called only by
   /// `NarrationController`.
   void clearCache();
 }

@@ -20,7 +20,7 @@ const readingStyles = <String, String>{
       'без зайвих пауз усередині фраз.',
 };
 
-/// The voice "Probe" phrase by book language — the same for all voices (А§6.8), so the probe audio
+/// The voice "Probe" phrase by book language — the same for all voices (A§6.8), so the probe audio
 /// is cached and free the second time.
 const samplePhrases = <String, String>{
   'ru': 'Здравствуйте! Так будет звучать ваша книга: спокойно, ясно и с выражением.',

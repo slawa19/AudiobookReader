@@ -74,12 +74,12 @@ void main() {
     }
   });
 
-  test('modules import only what is allowed (А§2)', () {
+  test('modules import only what is allowed (A§2)', () {
     final violations = <String>[];
     var files = 0;
     for (final dir in Directory('lib').listSync().whereType<Directory>()) {
       final module = dir.uri.pathSegments.where((s) => s.isNotEmpty).last;
-      expect(allowed.containsKey(module), isTrue, reason: 'directory lib/$module is not described in А§2');
+      expect(allowed.containsKey(module), isTrue, reason: 'directory lib/$module is not described in A§2');
       for (final f in dir.listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'))) {
         files++;
         for (final target in importedModules(f, module)) {
@@ -99,7 +99,7 @@ void main() {
     expect(allowed['reader']!.contains('screens'), isFalse);
   });
 
-  test('modules book and tts are pure Dart, without Flutter (А§2)', () {
+  test('modules book and tts are pure Dart, without Flutter (A§2)', () {
     for (final module in ['book', 'tts']) {
       for (final f in Directory('lib/$module').listSync(recursive: true).whereType<File>()) {
         expect(f.readAsStringSync().contains('package:flutter'), isFalse, reason: f.path);

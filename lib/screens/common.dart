@@ -30,7 +30,7 @@ TextStyle bookTitleStyle(BuildContext context, double size, {FontWeight weight =
       color: Theme.of(context).colorScheme.onSurface,
     );
 
-/// Protection against a follow-up touch (gesture review decision A 2026-11-14, А§8.1): after the layer under the finger
+/// Protection against a follow-up touch (gesture review decision A 2026-11-14, A§8.1): after the layer under the finger
 /// changed — reading panels ↔ player panel, a sheet or dialog opened or closed, the player panel or the
 /// download row disappeared, the screen changed — the new controls and the page beneath them accept no
 /// touches for this long. The second tap of a double tap arrives after 100–250 ms; two deliberate taps — less often.

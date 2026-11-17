@@ -93,7 +93,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       },
     );
-    // One controller command: the session, "Download chapter", chapter readiness, probes and audio (FR-M3, А§4).
+    // One controller command: the session, "Download chapter", chapter readiness, probes and audio (FR-M3, A§4).
     if (ok ?? false) s.narration.clearAllNarration();
   }
 
