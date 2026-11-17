@@ -26,8 +26,8 @@ Since 2026-11-17 the repository has been prepared for open-source publication un
 language; documentation, code comments, test names and technical messages in English; the `LICENSE`, the in-app
 "Open-source licenses" page and the demo-text attribution; English README screenshots; the tag-triggered release
 workflow with the pinned toolchain ([RELEASING.md](RELEASING.md)). The four signing secrets and the variable
-`SIGNING_CERT_SHA256` are set in GitHub. A dry run of the release workflow was started on 2026-11-17; its result is not
-recorded here. No release has been cut and the repository is still private; build attestations work only in a public
+`SIGNING_CERT_SHA256` are set in GitHub. The dry run of the release workflow passed on 2026-11-17 (run 44035431681);
+its attestation and release steps are skipped in a dry run and have never run. No release has been cut and the repository is still private; build attestations work only in a public
 repository, so the first real release is possible only after the owner switches it to public.
 
 **What is next, on the phone** — all with the owner, none of it can be verified from a computer:
@@ -41,14 +41,13 @@ repository, so the first real release is possible only after the owner switches 
 
 **What is next, publication** — the owner's steps, in this order:
 
-1. read the result of the release workflow's dry run (Actions → Release; [RELEASING.md](RELEASING.md), "Dry run");
-2. confirm the public name of the app: the Android label is "AudiobookReader", the web prototype is still titled
+1. confirm the public name of the app: the Android label is "AudiobookReader", the web prototype is still titled
    "Читалка — прототип" (`web/index.html`, `web/manifest.json`, `lib/app/prototype/device_frame.dart`);
-3. have the Ukrainian strings (`lib/screens/l10n/app_uk.arb`) read by a native speaker; they were written by an agent;
-4. look at Settings → "Open-source licenses" on the phone;
-5. confirm the rule of spec 003 (Changelog) that technical text, as distinct from interface strings, is in English;
-6. switch the GitHub repository to public;
-7. cut the first release: bump `version:` in `pubspec.yaml` if needed, push the tag `v0.1.0` (or the bumped version),
+2. have the Ukrainian strings (`lib/screens/l10n/app_uk.arb`) read by a native speaker; they were written by an agent;
+3. look at Settings → "Open-source licenses" on the phone;
+4. confirm the rule of spec 003 (Changelog) that technical text, as distinct from interface strings, is in English;
+5. switch the GitHub repository to public;
+6. cut the first release: bump `version:` in `pubspec.yaml` if needed, push the tag `v0.1.0` (or the bumped version),
    verify the published APK as in [RELEASING.md](RELEASING.md), "For users".
 
 The owner's phone has one build installed — the real one, signed with the permanent key. The build with the fake voice

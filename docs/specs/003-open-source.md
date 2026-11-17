@@ -53,8 +53,8 @@ The app's behavior for the reader does not change, except for the fifth interfac
 
   Status: the workflow `.github/workflows/release.yml`, `docs/RELEASING.md` (with the published certificate
   fingerprint) and the pinning are done and merged on 2026-11-17 (merge 50db81c, fingerprint 09659bd). The four signing
-  secrets and the variable `SIGNING_CERT_SHA256` are set in GitHub. A dry run was started on 2026-11-17; its result is
-  not recorded here. **No release has been cut:** an attestation needs a public repository, so the first real release
+  secrets and the variable `SIGNING_CERT_SHA256` are set in GitHub. The dry run of 2026-11-17 (run 44035431681)
+  passed: tests, build, signing, certificate check, checksums; the attestation and release steps are skipped in a dry run. **No release has been cut:** an attestation needs a public repository, so the first real release
   waits for the visibility switch.
 - **R7.** Pre-publication audit. On 2026-11-17 the audit of the 179-commit history found no secrets, keystores or
   third-party copyrighted content, so the history is not rewritten. Done. What remains is the owner's: switching the
@@ -112,7 +112,7 @@ The app's behavior for the reader does not change, except for the fifth interfac
 - 2026-11-17 — R6 done and merged: `release.yml` (tag `vX.Y.Z` → tests → signed APK → certificate check →
   `SHA256SUMS` → attestation → GitHub Release), `docs/RELEASING.md`, the Gradle distribution checksum,
   `pub get --enforce-lockfile` in the scripts, actions pinned by commit SHA; the certificate fingerprint is published in
-  `RELEASING.md`. The signing secrets and `SIGNING_CERT_SHA256` were set in GitHub; a dry run was started, its result is
-  not recorded here. No release has been cut and the repository is still private.
+  `RELEASING.md`. The signing secrets and `SIGNING_CERT_SHA256` were set in GitHub; the dry run of 2026-11-17 passed (attestation
+  and release steps are skipped in a dry run). No release has been cut and the repository is still private.
 - 2026-11-17 — consistency pass over the documents after the merges: status documents, index, changelog and links
   brought in line; `scripts/prototype.sh` now runs `pub get --enforce-lockfile` like the other scripts.
