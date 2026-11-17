@@ -4,13 +4,13 @@ import 'dart:typed_data';
 import 'audio_encoder.dart';
 import 'audio_store.dart';
 
-/// Один экземпляр на корень. Создаётся после готовности библиотеки, которая чистит tmp/.
-/// Синхронные короткие операции публикации и удаления не разделены await:
-/// команда удаления в том же изоляте не может вклиниться между проверкой и rename.
+/// One instance per root. Created after the library is ready, which cleans tmp/.
+/// Short synchronous publish and delete operations are not separated by an await:
+/// a delete command in the same isolate cannot wedge in between the check and the rename.
 class FileAudioStore extends AudioStore {
   FileAudioStore(this.root, {required this.encoder}) {
     _component(encoder.extension);
-    // Чистим только свои хвосты: tmp/ принадлежит также добавлению книг.
+    // Clean up only our own leftovers: tmp/ is shared with book adding.
     if (_temporary.existsSync()) _temporary.deleteSync(recursive: true);
   }
 
@@ -28,7 +28,7 @@ class FileAudioStore extends AudioStore {
 
   static String _component(String value) {
     if (!RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(value)) {
-      throw ArgumentError.value(value, 'component', 'Неверный компонент пути');
+      throw ArgumentError.value(value, 'component', 'Invalid path component');
     }
     return value;
   }
@@ -60,7 +60,7 @@ class FileAudioStore extends AudioStore {
     final target = _target(fingerprint, bookId);
     if (sampleRate <= 0 || pcm.isEmpty || pcm.length.isOdd) {
       throw ArgumentError(
-        'Ожидается непустой PCM 16 бит моно с положительной частотой',
+        'Expected non-empty 16-bit mono PCM with a positive sample rate',
       );
     }
     final generation = _generation;
@@ -87,7 +87,7 @@ class FileAudioStore extends AudioStore {
       if (!output.existsSync() || output.lengthSync() == 0) {
         throw const FileSystemException('Кодировщик не создал звук');
       }
-      // Для книги — только audio/, никогда не создаём отсутствующий books/<id>/.
+      // For a book — audio/ only, never create a missing books/<id>/.
       _audio(bookId).createSync();
       output.renameSync(target.path);
       notifyListeners();

@@ -15,8 +15,8 @@ import 'settings.dart';
 typedef LibraryParser = Future<ParsedBook> Function(String path);
 typedef LibraryTimer = Timer Function(Duration delay, void Function() callback);
 
-// 256 МиБ оставляют запас для иллюстрированного EPUB, но отсекают гигабайтные архивы
-// до чтения в память. Исходник и разбор живут только в рабочем изоляте.
+// 256 MiB leaves headroom for an illustrated EPUB but cuts off gigabyte archives
+// before they are read into memory. The source and the parsing live only in the worker isolate.
 const maxBookFileBytes = 256 * 1024 * 1024;
 
 Future<void> _checkSize(File file) async {
@@ -48,7 +48,7 @@ Future<void> _writeBook(String path, Book book) => Isolate.run(() async {
   await temp.rename(path);
 });
 
-// У TXT имя приходит от провайдера; язык без метаданных фиксируется полкой.
+// For TXT the name comes from the provider; a language without metadata is fixed by the shelf.
 ParsedBook _libraryMetadata(
   ParsedBook parsed, {
   required String txtTitle,
@@ -72,10 +72,10 @@ ParsedBook _libraryMetadata(
   );
 }
 
-/// Файловая полка этапа 1. После конструктора нужно дождаться [ready].
-/// Перед записью позиций книга должна быть открыта через [loadBook].
-/// [parser], [clock] и [timer] подставляются в тестах; обычный разбор идёт в Isolate.run.
-/// [interfaceLanguage] возвращает текущий язык интерфейса, включая системное умолчание из app.
+/// The file-based shelf of stage 1. After the constructor, wait for [ready].
+/// Before writing positions the book must be opened through [loadBook].
+/// [parser], [clock] and [timer] are substituted in tests; normal parsing runs in Isolate.run.
+/// [interfaceLanguage] returns the current interface language, including the system default from app.
 class FileLibrary extends Library {
   FileLibrary(
     this.root, {
@@ -97,7 +97,7 @@ class FileLibrary extends Library {
   final DateTime Function() _clock;
   final LibraryTimer _timer;
   final LibraryParser _parser;
-  // Корень сборки разрешает «Как в системе», не связывая полку с экранами.
+  // The assembly root resolves "Same as system" without tying the shelf to the screens.
   final String Function() _interfaceLanguage;
   late final Future<void> ready;
   final Map<String, _StoredBook> _stored = {};
@@ -128,9 +128,9 @@ class FileLibrary extends Library {
       try {
         settings.restore(await _json(config));
       } on FormatException {
-        // Пустой или оборванный JSON не лишает пользователя полки.
+        // An empty or truncated JSON does not deprive the user of the shelf.
       } on TypeError {
-        // Корень JSON должен быть объектом настроек.
+        // The JSON root must be a settings object.
       }
     }
     await settings.loadApiKey();
@@ -140,7 +140,7 @@ class FileLibrary extends Library {
       for (final entry in json.entries) {
         final month = DateTime.parse('${entry.key}-01');
         if (entry.key != _monthKey(month)) {
-          throw const FormatException('Неверный месяц расхода');
+          throw const FormatException('Invalid usage month');
         }
         loaded[month] = {
           for (final model in (entry.value! as Map<String, Object?>).entries)
@@ -151,11 +151,11 @@ class FileLibrary extends Library {
       }
       _usage = loaded;
     } on FormatException {
-      // Оборванный или неверный файл расхода не лишает пользователя полки.
+      // A truncated or invalid usage file does not deprive the user of the shelf.
     } on TypeError {
-      // Схема расхода повреждена — начинаем с нуля.
+      // The usage schema is damaged — start from zero.
     } on FileSystemException {
-      // Отсутствующий или нечитаемый файл равнозначен пустому расходу.
+      // A missing or unreadable file is equivalent to empty usage.
     }
     await for (final dir in books.list()) {
       if (dir is! Directory) continue;
@@ -165,7 +165,7 @@ class FileLibrary extends Library {
         final id = meta['id']! as String;
         _stored[id] = _StoredBook(meta, state, await _bytes(dir), dir);
       } catch (_) {
-        // Повреждённую запись пропускаем целиком, исходник оставляем для восстановления.
+        // Skip a damaged entry entirely, keep the source for recovery.
       }
     }
     if (!_closed) {
@@ -195,14 +195,14 @@ class FileLibrary extends Library {
     required int inputTokens,
     DateTime? at,
   }) async {
-    // Момент фиксируется до ожидания запуска и писателя, а не по времени записи.
+    // The moment is fixed before waiting for startup and the writer, not by the write time.
     final local = (at ?? _clock()).toLocal();
     final month = DateTime(local.year, local.month);
     if (audioTokens < 0 || inputTokens < 0) {
-      throw ArgumentError('Число токенов не может быть отрицательным');
+      throw ArgumentError('The token count cannot be negative');
     }
     await ready;
-    if (_closed) throw StateError('Библиотека закрыта');
+    if (_closed) throw StateError('The library is closed');
     await _enqueue(() async {
       final previous = _usage[month]?[modelId];
       final next = {
@@ -222,7 +222,7 @@ class FileLibrary extends Library {
               model.key: model.value.toJson(),
           },
       });
-      // Неудавшаяся запись не меняет счётчики в памяти; повтор не удвоит расход.
+      // A failed write does not change the in-memory counters; a retry will not double the usage.
       _usage = next;
       if (!_closed) notifyListeners();
     });
@@ -241,7 +241,7 @@ class FileLibrary extends Library {
   @override
   List<AddJob> get addJobs => List.unmodifiable(_jobs);
 
-  /// Отказ до разбора: например, Android не смог скопировать выбранный файл.
+  /// A failure before parsing: for example, Android could not copy the selected file.
   @override
   void recordFileFailure(String fileName, Object error) {
     _jobs.insert(
@@ -262,7 +262,7 @@ class FileLibrary extends Library {
   @override
   Future<ShelfEntry?> addFile(String path, String fileName) async {
     await ready;
-    if (_closed) throw StateError('Библиотека закрыта');
+    if (_closed) throw StateError('The library is closed');
     final String id;
     try {
       id = await _bookId(path);
@@ -357,7 +357,7 @@ class FileLibrary extends Library {
     for (final e in parsed.images.entries) {
       await File('${dir.path}/images/${Uri.encodeComponent(e.key)}')
           .writeAsBytes(e.value);
-      // Битая картинка не делает текст книги нечитаемым. У неё нет размера для раскладки.
+      // A broken image does not make the book text unreadable. It has no size for layout.
       try {
         final codec = await ui.instantiateImageCodec(e.value);
         try {
@@ -368,7 +368,7 @@ class FileLibrary extends Library {
           codec.dispose();
         }
       } catch (_) {
-        /* Изображение пропускается. */
+        /* The image is skipped. */
       }
     }
     if (parsed.cover != null) {
@@ -401,7 +401,7 @@ class FileLibrary extends Library {
     final path = '${_dir(id).path}/book.json';
     var book = await _readBook(path);
     final stored = _stored[id]!;
-    // Версии в meta/state дают закончить переразбор, прерванный после замены book.json.
+    // The versions in meta/state let a reparse that was interrupted after replacing book.json finish.
     if (book.parserVersion < currentParserVersion ||
         stored.meta['parserVersion'] != book.parserVersion ||
         stored.state['parserVersion'] != book.parserVersion) {
@@ -414,7 +414,7 @@ class FileLibrary extends Library {
       final parsed = _libraryMetadata(
         await _parser(original.path),
         txtTitle: stored.meta['title']! as String,
-        // Сохраняем и прежний пустой язык: от него зависит отпечаток оплаченного звука.
+        // Keep the previous empty language too: the fingerprint of the paid audio depends on it.
         language: book.language,
       );
       book = parsed.book;
@@ -531,7 +531,7 @@ class FileLibrary extends Library {
   }
 
   void _change(String id, String field, Object? value) {
-    if (_closed) throw StateError('Библиотека закрыта');
+    if (_closed) throw StateError('The library is closed');
     final stored = _stored[id]!;
     stored.state[field] = value;
     stored.refresh(_dir(id));
@@ -553,7 +553,7 @@ class FileLibrary extends Library {
     if (immediate || elapsed >= const Duration(seconds: 1)) {
       _pending?.cancel();
       _pending = null;
-      // Ошибки фоновой записи сохраняет писатель; flush отдаёт их вызывающему коду.
+      // The writer keeps background write errors; flush hands them to the calling code.
       unawaited(
         _enqueue(() async {
           try {
@@ -574,7 +574,7 @@ class FileLibrary extends Library {
 
   Future<void> _writeDirty({bool force = false}) async {
     if (_dirty.isEmpty && !_settingsDirty) return;
-    // Проверяем время у самого диска: очередь могла задержаться за переразбором.
+    // Check the time at the disk itself: the queue may have been delayed by a reparse.
     final elapsed = _lastWrite == null
         ? const Duration(seconds: 1)
         : _clock().difference(_lastWrite!);
@@ -589,7 +589,7 @@ class FileLibrary extends Library {
     final ids = _dirty.toList();
     for (final id in ids) {
       final state = _stored[id]?.state;
-      // Пока идёт запись, новое изменение может снова пометить книгу грязной.
+      // While a write is in progress, a new change may mark the book dirty again.
       _dirty.remove(id);
       if (state != null) {
         try {
@@ -616,7 +616,7 @@ class FileLibrary extends Library {
     await ready;
     _pending?.cancel();
     _pending = null;
-    // Сбой хранилища ключа не мешает дописать позицию и обычные настройки.
+    // A key-storage failure does not prevent writing the position and the ordinary settings.
     await Future.wait([
       settings.flushApiKey(),
       _enqueue(() async {
@@ -653,7 +653,7 @@ class FileLibrary extends Library {
     notifyListeners();
   }
 
-  /// Сначала await flush(), затем dispose(). Сам dispose не обещает асинхронную запись.
+  /// First await flush(), then dispose(). dispose itself does not promise an asynchronous write.
   @override
   void dispose() {
     _closed = true;
@@ -667,7 +667,7 @@ Future<Map<String, Object?>> _json(File file) async =>
     jsonDecode(await file.readAsString()) as Map<String, Object?>;
 
 Future<void> _atomic(File file, Map<String, Object?> value) async {
-  // Снимок снимается до первого await; следующая команда меняет уже актуальную память.
+  // The snapshot is taken before the first await; the next command changes the already current memory.
   final text = jsonEncode(value);
   final next = File('${file.path}.new');
   await next.writeAsString(text, flush: true);
@@ -721,7 +721,7 @@ class _StoredBook {
           ? 0
           : (((pos?.charsBefore ?? 0) + (pos?.offset ?? 0)) / total).clamp(
               0.0,
-              // Конец позиции сам по себе не означает «дочитана» (FR-L4).
+              // A position at the end does not by itself mean "finished" (FR-L4).
               (total - 1) / total,
             ),
       chapterTitle: state['chapterTitle'] as String? ?? '',

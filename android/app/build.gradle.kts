@@ -2,12 +2,12 @@ import java.util.Base64
 
 plugins {
     id("com.android.application")
-    // Flutter подключается после плагина Android.
+    // The Flutter plugin is applied after the Android plugin.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Flutter передаёт --dart-define в Base64 через dart-defines. Тот же признак читает app/assembly.dart:
-// нельзя получить подставной звук с applicationId настоящей сборки.
+// Flutter passes --dart-define as Base64 via dart-defines. The same flag is read by app/assembly.dart:
+// a fake audio build must not be obtainable with the applicationId of the real build.
 val fakeTts = providers.gradleProperty("dart-defines").orNull
     ?.split(',')
     ?.map { String(Base64.getDecoder().decode(it), Charsets.UTF_8) }
@@ -29,12 +29,12 @@ android {
         manifestPlaceholders["appLabel"] = if (fakeTts) "AudiobookReader (fake)" else "AudiobookReader"
         minSdk = 31
         targetSdk = flutter.targetSdkVersion
-        // Версия приложения берётся из pubspec.yaml.
+        // The app version is taken from pubspec.yaml.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
-    // Отладочная сборка не требует секретов. У release никогда нет подмены на debug.
+    // The debug build needs no secrets. Release never falls back to the debug signing.
     signingConfigs {
         create("release") {
             storeFile = providers.environmentVariable("ANDROID_KEYSTORE_PATH").orNull?.let { file(it) }

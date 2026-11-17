@@ -1,7 +1,7 @@
 import '../library/settings.dart';
 
-/// Подставному движку ключ не нужен. Все потребители одной настройки получают
-/// одно разрешение на озвучку; фиктивный секрет не сохраняется и не показывается.
+/// The fake engine needs no key. All consumers of one setting get
+/// the same permission to synthesize; the dummy secret is neither stored nor shown.
 class NativeSettings extends AppSettings {
   NativeSettings({required super.voice, required super.modelId, super.secretStore, required this.fakeTts});
   final bool fakeTts;

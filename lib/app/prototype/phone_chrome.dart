@@ -2,9 +2,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../screens/common.dart';
 
-/// Только прототип: строка состояния и полоска жестов поверх приложения, чтобы в браузере и на снимках
-/// экран выглядел как телефон в режиме «от края до края». На телефоне это рисует Android.
-/// В иммерсивном режиме (экран чтения без панелей) обе скрыты, как скрывает их система.
+/// Prototype only: the status bar and the gesture pill over the app, so that in the browser and in screenshots
+/// the screen looks like a phone in edge-to-edge mode. On a phone Android draws this.
+/// In immersive mode (reading screen without panels) both are hidden, the way the system hides them.
 class PhoneChrome extends StatelessWidget {
   const PhoneChrome({super.key, required this.child});
 

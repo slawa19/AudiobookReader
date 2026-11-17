@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Книги, позиции, расход и ключ не покидают устройство ни через облако, ни при переносе. -->
+<!-- Books, positions, usage and the key never leave the device — neither through the cloud nor on transfer. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="root" path="." />

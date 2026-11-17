@@ -1,10 +1,10 @@
-/// Хранилище одного секрета — ключа Gemini. Реализацию подставляет корень сборки.
+/// Storage for a single secret — the Gemini key. The implementation is provided by the assembly root.
 abstract interface class SecretStore {
   Future<String?> read();
   Future<void> write(String value);
 }
 
-/// Текст платформенной ошибки может содержать секрет, поэтому наружу он не выходит.
+/// The platform error text may contain the secret, so it does not go outside.
 class SecretStoreException implements Exception {
   const SecretStoreException();
 

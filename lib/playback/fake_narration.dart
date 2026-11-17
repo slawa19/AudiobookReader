@@ -10,15 +10,15 @@ import 'chapter_download.dart';
 import 'narration.dart';
 import 'voice_sample.dart';
 
-/// То же окно начала блока, что у настоящего контроллера.
+/// The same block-start window as in the real controller.
 const _blockStartWindow = Duration(seconds: 3);
 
-/// Подставная озвучка прототипа: звука нет, таймер двигает «звучащий» блок по книге.
+/// The prototype's fake narration: no audio, a timer moves the "voiced" block through the book.
 ///
-/// Единица — блок, а не отрезок А§6.1: деления длинных абзацев и склейки коротких реплик в прототипе нет. Старт
-/// с предложения внутри блока — доля пройденного блока; в настоящем приложении это стартовый отрезок А§6.1.
-/// Длительность блока — знаки × 0,069 с ÷ скорость ÷ [demoAcceleration], чтобы следование за голосом было видно
-/// за минуту, а не за десять.
+/// The unit is a block, not a segment of А§6.1: the prototype has no splitting of long paragraphs or merging of short
+/// lines. A start from a sentence inside a block is a fraction of the block elapsed; in the real app it is the start
+/// segment of А§6.1. Block duration is characters × 0.069 s ÷ speed ÷ [demoAcceleration], so that following the voice
+/// is visible in a minute rather than ten.
 class FakeNarrationController extends NarrationController {
   FakeNarrationController({
     required this.library,
@@ -32,7 +32,7 @@ class FakeNarrationController extends NarrationController {
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now;
 
-  /// Скорость — настройка (FR-P5): сеанс звучит с той, что сохранена, а не с 1×.
+  /// The speed is a setting (FR-P5): the session plays at the saved one, not at 1×.
   final AppSettings? settings;
 
   final Library library;
@@ -55,13 +55,14 @@ class FakeNarrationController extends NarrationController {
   Timer? _timer;
   Timer? _prepare;
 
-  /// Номер сеанса (А§6.4): ответ прежнего сеанса не трогает новый.
+  /// Session number (А§6.4): a response of a previous session does not touch the new one.
   int _session = 0;
 
-  /// Смещение начала звучащей единицы в блоке: 0 или начало предложения, с которого начат блок.
+  /// The offset of the start of the voiced unit in the block: 0 or the start of the sentence the block was started
+  /// from.
   int _unitStart = 0;
 
-  /// Состояние держится, пока его не сменит пользователь (только для показа: «Готовлю голос…», «Жду связь…»).
+  /// The state holds until the user changes it (display only: "Preparing voice…", "Waiting for connection…").
   bool _held = false;
 
   @override
@@ -94,15 +95,15 @@ class FakeNarrationController extends NarrationController {
 
   Book? get book => _book;
 
-  // --- команды контракта ---------------------------------------------------------------------------------
+  // --- contract commands -------------------------------------------------------------------------------
 
   int _commands = 0;
 
   @override
   int get commandRevision => _commands;
 
-  /// Явная команда пользователя (А§5, А§6.6): счётчик для экрана, и истёкший таймер сна не наследуется новым
-  /// стартом (FR-D1, №7 ревью логики).
+  /// An explicit user command (А§5, А§6.6): a counter for the screen, and an expired sleep timer is not inherited by
+  /// the new start (FR-D1, logic review item 7).
   void _userCommand() {
     _commands++;
     _dropExpiredSleep();
@@ -115,13 +116,13 @@ class FakeNarrationController extends NarrationController {
     _startAt(book, listenStart(book, page, library.listeningPositionOf(book.id)));
   }
 
-  /// Сеанс переходит к книге [book]; другая книга — таймер сна снимается (правило c).
+  /// The session moves to the book [book]; for a different book the sleep timer is cleared (rule c).
   void _enterBook(Book book) {
     if (_book != null && _book!.id != book.id) _sleep = null;
     _book = book;
   }
 
-  /// Новый сеанс с места [p]: с блока и смещения внутри него (стартовый отрезок от предложения, А§6.1).
+  /// A new session from place [p]: from a block and an offset inside it (the start segment from a sentence, А§6.1).
   void _startAt(Book book, ReadingPosition p) {
     _enterBook(book);
     final block = spokenBlockFrom(_book!, p.block, forward: true) ?? p.block;
@@ -132,10 +133,10 @@ class FakeNarrationController extends NarrationController {
   void resume() {
     final book = _book;
     if (book == null) return;
-    // Срок таймера истёк, пока звука не было: ему нечего останавливать — снят, «Слушать» звучит (правило c).
+    // The timer expired while there was no audio: it has nothing to stop — cleared, "Listen" plays (rule c).
     _userCommand();
     if (_state == NarrationState.stopped) {
-      // Новый сеанс с актуальной сохранённой позиции: после остановки её мог переписать экран (А§5).
+      // A new session from the current saved position: after a stop the screen may have rewritten it (А§5).
       final saved = library.positionOf(book.id) ?? ReadingPosition(_block ?? 0, 0);
       _startAt(book, saved);
       return;
@@ -161,7 +162,7 @@ class FakeNarrationController extends NarrationController {
     if (_book?.id == book.id && (_state == NarrationState.paused || isActive)) {
       _moveKeepingIntent(block);
     } else {
-      // «Читать отсюда» — с начала выбранного абзаца (FR-P3, D).
+      // "Read from here" — from the start of the selected paragraph (FR-P3, D).
       _startAt(book, ReadingPosition(block, 0));
     }
   }
@@ -192,8 +193,8 @@ class FakeNarrationController extends NarrationController {
     _moveKeepingIntent(target);
   }
 
-  /// Смена места внутри сеанса: новый сеанс, намерение прежнее (А§6.6). Пауза остаётся паузой. [offset] — начало
-  /// единицы внутри блока (стартовый отрезок с предложения).
+  /// A place change within a session: a new session, the intent stays the same (А§6.6). A pause stays a pause. [offset]
+  /// — the start of the unit inside the block (the start segment from a sentence).
   void _moveKeepingIntent(int block, {int offset = 0}) {
     final target = spokenBlockFrom(_book!, block, forward: true) ?? block;
     _session++;
@@ -207,7 +208,8 @@ class FakeNarrationController extends NarrationController {
     if (_state == NarrationState.paused) {
       notifyListeners();
     } else {
-      // В прототипе звук «соседнего» отрезка всегда готов: сразу playing (А§6.6: или preparing, если звука нет).
+      // In the prototype the audio of the "neighboring" segment is always ready: playing at once (А§6.6: or preparing
+      // if there is no audio).
       _enter(NarrationState.playing);
     }
   }
@@ -216,8 +218,8 @@ class FakeNarrationController extends NarrationController {
   void close({ReadingPosition? screenPosition}) {
     final book = _book;
     _endSession();
-    // Сначала сеанс завершён — потом позиция экрана уходит писателю. Позднее ни одна запись контроллера её не
-    // перепишет: номер сеанса уже сменился (А§5).
+    // First the session is ended — then the screen position goes to the writer. Later no controller write
+    // will overwrite it: the session number has already changed (А§5).
     if (book != null && screenPosition != null) {
       library.savePosition(book.id, screenPosition, fraction: book.fractionAt(screenPosition.block, screenPosition.offset));
     }
@@ -228,7 +230,7 @@ class FakeNarrationController extends NarrationController {
     _session++;
     _timer?.cancel();
     _prepare?.cancel();
-    // Таймер сна принадлежит прослушиванию: «Закрыть» и закрытие книги его снимают (правило c).
+    // The sleep timer belongs to listening: "Close" and closing the book clear it (rule c).
     _sleep = null;
     _held = false;
     _book = null;
@@ -255,7 +257,7 @@ class FakeNarrationController extends NarrationController {
   @override
   void restartSession() {
     if (_book == null || _block == null) return;
-    // С начала текущей единицы, включая стартовую с предложения внутри блока (№2 ревью логики).
+    // From the start of the current unit, including a start from a sentence inside a block (logic review item 2).
     if (_state == NarrationState.paused || isActive) _moveKeepingIntent(_block!, offset: _unitStart);
   }
 
@@ -285,9 +287,9 @@ class FakeNarrationController extends NarrationController {
     }));
   }
 
-  // --- только для показа: состояния, которые в жизни вызывает сеть -----------------------------------------
+  // --- display only: states that in real life are caused by the network -------------------------------
 
-  /// Включает состояние для панели «Состояния для показа». Если прослушивания нет, начинает его с [fromBlock].
+  /// Turns on a state for the "Demo states" panel. If there is no listening, starts it from [fromBlock].
   void demoShow(String what, {Book? book, int fromBlock = 0}) {
     if (_book == null || _state == NarrationState.idle) {
       if (book == null) return;
@@ -320,7 +322,8 @@ class FakeNarrationController extends NarrationController {
       case 'error402':
         _stop(const NarrationError(NarrationErrorKind.payment, 'Your prepayment credits are depleted.'));
       case 'error404':
-        // Модель, на которой случилась ошибка, — в самой ошибке: выбор другой модели потом её не переименует.
+        // The model on which the error happened is in the error itself: choosing another model later will not rename
+        // it.
         final model = settings?.modelId ?? 'gemini-3.8-flash-tts';
         _stop(NarrationError(NarrationErrorKind.modelNotFound, 'models/$model is not found for API version v1beta.',
             modelId: model));
@@ -343,7 +346,7 @@ class FakeNarrationController extends NarrationController {
     _enter(NarrationState.stopped);
   }
 
-  // --- ход «звука» -----------------------------------------------------------------------------------
+  // --- the "audio" progress ----------------------------------------------------------------------------
 
   void _newSession(int block, int offset) {
     _session++;
@@ -372,7 +375,7 @@ class FakeNarrationController extends NarrationController {
         if (session == _session) _advance();
       });
     } else if (s == NarrationState.preparing || s == NarrationState.waiting || s == NarrationState.paused) {
-      // Звука нет, но срок таймера сна может истечь и сейчас (правило c).
+      // There is no audio, but the sleep timer deadline may pass right now (rule c).
       final session = _session;
       _timer = Timer.periodic(tick, (_) {
         if (session == _session) _expireSleep();
@@ -382,14 +385,14 @@ class FakeNarrationController extends NarrationController {
     notifyListeners();
   }
 
-  /// Перед явным стартом: истёкший срок таймера просто снимается — новому старту он ничего не останавливает.
+  /// Before an explicit start: an expired timer deadline is simply cleared — it stops nothing for the new start.
   void _dropExpiredSleep() {
     final sleep = _sleep;
     if (sleep != null && sleep.kind == SleepKind.minutes && sleep.remaining(now()) == Duration.zero) _sleep = null;
   }
 
-  /// Срок таймера сна по минутам истёк: во время звука и в `preparing`/`waiting` — пауза; на паузе таймер просто
-  /// снимается. В любом случае таймер снят и больше ничего не останавливает (правило c, FR-D1).
+  /// The sleep timer's minute deadline passed: during audio and in `preparing`/`waiting` — a pause; on a pause the
+  /// timer is simply cleared. In any case the timer is cleared and stops nothing more (rule c, FR-D1).
   bool _expireSleep() {
     final sleep = _sleep;
     if (sleep == null || sleep.kind != SleepKind.minutes || sleep.remaining(now()) > Duration.zero) return false;
@@ -405,7 +408,7 @@ class FakeNarrationController extends NarrationController {
   }
 
   Duration _duration(Block b) {
-    // Скорость — одна: та же, что показывает панель (№8 ревью логики).
+    // There is one speed: the same one the panel shows (logic review item 8).
     final secs = b.text.length * secondsPerChar / speed / demoAcceleration;
     return Duration(milliseconds: (math.max(1.6, secs) * 1000).round());
   }
@@ -424,10 +427,10 @@ class FakeNarrationController extends NarrationController {
     if (nextBlock == null) {
       _progress = 1;
       _stopReason = StopReason.endOfBook;
-      // Кончилась и последняя глава: таймер «до конца главы» сработал и снимается (№7 ревью логики).
+      // The last chapter has ended too: the "until end of chapter" timer fired and is cleared (logic review item 7).
       if (_sleep?.kind == SleepKind.endOfChapter) _sleep = null;
       _enter(NarrationState.stopped);
-      // Прослушивание дошло до конца книги — книга дочитана (FR-L4, правило d).
+      // Listening reached the end of the book — the book is finished (FR-L4, rule d).
       library.setFinished(book.id, true);
       return;
     }
@@ -446,16 +449,17 @@ class FakeNarrationController extends NarrationController {
 
   int _lastSpoken() => spokenBlockFrom(_book!, _book!.blocks.length - 1, forward: false) ?? 0;
 
-  /// Пока сеанс активен, позицию чтения пишет контроллер: звучащее место (А§5). Место прослушивания — начало
-  /// звучащей единицы — пишется всегда и не стирается ни паузой, ни остановкой, ни «Закрыть» (А§4).
+  /// While the session is active, the controller writes the reading position: the voiced place (А§5). The listening
+  /// place — the start of the voiced unit — is always written and is erased by neither a pause, nor a stop, nor "Close"
+  /// (А§4).
   void _savePosition() {
     final book = _book;
     final block = _block;
     if (book == null || block == null) return;
     final len = book.blocks[block].text.length;
     final offset = math.min((_progress * len).floor(), math.max(0, len - 1));
-    // Название главы для полки библиотека считает сама по позиции: смена главы оглавлением не оставит на полке
-    // прежнюю (находка №2 проверки путей).
+    // The library computes the chapter name for the shelf from the position itself: changing the chapter via the table
+    // of contents will not leave the previous one on the shelf (finding 2 of the path review).
     library.savePosition(book.id, ReadingPosition(block, offset), fraction: book.fractionAt(block, offset));
     library.saveListeningPosition(book.id, ReadingPosition(block, _unitStart));
   }

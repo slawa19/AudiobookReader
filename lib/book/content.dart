@@ -1,4 +1,4 @@
-// Преобразование XML-дерева в линейные блоки; общие правила начертаний и смещений.
+// Converting the XML tree into linear blocks; common rules for styles and offsets.
 import 'model.dart';
 import 'xml.dart';
 
@@ -85,8 +85,8 @@ class ContentBuilder {
       e.local == 'br' ||
       (fb2 ? {'empty-line', 'image'} : {'hr', 'img'}).contains(e.local);
 
-  // При восстановлении незакрытого пустого тега XML-парсер вкладывает в него
-  // последующий текст. Для книжного содержимого это его соседи, а не дети.
+  // When recovering an unclosed empty tag, the XML parser nests the following text
+  // inside it. For book content that text is its sibling, not its child.
   Iterable<Object> contentChildren(XmlElement e) sync* {
     for (final child in e.children) {
       yield child;
@@ -247,7 +247,7 @@ class ContentBuilder {
       ).visitAndFlush(e);
       return;
     }
-    // Контейнеры сохраняют порядок смешанного содержимого. Отступы исходного XML блоков не создают.
+    // Containers keep the order of mixed content. Indentation in the source XML does not create blocks.
     var line = _Inline(this, context);
     for (final child in contentChildren(e)) {
       if (child is String) {
@@ -349,7 +349,7 @@ class _Inline {
       owner.add(BlockKind.separator, '');
       return;
     }
-    // В строке таблицы вложенные абзацы становятся текстом с пробелом, а не склеенными словами.
+    // In a table row, nested paragraphs become text joined with a space, not words glued together.
     if (e.local == 'p') write(' ');
     final style = switch (e.local) {
       'emphasis' || 'em' || 'i' => SpanStyle.italic,

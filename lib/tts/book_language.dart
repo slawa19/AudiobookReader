@@ -1,12 +1,12 @@
-// Что в запросе к Gemini зависит от языка КНИГИ, а не интерфейса и не голоса (GEMINI_TTS.md, «Другие языки»):
-// текст стиля чтения и фраза «Пробы». Чистый Dart.
+// What in a request to Gemini depends on the language of the BOOK, not of the interface or the voice (GEMINI_TTS.md,
+// "Other languages"): the reading-style text and the voice "Probe" phrase. Pure Dart.
 //
-// Стиль не называет пол чтеца: голос может быть и женским, и мужским, а род слова «рассказчица/рассказчик»
-// согласовывался бы с полом. Для языка, которого нет в таблице, — английский.
+// The style does not name the reader's gender: the voice may be female or male, and the grammatical gender of the word
+// "рассказчица/рассказчик" would have to agree with the gender. For a language not in the table — English.
 
 const _fallback = 'en';
 
-/// Стиль чтения по языку книги (код ISO 639-1).
+/// The reading style by book language (ISO 639-1 code).
 const readingStyles = <String, String>{
   'ru': 'Прочитай этот текст в манере профессиональной аудиокниги: живо, естественно, с выразительной '
       'интонацией, без лишних пауз внутри фраз.',
@@ -20,8 +20,8 @@ const readingStyles = <String, String>{
       'без зайвих пауз усередині фраз.',
 };
 
-/// Фраза «Пробы» голоса по языку книги — одна и та же для всех голосов (А§6.8), поэтому звук пробы
-/// кэшируется и второй раз бесплатен.
+/// The voice "Probe" phrase by book language — the same for all voices (А§6.8), so the probe audio
+/// is cached and free the second time.
 const samplePhrases = <String, String>{
   'ru': 'Здравствуйте! Так будет звучать ваша книга: спокойно, ясно и с выражением.',
   'en': 'Hello! This is how your book will sound: calm, clear and expressive.',

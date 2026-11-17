@@ -11,7 +11,7 @@ const firstPartMin = 80;
 
 final _spokenCharacters = RegExp(r'[\p{L}\p{N}]', unicode: true);
 
-/// Полуоткрытые диапазоны. Каждый диапазон линейный: удалённые знаки разрывают соответствие.
+/// Half-open ranges. Each range is linear: deleted characters break the correspondence.
 class SpeechMapping {
   const SpeechMapping(this.start, this.end, this.block, this.blockStart, this.blockEnd);
   final int start, end, block, blockStart, blockEnd;
@@ -22,7 +22,7 @@ class SpeechSegment {
     : mappings = List.unmodifiable(mappings);
   final String text;
 
-  /// Вставленный между блоками перевод строки не имеет соответствия в книге.
+  /// A line break inserted between blocks has no counterpart in the book.
   final List<SpeechMapping> mappings;
   final int l, lmin;
 
@@ -44,11 +44,11 @@ class SpeechSegment {
   );
 }
 
-/// Правило 2, общее для отрезков, первой части и защитного предела клиента.
-/// Минимум 2 позволяет сохранить суррогатную пару, даже если она стоит первой.
+/// Rule 2, common to segments, the first part and the client's safety limit.
+/// A minimum of 2 lets a surrogate pair be kept even if it comes first.
 List<String> splitSpeech(String text, int limit) {
   if (limit < 2) {
-    throw ArgumentError.value(limit, 'limit', 'Минимум 2 кодовые единицы');
+    throw ArgumentError.value(limit, 'limit', 'At least 2 code units');
   }
   final starts = sentenceStarts(text);
   final out = <String>[];
@@ -100,7 +100,7 @@ SpeechSegment _blockSegment(Block block, int l, int lmin) {
 }
 
 List<SpeechSegment> chapterSegments(List<Block> blocks, {int l = segmentLength, int lmin = minimumGroupLength}) {
-  if (l < 2 || lmin < 0) throw ArgumentError('Нужны l >= 2 и lmin >= 0');
+  if (l < 2 || lmin < 0) throw ArgumentError('Requires l >= 2 and lmin >= 0');
   final out = <SpeechSegment>[];
   SpeechSegment? group;
   void flush() {
@@ -142,8 +142,8 @@ List<SpeechSegment> chapterSegments(List<Block> blocks, {int l = segmentLength, 
   return out;
 }
 
-/// Каноническое деление не пересчитывается от места старта: меняется только первый отрезок.
-/// Смещение в Block.text приводится к началу предложения существующим алгоритмом.
+/// The canonical split is not recomputed from the start place: only the first segment changes.
+/// The offset in Block.text is brought to the sentence start by the existing algorithm.
 List<SpeechSegment> segmentsFrom(
   List<Block> blocks, {
   required int block,
@@ -170,7 +170,7 @@ List<SpeechSegment> segmentsFrom(
 List<SpeechSegment> segmentParts(SpeechSegment segment) {
   if (segment.text.isEmpty) return [];
   final starts = sentenceStarts(segment.text);
-  // Берём минимум целых предложений, достаточный для первой части; предел 200 применяет правило 2.
+  // Take the minimum whole sentences sufficient for the first part; the limit of 200 is applied by rule 2.
   final sentenceEnd = starts.skip(1).where((end) => end >= firstPartMin).firstOrNull ?? segment.text.length;
   final end = splitSpeech(segment.text.substring(0, sentenceEnd), firstPartLength).first.length;
   return [segment.slice(0, end), if (end < segment.text.length) segment.slice(end, segment.text.length)];
@@ -189,7 +189,7 @@ class SegmentReadiness {
       requests = List.unmodifiable(requests);
   final bool ready;
 
-  /// Порядок воспроизведения: целый файл либо части, включая ещё не готовые.
+  /// Playback order: a whole file or parts, including ones not ready yet.
   final List<SynthesisUnit> units;
   final List<SynthesisUnit> requests;
 }

@@ -6,8 +6,8 @@ import 'package:flutter/services.dart';
 import '../book/model.dart';
 import 'library.dart';
 
-/// Подставная полка прототипа: несколько книг, две из них с настоящим текстом из assets/demo/.
-/// Ничего не пишет на диск и никуда не ходит. В настоящем приложении её заменит `Library` на файлах (А§4).
+/// The prototype's fake shelf: several books, two of them with real text from assets/demo/.
+/// Writes nothing to disk and goes nowhere. In the real app `Library` on files replaces it (А§4).
 class FakeLibrary extends Library {
   FakeLibrary({DateTime? now}) : _now = now ?? DateTime(2026, 11, 14, 12, 30) {
     _entries.addAll(_demoEntries(_now));
@@ -23,12 +23,12 @@ class FakeLibrary extends Library {
   final Map<String, String?> _bookVoices = {};
   final Map<String, Book> _books = {};
 
-  /// «Пустая полка» для показа (только прототип).
+  /// "Empty shelf" for display (prototype only).
   bool demoEmptyShelf = false;
 
   static const _textAssets = {'kapitanskaya': 'assets/demo/kapitanskaya.json', 'dama': 'assets/demo/dama.json'};
 
-  /// Загружает тексты заранее, чтобы открытие книги было мгновенным (и тесты не ждали платформу).
+  /// Loads the texts in advance so that opening a book is instant (and tests do not wait for the platform).
   Future<void> preload() async {
     for (final e in _textAssets.entries) {
       final data = await rootBundle.load(e.value);
@@ -74,7 +74,7 @@ class FakeLibrary extends Library {
     return cachedBook(bookId)!;
   }
 
-  /// Задержка открытия книги — как чтение `book.json` с диска (для теста двойного нажатия).
+  /// Book open delay — like reading `book.json` from disk (for the double-tap test).
   Duration loadDelay = Duration.zero;
 
   @override
@@ -86,7 +86,7 @@ class FakeLibrary extends Library {
   @override
   ReadingPosition? positionOf(String bookId) => _positions[bookId];
 
-  /// В настоящей библиотеке — `state.json` рядом с позицией чтения; в прототипе — память.
+  /// In the real library — `state.json` next to the reading position; in the prototype — memory.
   final Map<String, ReadingPosition> _listening = {};
 
   @override
@@ -95,7 +95,7 @@ class FakeLibrary extends Library {
   @override
   void saveListeningPosition(String bookId, ReadingPosition position) => _listening[bookId] = position;
 
-  /// Дочитанные книги (FR-L4) — отдельный факт; в приложении — в `state.json`.
+  /// Finished books (FR-L4) are a separate fact; in the app — in `state.json`.
   final Set<String> _finished = {};
 
   @override
@@ -171,9 +171,9 @@ class FakeLibrary extends Library {
     notifyListeners();
   }
 
-  // --- имитация добавления (системного выбора файла в прототипе нет) ---------------------------------
+  // --- simulated adding (the prototype has no system file picker) ---------------------------------------
 
-  /// Файлы, которые «выбирает» имитация системного окна выбора файла.
+  /// Files that the simulated system file picker "selects".
   static const demoFiles = <({String name, String kind})>[
     (name: 'turgenev_zapiski_ohotnika.fb2', kind: 'duplicate'),
     (name: 'pushkin_povesti_belkina.fb2.zip', kind: 'ok'),
@@ -182,7 +182,8 @@ class FakeLibrary extends Library {
     (name: 'bestseller.epub', kind: 'drm'),
   ];
 
-  /// Книги, которые получаются из «файлов» имитации выбора (id — как первые знаки sha256 у настоящей, А§4).
+  /// Books produced from the simulated picker's "files" (id — like the first characters of sha256 in the real one,
+  /// А§4).
   static final _demoFileBooks = <String, ShelfEntry Function(DateTime addedAt)>{
     'duplicate': (at) => ShelfEntry(
         id: 'zapiski', title: 'Записки охотника', author: 'Иван Тургенев', addedAt: at, bookBytes: 1300 * 1024),
@@ -190,8 +191,8 @@ class FakeLibrary extends Library {
         id: 'belkin', title: 'Повести Белкина', author: 'Александр Пушкин', addedAt: at, bookBytes: 410 * 1024),
   };
 
-  /// Возвращает id имеющейся книги, если файл уже на полке (FR-L3); иначе начинает добавление. Тот же файл,
-  /// который уже добавляется, второй раз не добавляется. Удалённая книга добавляется заново.
+  /// Returns the id of an existing book if the file is already on the shelf (FR-L3); otherwise starts adding. The same
+  /// file that is already being added is not added a second time. A deleted book is added again.
   String? addDemoFile(String name, String kind) {
     final make = _demoFileBooks[kind];
     if (make != null) {
@@ -216,7 +217,7 @@ class FakeLibrary extends Library {
     return null;
   }
 
-  /// Показывает строку добавления в заданном состоянии сразу, без ожидания (панель «Состояния для показа»).
+  /// Shows an add row in the given state immediately, without waiting (the "Demo states" panel).
   void demoAddJob(String kind) {
     final names = {
       'adding': 'tolstoy_voyna_i_mir.fb2.zip',
@@ -276,7 +277,7 @@ class FakeLibrary extends Library {
   }
 
   static List<ShelfEntry> _demoEntries(DateTime now) {
-    // [hoursAgo] — когда открывали; `null` — ни разу (книга «новая»).
+    // [hoursAgo] — when it was opened; `null` — never (the book is "new").
     ShelfEntry e(String id, String title, String author, int? hoursAgo,
             {bool cover = true, double? fraction, int kb = 600, int addedDaysAgo = 60}) =>
         ShelfEntry(

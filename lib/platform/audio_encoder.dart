@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../audio/audio_encoder.dart';
 
-/// PCM передаётся Android путём файла, без копии массива в MethodChannel.
+/// PCM is passed to Android as a file path, without copying the array into the MethodChannel.
 class AndroidAudioEncoder implements AudioEncoder {
   const AndroidAudioEncoder();
 
@@ -21,7 +21,7 @@ class AndroidAudioEncoder implements AudioEncoder {
     required String outputPath,
     required int sampleRate,
   }) async {
-    if (pcmPath == outputPath) throw ArgumentError('Вход и выход совпадают');
+    if (pcmPath == outputPath) throw ArgumentError('Input and output are the same file');
     try {
       await channel.invokeMethod<void>('encode', {
         'pcmPath': pcmPath,

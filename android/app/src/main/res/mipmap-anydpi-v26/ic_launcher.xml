@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- minSdk 31: адаптивный значок есть всегда, растровые копии не нужны. -->
+<!-- minSdk 31: an adaptive icon is always available, raster copies are not needed. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background" />
     <foreground android:drawable="@drawable/ic_launcher_foreground" />

@@ -122,7 +122,7 @@ abstract class AppLocalizations {
   /// **'Следующий отрезок'**
   String get mediaNext;
 
-  /// Заголовок полки
+  /// Shelf title
   ///
   /// In ru, this message translates to:
   /// **'Книги'**
@@ -152,7 +152,7 @@ abstract class AppLocalizations {
   /// **'Продолжить'**
   String get continueReading;
 
-  /// Книгу ещё не открывали
+  /// The book has not been opened yet
   ///
   /// In ru, this message translates to:
   /// **'новая'**
@@ -296,7 +296,7 @@ abstract class AppLocalizations {
   /// **'К месту чтения'**
   String get toReadingPlace;
 
-  /// Доля книги, формат по локали
+  /// Fraction of the book, formatted by locale
   ///
   /// In ru, this message translates to:
   /// **'{value}'**
@@ -416,7 +416,7 @@ abstract class AppLocalizations {
   /// **'Голос'**
   String get voice;
 
-  /// Сокращение «минут» — без склонения
+  /// Abbreviation of "minutes" — without declension
   ///
   /// In ru, this message translates to:
   /// **'{count} мин'**
@@ -452,7 +452,7 @@ abstract class AppLocalizations {
   /// **'На счёте Gemini закончились деньги'**
   String get error402Title;
 
-  /// Автопродолжения нет (FR-P6): только «нажмите Слушать»
+  /// No auto-resume (FR-P6): only "press Listen"
   ///
   /// In ru, this message translates to:
   /// **'Пополните счёт и нажмите «Слушать» — продолжим с этого абзаца.'**
@@ -494,7 +494,7 @@ abstract class AppLocalizations {
   /// **'Google отказал в озвучке'**
   String get errorOtherTitle;
 
-  /// Текст Google — как есть, без перевода
+  /// Google's text — as is, not translated
   ///
   /// In ru, this message translates to:
   /// **'Google: «{message}»'**
@@ -554,13 +554,13 @@ abstract class AppLocalizations {
   /// **'Пауза в конце главы'**
   String get sleepActiveChapter;
 
-  /// Глава полностью озвучена
+  /// The chapter is fully narrated
   ///
   /// In ru, this message translates to:
   /// **'озвучена'**
   String get voiced;
 
-  /// Оценка перед «Скачать главу» (FR-D2)
+  /// Estimate before "Download chapter" (FR-D2)
   ///
   /// In ru, this message translates to:
   /// **'Не озвучено: ≈ {minutes} мин звука, ≈ {price}'**
@@ -740,7 +740,7 @@ abstract class AppLocalizations {
   /// **'Потрачено'**
   String get spent;
 
-  /// Сумма в долларах, формат по локали
+  /// Amount in dollars, formatted by locale
   ///
   /// In ru, this message translates to:
   /// **'{amount}'**
@@ -824,139 +824,139 @@ abstract class AppLocalizations {
   /// **'Українська'**
   String get langUk;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'мягкий'**
   String get voiceCharSoft;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'лёгкий, непринуждённый'**
   String get voiceCharBreezy;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'яркий'**
   String get voiceCharBright;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'спокойный'**
   String get voiceCharCalm;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'плавный'**
   String get voiceCharSmooth;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'чёткий'**
   String get voiceCharClear;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'зрелый'**
   String get voiceCharMature;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'твёрдый'**
   String get voiceCharFirm;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'бодрый'**
   String get voiceCharUpbeat;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'молодой'**
   String get voiceCharYouthful;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'напористый'**
   String get voiceCharForward;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'тёплый'**
   String get voiceCharWarm;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'нежный'**
   String get voiceCharGentle;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'дружелюбный'**
   String get voiceCharFriendly;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'с хрипотцой'**
   String get voiceCharGravelly;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'деловой'**
   String get voiceCharInformative;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'с придыханием'**
   String get voiceCharBreathy;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'возбуждённый'**
   String get voiceCharExcitable;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'живой'**
   String get voiceCharLively;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'знающий'**
   String get voiceCharKnowledgeable;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'ровный'**
   String get voiceCharEven;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'непринуждённый'**
   String get voiceCharEasygoing;
 
-  /// Характер голоса
+  /// Voice character
   ///
   /// In ru, this message translates to:
   /// **'разговорный'**

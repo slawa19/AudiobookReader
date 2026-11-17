@@ -8,17 +8,17 @@ import 'l10n/app_localizations.dart';
 import 'services.dart';
 import 'voice_screen.dart';
 
-/// Настройки — один экран (CONCEPT §3): ключ, голос, модель, язык интерфейса, потрачено, место под озвучку.
+/// Settings are one screen (CONCEPT §3): key, voice, model, interface language, spent, space for narration.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, required this.services, this.focusKey = false, this.openModel = false});
 
   final AppServices services;
 
-  /// «Слушать» без ключа и «Изменить ключ» после отказа по ключу приводят сюда сразу к полю ключа (FR-P7): поле
-  /// открыто для ввода, даже если ключ сохранён.
+  /// "Listen" without a key and "Change key" after a key rejection lead here straight to the key field (FR-P7): the
+  /// field is open for input even if a key is saved.
   final bool focusKey;
 
-  /// Ответ 404 на модель — «Выбрать модель» открывает выбор сразу.
+  /// A 404 response for the model — "Choose model" opens the choice at once.
   final bool openModel;
 
   @override
@@ -36,7 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _editingKey = widget.focusKey;
-    // Ушли с поля (касание мимо, другой пункт) — непустой ключ сохраняется (решение E проверки жестов, FR-P7).
+    // Left the field (a tap elsewhere, another item) — a non-empty key is saved (gesture review decision E, FR-P7).
     _keyFocus.addListener(() {
       if (!_keyFocus.hasFocus) _keepTypedKey();
     });
@@ -57,7 +57,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context,
       (context) => _ModelSheet(current: TtsModel.byId(s.settings.modelId), tariffs: s.tariffs),
     );
-    // Касание уже выбранной модели ничего не меняет и сеанс не перезапускает (правило j).
+    // A touch on the already selected model changes nothing and does not restart the session (rule j).
     if (picked != null && picked.id != s.settings.modelId) {
       s.settings.modelId = picked.id;
       s.narration.restartSession();
@@ -66,7 +66,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _chooseLanguage() async {
     final picked = await showScrollableSheet<String>(context, (context) => _LanguageSheet(current: s.settings.language));
-    // Пустая строка — «Как в системе».
+    // An empty string — "Same as system".
     if (picked != null) s.settings.language = picked.isEmpty ? null : picked;
   }
 
@@ -93,19 +93,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       },
     );
-    // Одна команда контроллера: сеанс, «Скачать главу», готовность глав, пробы и звук (FR-M3, А§4).
+    // One controller command: the session, "Download chapter", chapter readiness, probes and audio (FR-M3, А§4).
     if (ok ?? false) s.narration.clearAllNarration();
   }
 
   void _saveKey() {
-    // «Готово» на пустом поле ключ не трогает: удаления ключа в интерфейсе нет (правило j).
+    // "Done" on an empty field does not touch the key: the interface has no key deletion (rule j).
     if (_keyController.text.trim().isNotEmpty) s.settings.apiKey = _keyController.text;
     _keyController.clear();
     setState(() => _editingKey = false);
   }
 
-  /// Введённое в поле, но не подтверждённое кнопкой: при уходе с поля или с экрана непустое значение сохраняется,
-  /// пустое ключ не трогает (решение E проверки жестов, FR-P7).
+  /// Entered in the field but not confirmed by the button: on leaving the field or the screen a non-empty value is
+  /// saved, an empty one does not touch the key (gesture review decision E, FR-P7).
   void _keepTypedKey() {
     if (_keyController.text.trim().isEmpty) return;
     s.settings.apiKey = _keyController.text;
@@ -118,7 +118,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final l10n = context.l10n;
-    // Уход с экрана — стрелкой «Назад» или системной «Назад» — сохраняет введённый ключ.
+    // Leaving the screen — by the "Back" arrow or the system "Back" — saves the entered key.
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) _keepTypedKey();
@@ -290,7 +290,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-/// Группа настроек — скруглённая карточка, как в современных настройках Android.
+/// A settings group is a rounded card, like in modern Android settings.
 class _Group extends StatelessWidget {
   const _Group({required this.children});
 
@@ -353,8 +353,8 @@ class _ModelSheet extends StatelessWidget {
   }
 }
 
-/// «Язык»: «Как в системе» и пять языков интерфейса, каждый назван на самом себе. Возвращает код языка или
-/// пустую строку для «Как в системе».
+/// "Language": "Same as system" and the five interface languages, each named in itself. Returns the language code or
+/// an empty string for "Same as system".
 class _LanguageSheet extends StatelessWidget {
   const _LanguageSheet({required this.current});
 

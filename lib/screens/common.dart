@@ -12,16 +12,16 @@ import '../reader/page_style.dart';
 import '../tts/voices.dart';
 import 'l10n/app_localizations.dart';
 
-/// Строки интерфейса — только из ARB (lib/screens/l10n), в коде экранов текста нет.
+/// Interface strings come only from the ARB (lib/screens/l10n); there is no text in the screen code.
 extension L10nContext on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this);
 }
 
-/// Адреса, на которые ведут кнопки (не строки интерфейса).
+/// Addresses the buttons lead to (not interface strings).
 const billingUrl = 'https://aistudio.google.com/billing';
 const keyUrl = 'https://aistudio.google.com/apikey';
 
-/// Названия книг — гарнитурой книги (NOTES.md).
+/// Book titles use the book typeface (NOTES.md).
 TextStyle bookTitleStyle(BuildContext context, double size, {FontWeight weight = FontWeight.w700}) => TextStyle(
       fontFamily: bookFontFamily,
       fontSize: size,
@@ -30,14 +30,14 @@ TextStyle bookTitleStyle(BuildContext context, double size, {FontWeight weight =
       color: Theme.of(context).colorScheme.onSurface,
     );
 
-/// Защита от касания вдогонку (решение A проверки жестов 2026-11-14, А§8.1): после того как слой под пальцем
-/// сменился — панели чтения ↔ панель плеера, открылся или закрылся лист или диалог, исчезла панель плеера или
-/// строка скачивания, сменился экран, — новые элементы управления и страница под ними столько времени не принимают
-/// касаний. Второе касание двойного нажатия приходит через 100–250 мс; два осмысленных нажатия — реже.
+/// Protection against a follow-up touch (gesture review decision A 2026-11-14, А§8.1): after the layer under the finger
+/// changed — reading panels ↔ player panel, a sheet or dialog opened or closed, the player panel or the
+/// download row disappeared, the screen changed — the new controls and the page beneath them accept no
+/// touches for this long. The second tap of a double tap arrives after 100–250 ms; two deliberate taps — less often.
 const layerSettleTime = Duration(milliseconds: 350);
 
-/// Свежий слой (лист, диалог): первые [layerSettleTime] касания поглощаются — второе касание двойного нажатия,
-/// открывшего лист, не нажимает то, что встало под палец, и не закрывает лист через затемнение.
+/// A fresh layer (sheet, dialog): the first [layerSettleTime] of touches are absorbed — the second tap of a double tap
+/// that opened the sheet does not press what appeared under the finger and does not close the sheet through the scrim.
 class FreshLayerGuard extends StatefulWidget {
   const FreshLayerGuard({super.key, required this.child});
 
@@ -69,8 +69,8 @@ class _FreshLayerGuardState extends State<FreshLayerGuard> {
   Widget build(BuildContext context) => AbsorbPointer(absorbing: _absorbing, child: widget.child);
 }
 
-/// Первая версия — только портретная ориентация (решение F проверки жестов; спека 001, «Не делаем»). Закреплено и
-/// в манифесте Android (`android:screenOrientation="portrait"`).
+/// The first version is portrait only (gesture review decision F; spec 001, "Out of scope"). Also pinned
+/// in the Android manifest (`android:screenOrientation="portrait"`).
 const allowedOrientations = [DeviceOrientation.portraitUp];
 
 void lockPortrait() {
@@ -78,8 +78,8 @@ void lockPortrait() {
   SystemChrome.setPreferredOrientations(allowedOrientations);
 }
 
-/// Скрыты ли системные панели (экран чтения без панелей). Рамка прототипа в браузере рисует по нему строку
-/// состояния; на телефоне то же делает система.
+/// Whether the system panels are hidden (the reading screen without panels). The prototype frame in the browser draws
+/// the status bar by it; on a phone the system does the same.
 final ValueNotifier<bool> systemBarsHidden = ValueNotifier(false);
 
 void setImmersive(bool hidden) {
@@ -91,7 +91,7 @@ void setImmersive(bool hidden) {
     }
   }
 
-  // Из initState и dispose нельзя менять слушаемое значение посреди кадра — откладываем на его конец.
+  // From initState and dispose the observed value cannot be changed in the middle of a frame — defer to its end.
   final phase = SchedulerBinding.instance.schedulerPhase;
   if (phase == SchedulerPhase.idle || phase == SchedulerPhase.postFrameCallbacks) {
     apply();
@@ -101,24 +101,24 @@ void setImmersive(bool hidden) {
   }
 }
 
-/// Объём на диске по локали: «96 МБ», «1,2 ГБ».
+/// A size on disk by locale: "96 МБ", "1,2 ГБ".
 String formatBytes(AppLocalizations l10n, int bytes) {
   final mb = bytes / (1024 * 1024);
   if (mb >= 1024) return l10n.gigabytes(mb / 1024);
   return l10n.megabytes(mb.round());
 }
 
-/// Одинаковое округление на полке, внизу чтения и у ползунка. Значение 1 зарезервировано
-/// для дочитанной книги (FR-L4); малая ненулевая позиция может показываться как 0 %.
+/// The same rounding on the shelf, at the bottom of reading and at the slider. The value 1 is reserved
+/// for a finished book (FR-L4); a small non-zero position may be shown as 0 %.
 double progressForDisplay(double fraction) => fraction >= 1 ? 1 : (fraction * 100).round().clamp(0, 99) / 100;
 
-/// «Новая» у неоткрытой; числовая подпись общая для полки и чтения.
+/// "New" for an unopened one; the numeric label is shared by the shelf and reading.
 String shelfProgress(AppLocalizations l10n, double? fraction) {
   if (fraction == null) return l10n.progressNew;
   return l10n.percent(progressForDisplay(fraction));
 }
 
-/// Название месяца в именительном падеже с заглавной буквы: «Ноябрь», «November», «Listopad».
+/// A month name in the nominative case with a capital letter: "Ноябрь", "November", "Listopad".
 String monthName(AppLocalizations l10n, DateTime month) {
   final s = DateFormat.LLLL(l10n.localeName).format(month);
   return s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
@@ -156,7 +156,7 @@ String addFailureText(AppLocalizations l10n, AddFailure f) => switch (f) {
       AddFailure.protected => l10n.addFailedProtected,
     };
 
-/// Языки интерфейса: код → название на самом языке.
+/// Interface languages: code → name in the language itself.
 List<(String code, String name)> interfaceLanguages(AppLocalizations l10n) => [
       ('ru', l10n.langRu),
       ('en', l10n.langEn),
@@ -205,14 +205,14 @@ class BookCover extends StatelessWidget {
   }
 }
 
-/// Две кнопки: в ряд поровну, а если подписи не помещаются — столбцом во всю ширину.
+/// Two buttons: side by side in equal parts, and if the labels do not fit — in a column of full width.
 class ButtonPair extends StatelessWidget {
   const ButtonPair({super.key, required this.first, required this.second, required this.labels});
 
   final Widget first;
   final Widget second;
 
-  /// Подписи кнопок — чтобы оценить нужную ширину.
+  /// Button labels — to estimate the needed width.
   final List<String> labels;
 
   @override
@@ -227,7 +227,7 @@ class ButtonPair extends StatelessWidget {
         need = need < tp.width ? tp.width : need;
         tp.dispose();
       }
-      // Иконка 18 + зазор 8 + поля кнопки 2 × 24.
+      // Icon 18 + gap 8 + button padding 2 × 24.
       final perButton = need + 18 + 8 + 48;
       if (perButton * 2 + 8 <= c.maxWidth) {
         return Row(children: [Expanded(child: first), const SizedBox(width: 8), Expanded(child: second)]);
@@ -237,8 +237,8 @@ class ButtonPair extends StatelessWidget {
   }
 }
 
-/// Измеряет сообщение об ошибке, конец книги или скачивание. Панель управления не измеряется:
-/// её постоянная высота не зависит от состояния и следования.
+/// Measures an error message, end of book or a download. The control panel is not measured:
+/// its constant height does not depend on state and following.
 class MeasureSize extends SingleChildRenderObjectWidget {
   const MeasureSize({super.key, required this.onChange, required super.child});
 
@@ -268,7 +268,7 @@ class RenderMeasureSize extends RenderProxyBox {
   }
 }
 
-/// Чип голоса книги: в нижней панели чтения и в панели плеера.
+/// The book voice chip: in the reading bottom panel and in the player panel.
 class VoiceChip extends StatelessWidget {
   const VoiceChip({super.key, required this.voiceName, required this.onPressed});
 
@@ -294,7 +294,8 @@ class VoiceChip extends StatelessWidget {
   }
 }
 
-/// Лист с ручкой, который не выходит за экран: при нехватке высоты (узкий экран, крупный шрифт) прокручивается.
+/// A sheet with a handle that does not extend beyond the screen: when height is lacking (narrow screen, large font) it
+/// scrolls.
 Future<T?> showScrollableSheet<T>(BuildContext context, WidgetBuilder builder, {Color? barrierColor}) {
   return showModalBottomSheet<T>(
     context: context,
@@ -310,7 +311,7 @@ Future<T?> showScrollableSheet<T>(BuildContext context, WidgetBuilder builder, {
   );
 }
 
-/// Заголовок листа.
+/// A sheet title.
 Widget sheetTitle(BuildContext context, String text, {String? subtitle}) {
   final theme = Theme.of(context);
   return Padding(

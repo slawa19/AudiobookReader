@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 import '../library/incoming_files.dart';
 
-/// Приём файлов Android (А§7). Создаётся в app; прототип эту реализацию не использует.
+/// Receiving files on Android (А§7). Created in app; the prototype does not use this implementation.
 class AndroidIncomingFiles implements IncomingFiles {
   static const _methods = MethodChannel('audiobook_reader/incoming_files');
   static const _events = EventChannel('audiobook_reader/incoming_files/events');
@@ -13,8 +13,8 @@ class AndroidIncomingFiles implements IncomingFiles {
     return file == null ? null : _decode(file);
   }
 
-  // Подписка на канал начинается только с подпиской получателя. До неё очередь
-  // держит Android, в том числе если копирование при холодном запуске уже завершилось.
+  // Subscribing to the channel begins only with the receiver's subscription. Until then the queue
+  // is held by Android, including when the copy on a cold start has already finished.
   late final Stream<IncomingFile> _incomingFiles = _receive();
 
   @override

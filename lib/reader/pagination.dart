@@ -7,14 +7,14 @@ import 'package:flutter/widgets.dart';
 import '../book/model.dart';
 import 'page_style.dart';
 
-/// Наблюдение за фактическими измерениями в тестах; текст книги сюда не передаётся.
+/// Observing actual measurements in tests; the book text is not passed here.
 @visibleForTesting
 void Function(int block, int start, int end)? debugPageMeasurement;
 
-/// Кусок блока на странице: текст [start, end) блока [block] и его место по вертикали.
+/// A piece of a block on a page: the text [start, end) of block [block] and its vertical place.
 ///
-/// У картинки два вида кусков: сама картинка ([imageSize] задан, текст пуст) и строки подписи (текст подписи,
-/// [imageSize] — `null`). Заголовок и подпись делятся по строкам так же, как абзац.
+/// An image has two kinds of pieces: the image itself ([imageSize] set, text empty) and the caption lines (the caption
+/// text, [imageSize] — `null`). A heading and a caption are split by lines the same way as a paragraph.
 class PageFragment {
   const PageFragment({
     required this.block,
@@ -31,13 +31,13 @@ class PageFragment {
   final double top;
   final double height;
 
-  /// У картинки — размер, в который она вписана.
+  /// For an image — the size it is fitted into.
   final Size? imageSize;
 
   bool get isImage => imageSize != null;
 }
 
-/// Страница: пара «начало» и «конец» (А§5) плюс раскладка кусков.
+/// A page: a "start" and "end" pair (А§5) plus the layout of the pieces.
 class BookPageLayout {
   const BookPageLayout({required this.chapter, required this.fragments});
 
@@ -50,7 +50,7 @@ class BookPageLayout {
   int get lastEnd => fragments.last.end;
 
 
-  /// Стоит ли место (блок, смещение) на этой странице.
+  /// Whether the place (block, offset) is on this page.
   bool contains(int block, int offset) {
     for (final f in fragments) {
       if (f.block == block && offset >= f.start && (offset < f.end || (offset == f.end && f.end == f.start))) {
@@ -61,17 +61,18 @@ class BookPageLayout {
   }
 }
 
-/// Расчёт главы от сохранённого места. Первая страница готова после [start], каждая следующая считается
-/// отдельным событием главного изолята. Экран может рисовать [pages], не дожидаясь [isComplete].
-/// Повторный [start] отменяет прежнюю работу; место передаётся явно, а не выводится из новой типографики.
-/// С [start] `throughBook: true` расчёт продолжается через границы следующих глав до конца книги.
+/// Computing a chapter from a saved place. The first page is ready after [start], each following one is computed
+/// as a separate main-isolate event. The screen may draw [pages] without waiting for [isComplete].
+/// A repeated [start] cancels the previous work; the place is passed explicitly, not derived from the new typography.
+/// With [start] `throughBook: true` the computation continues across the boundaries of the following chapters to the
+/// end of the book.
 class ChapterPagination extends ChangeNotifier {
   late Book _book;
   late PageStyle _style;
   late Size _column;
   Map<String, Size> _imageSizes = const {};
 
-  /// Индексы в [pages] локальны: при досчёте назад начало массива сдвигается на это число страниц.
+  /// Indices in [pages] are local: when computing backwards, the start of the array shifts by this many pages.
   int get prependedCount => _prepended;
   int _prepended = 0;
   int _bookStart = 0;
@@ -84,7 +85,7 @@ class ChapterPagination extends ChangeNotifier {
   Completer<int>? _backDone;
   int _backChapter = 0;
 
-  /// Конец книги известен из координат самой страницы, без ожидания следующей порции расчёта.
+  /// The end of the book is known from the page's own coordinates, without waiting for the next batch of computation.
   bool endsBook(BookPageLayout page) {
     if (page.lastEnd != _book.blocks[page.lastBlock].text.length) return false;
     for (var b = page.lastBlock + 1; b < _book.blocks.length; b++) {
@@ -93,7 +94,7 @@ class ChapterPagination extends ChangeNotifier {
     return true;
   }
 
-  /// Конец текстового блока относится к следующему блоку. Пустые картинки и разделители — видимые места.
+  /// The end of a text block belongs to the next block. Empty images and dividers are visible places.
   (int, int) _place(int block, int offset) {
     block = block.clamp(0, _book.blocks.length - 1);
     offset = offset.clamp(0, _book.blocks[block].text.length);
@@ -107,7 +108,7 @@ class ChapterPagination extends ChangeNotifier {
   }
 
   bool _visualEmpty(Block b) => b.kind == BlockKind.image || b.kind == BlockKind.separator;
-  /// Номер страницы, на которой стоит место (блок, смещение).
+  /// The number of the page the place (block, offset) is on.
   int pageOf(int block, int offset) {
     var lo = 0;
     var hi = pages.length - 1;
@@ -125,16 +126,16 @@ class ChapterPagination extends ChangeNotifier {
 
   final List<int> chapterFirstPage = [];
 
-  /// Готовая страница места. В перекрытии выбирается следующая, кроме удерживаемой первой [preferredPage].
-  /// Последняя известная страница ещё не означает конец книги.
+  /// The ready page of a place. In an overlap the next one is chosen, except the held first [preferredPage].
+  /// The last known page does not yet mean the end of the book.
   int? findPage(int block, int offset, {int? preferredPage}) {
     if (_pages.isEmpty) return null;
     final place = _place(block, offset);
     if (place.$1 == _book.blocks.length) return endsBook(_pages.last) ? _pages.length - 1 : null;
     block = place.$1;
     offset = place.$2;
-    // Перекрытие есть только у первой страницы главы. Пока читатель на ней, голос её не меняет.
-    // В остальных случаях двоичный поиск выбирает следующую страницу с этим местом.
+    // Only the first page of a chapter has an overlap. While the reader is on it, the voice does not change it.
+    // In other cases a binary search picks the next page with this place.
     if (preferredPage != null && preferredPage >= 0 && preferredPage < _pages.length) {
       final preferred = _pages[preferredPage];
       final chapterStart = _place(_book.chapters[preferred.chapter].firstBlock, 0);
@@ -182,8 +183,8 @@ class ChapterPagination extends ChangeNotifier {
     _imageSizes = imageSizes;
     var place = _place(block, offset);
     if (place.$1 == book.blocks.length) {
-      // Для позиции за последним знаком достаточно ограниченного хвоста последнего видимого блока.
-      // Его последняя страница становится точкой старта; предшествующий текст подключается обычным ходом назад.
+      // For a position past the last character, a bounded tail of the last visible block is enough.
+      // Its last page becomes the start point; the preceding text is attached by the usual backward move.
       var last = book.blocks.length - 1;
       while (last > 0 && book.blocks[last].text.isEmpty && !_visualEmpty(book.blocks[last])) { last--; }
       var tail = math.max(0, book.blocks[last].text.length - 4096);
@@ -201,8 +202,8 @@ class ChapterPagination extends ChangeNotifier {
     _advance(_generation);
   }
 
-  /// Строки префикса измеряются порциями, страницы собираются с конца до уже показанного начала.
-  /// Страницы добавляются одной вставкой: видимый кусок и его границы никогда не заменяются.
+  /// Prefix lines are measured in batches, pages are assembled from the end up to the already shown start.
+  /// Pages are added with a single insertion: a visible piece and its boundaries are never replaced.
   Future<int> loadPrevious() {
     if (_backDone != null) return _backDone!.future;
     if (!hasPrevious) return Future.value(0);
@@ -230,7 +231,7 @@ class ChapterPagination extends ChangeNotifier {
       _backTimer = Timer(const Duration(milliseconds: 1), () => _advanceBack(generation));
     } else {
       if (_before.isEmpty && _backChapter > 0) {
-        // Пустая глава или пустой префикс собственной главы не задерживает продвижение назад.
+        // An empty chapter or an empty prefix of its own chapter does not delay moving backwards.
         _backIterator = _Paginator(_book, _style, _column, _imageSizes).before(--_backChapter).iterator;
         _backTimer = Timer(const Duration(milliseconds: 1), () => _advanceBack(generation));
         notifyListeners();
@@ -264,7 +265,7 @@ class ChapterPagination extends ChangeNotifier {
     if (iterator.moveNext()) {
       if (_pages.isEmpty || _pages.last.chapter != iterator.current.chapter) chapterFirstPage.add(_pages.length);
       _pages.add(iterator.current);
-      // Короткая пауза оставляет место кадру и событиям ввода между порциями, в том числе в тестовых часах.
+      // A short pause leaves room for a frame and input events between batches, including in test clocks.
       _timer = Timer(const Duration(milliseconds: 1), () => _advance(generation));
     } else {
       _iterator = null;
@@ -274,8 +275,8 @@ class ChapterPagination extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Следующая порция тем же итератором. Перераскладка может досчитать ограниченный текст старой
-  /// видимой страницы до удерживаемого места перед первым показом; книга до этой страницы не считается.
+  /// The next batch with the same iterator. Re-layout may finish computing the bounded text of the old
+  /// visible page up to the held place before the first display; the book up to that page is not computed.
   void advancePage() {
     if (_paused) return;
     _timer?.cancel();
@@ -283,7 +284,7 @@ class ChapterPagination extends ChangeNotifier {
     _advance(_generation);
   }
 
-  /// Пока ищется другая цель, видимые страницы и итератор остаются для возможного возврата.
+  /// While another target is being searched, the visible pages and the iterator stay for a possible return.
   void pause() {
     _paused = true;
     _generation++;
@@ -292,7 +293,7 @@ class ChapterPagination extends ChangeNotifier {
     cancelPrevious();
   }
 
-  /// Продолжает хвост без повторного измерения или замены уже показанных страниц.
+  /// Continues the tail without re-measuring or replacing already shown pages.
   void resume() {
     if (!_paused) return;
     _paused = false;
@@ -302,7 +303,7 @@ class ChapterPagination extends ChangeNotifier {
     }
   }
 
-  /// После отмены ни измерений, ни уведомлений от старого расчёта больше нет.
+  /// After cancellation there are no more measurements or notifications from the old computation.
   void cancel() {
     _paused = false;
     _generation++;
@@ -312,7 +313,7 @@ class ChapterPagination extends ChangeNotifier {
     cancelPrevious();
   }
 
-  /// Более новая команда вперёд снимает ненужный запрос назад, не останавливая расчёт хвоста.
+  /// A newer forward command drops an unneeded backward request without stopping the tail computation.
   void cancelPrevious() {
     _backTimer?.cancel();
     _backTimer = null;
@@ -405,7 +406,7 @@ class _Paginator {
     }
   }
 
-  /// Пустая порция отдаёт кадр после измерения одной страницы. Готовые страницы идут от ближайшей назад.
+  /// An empty batch yields a frame after measuring one page. Ready pages go from the nearest one backwards.
   Iterable<BookPageLayout?> before(int c, {int? stopBlock, int stopOffset = 0}) sync* {
     final prefix = <BookPageLayout>[];
     for (final page in chapter(c, stopBlock: stopBlock, stopOffset: stopOffset)) {
@@ -413,7 +414,7 @@ class _Paginator {
       yield null;
     }
     if (stopBlock == null || stopBlock >= book.chapters[c].endBlock) {
-      // Предыдущая глава показывается в своей обычной прямой раскладке, включая её короткий конец.
+      // The previous chapter is shown in its ordinary forward layout, including its short end.
       yield* prefix.reversed;
       return;
     }
@@ -436,8 +437,8 @@ class _Paginator {
       current.addFirst(unit);
     }
     if (current.isNotEmpty) {
-      // Остаток у начала главы не показывается коротким: обычная первая страница может
-      // повторить последние строки на следующей. Другие границы остаются непересекающимися.
+      // The remainder at the start of a chapter is not shown as short: an ordinary first page may
+      // repeat the last lines on the next one. Other boundaries stay non-overlapping.
       yield _Paginator(book, style, column, imageSizes).chapter(c).first;
     }
   }
@@ -463,7 +464,7 @@ class _Paginator {
           : b.kind == BlockKind.image ? lh * 0.3
           : _spacingBefore(f.block == ch.firstBlock ? null : book.blocks[f.block - 1].kind, b.kind);
       final after = f.end != b.text.length ? 0.0 : heading ? lh * 1.2 : b.kind == BlockKind.image ? lh * 0.6 : 0.0;
-      // Небольшой заголовок остаётся целым, как в прямой раскладке.
+      // A small heading stays whole, as in the forward layout.
       if (heading && f.start == 0 && f.end == b.text.length && before + f.height <= column.height) {
         out.add(_BackUnit([PageFragment(block: f.block, start: f.start, end: f.end, top: 0, height: f.height)],
             f.height, before: before, topBefore: before, after: after));
@@ -477,7 +478,7 @@ class _Paginator {
         final first = i == 0;
         final last = i == measured.lineStarts.length - 1;
         if (b.kind == BlockKind.image && row.start == 0 && out.isNotEmpty && out.last.fragments.last.isImage) {
-          // Картинка и первая строка подписи переносятся вместе.
+          // An image and the first caption line are moved together.
           final image = out.removeLast();
           out.add(_BackUnit([...image.fragments, PageFragment(block: row.block, start: row.start, end: row.end,
               top: image.height + before, height: row.height)], image.height + before + row.height,
@@ -513,8 +514,8 @@ class _Paginator {
     return BookPageLayout(chapter: c, fragments: fragments);
   }
 
-  /// Даже один огромный абзац измеряется окнами. Незавершённую последнюю строку окна измеряем заново
-  /// со следующим окном: граница окна не становится искусственным переносом строки.
+  /// Even one huge paragraph is measured in windows. The unfinished last line of a window is measured again
+  /// with the next window: a window boundary does not become an artificial line break.
   Iterable<BookPageLayout> _placeText(int i, int start,
       {double before = 0, bool beforeAtPageTop = false, double after = 0, bool keepTogether = false}) sync* {
     final block = book.blocks[i];
@@ -523,13 +524,13 @@ class _Paginator {
     if (at >= limit) return;
     do {
       var end = math.min(at + 4096, limit);
-      // Окно не разрезает суррогатную пару UTF-16.
+      // A window does not split a UTF-16 surrogate pair.
       if (end < limit && end > at && block.text.codeUnitAt(end - 1) >= 0xD800 &&
           block.text.codeUnitAt(end - 1) <= 0xDBFF) {
         end--;
       }
-      // Незавершённое слово может изменить перенос и предпоследней строки окна. По возможности
-      // заканчиваем окно на пробеле; последняя строка всё равно остаётся для следующего измерения.
+      // An unfinished word may change the wrap of the window's second-to-last line too. When possible,
+      // end the window at a space; the last line still stays for the next measurement.
       if (end < limit) {
         final boundary = block.text.substring(at, end).lastIndexOf(RegExp(r'\s'));
         if (boundary >= 0) end = at + boundary + 1;
@@ -547,8 +548,8 @@ class _Paginator {
     } while (at < limit);
   }
 
-  /// Кладёт строки куска на страницы. [before] — отступ перед первой строкой (у начала страницы — только при
-  /// [beforeAtPageTop]); [keepTogether] — не делить, если целиком помещается на пустую страницу.
+  /// Puts the piece's lines onto pages. [before] — the gap before the first line (at the page top — only with
+  /// [beforeAtPageTop]); [keepTogether] — do not split if it fits whole on an empty page.
   Iterable<BookPageLayout> _placeLines(int i, _Measured m,
       {double before = 0, bool beforeAtPageTop = false, double after = 0, bool keepTogether = false}) sync* {
     if (m.lineHeights.isEmpty) return;
@@ -572,14 +573,14 @@ class _Paginator {
           yield _flush();
           continue;
         }
-        // Строка выше пустой страницы (огромный кегль) — кладём одну, иначе разбивка не продвинется.
+        // A line taller than an empty page (a huge font size) — put one, otherwise pagination will not advance.
         h = m.lineHeights.first;
         k = 1;
       }
       final start = m.lineStarts.first;
       var end = k < m.lineStarts.length ? m.lineStarts[k] : m.end;
-      // Разрыв внутри длинного слова меняет перенос последней строки. Проверяем ровно тот кусок,
-      // который будет нарисован, а после разрыва заново измеряем оставшийся текст от нового начала.
+      // A break inside a long word changes the wrap of the last line. We check exactly the piece
+      // that will be drawn, and after the break measure the remaining text again from the new start.
       h = _measure(book.blocks[i], start, end).lineHeights.fold(0.0, (a, b) => a + b);
       while (h > avail + 0.01 && k > 1) {
         k--;
@@ -600,7 +601,7 @@ class _Paginator {
     _y += after;
   }
 
-  /// Картинка вписывается в страницу вместе с первой строкой подписи; длинная подпись продолжается кусками.
+  /// An image is fitted into the page together with the first caption line; a long caption continues in pieces.
   Iterable<BookPageLayout> _placeImage(int i, Block block, {required double gap}) sync* {
     final caption = block.text.isEmpty ? null : _measure(block, 0, math.min(4096, block.text.length));
     final captionGap = caption == null ? 0.0 : lh * 0.3;
@@ -626,11 +627,11 @@ class _Paginator {
 
   double _headingBefore(int c, int block, int start) {
     final ch = book.chapters[c];
-    // Раздел только из заголовка — страница-заглавие: заголовок ниже обычного.
+    // A section of only a heading is a title page: the heading is lower than usual.
     return start > 0 ? 0 : ch.blockCount == 1 ? column.height * 0.28 : block == ch.firstBlock ? lh : lh * 1.5;
   }
 
-  /// Картинка во всю ширину колонки, но не выше 62 % страницы и не выше [maxHeight].
+  /// An image the full width of the column, but not taller than 62 % of the page and not taller than [maxHeight].
   Size _imageBox(Block block, double maxHeight) {
     final natural = imageSizes[block.imageId] ?? const Size(4, 3);
     final maxH = math.max(lh * 2, math.min(column.height * 0.62, maxHeight));
@@ -656,8 +657,8 @@ class _Paginator {
       if (i == 0) {
         starts.add(start);
       } else {
-        // Начало строки — позиция у левого края строки. Для выравнивания по центру (заголовок, подпись) левее
-        // текста стоит её же начало.
+        // The line start is the position at the line's left edge. For center alignment (heading, caption) the line's
+        // own start is to the left of the text.
         final pos = tp.getPositionForOffset(Offset(0.5, y + metrics[i].height / 2)).offset - shift + start;
         starts.add(math.max(starts.last + 1, pos.clamp(start, end)));
       }
@@ -676,23 +677,24 @@ class _Measured {
   final int end;
 }
 
-/// Неделимая часть обратной страницы: строка, небольшой заголовок или картинка с началом подписи.
+/// An indivisible part of a backward page: a line, a small heading or an image with the start of its caption.
 class _BackUnit {
   _BackUnit(this.fragments, this.height, {this.before = 0, this.topBefore = 0, this.after = 0});
   final List<PageFragment> fragments;
   final double height, before, topBefore, after;
 }
 
-/// Красная строка — только у абзаца и только в его начале.
+/// A first-line indent only for a paragraph and only at its start.
 bool hasIndent(Block block, int start) => block.kind == BlockKind.paragraph && start == 0;
 
-/// Отступ слева у куска блока.
+/// The left indent of a block piece.
 double fragmentInset(PageStyle style, Block block) => style.isVerseLike(block.kind) ? style.insetVerse : 0;
 
-/// Текст куска для измерения и отрисовки — один и тот же: абзац, стих, цитата, заголовок или подпись картинки.
+/// The text of a piece for measuring and drawing is one and the same: a paragraph, verse, quote, heading or image
+/// caption.
 InlineSpan pieceSpan(PageStyle style, Block block, int start, int end, {Color? color, Color? subColor, Color? noteColor}) {
-  // Кусок, оборванный сразу после перевода строки (стихи, заголовок), рисуется без него: иначе внизу куска
-  // появилась бы лишняя пустая строка.
+  // A piece cut off right after a line break (verse, heading) is drawn without it: otherwise an extra empty line
+  // would appear at the bottom of the piece.
   if (end > start && block.text.codeUnitAt(end - 1) == 0x0A) end--;
   switch (block.kind) {
     case BlockKind.heading:
@@ -746,8 +748,8 @@ TextPainter piecePainter(PageStyle style, Block block, int start, int end, {requ
   return tp;
 }
 
-/// Заголовок: первая строка — крупно, остальные (после `\n`) — курсивом. Кусок [start, end) сохраняет стиль
-/// своей строки, поэтому длинный заголовок делится по строкам, как абзац.
+/// A heading: the first line is large, the rest (after `\n`) are italic. A piece [start, end) keeps the style
+/// of its line, so a long heading is split by lines like a paragraph.
 InlineSpan _headingSpan(PageStyle style, Block block, int start, int end, {Color? color, Color? subColor, Color? noteColor}) {
   final text = block.text;
   final children = <InlineSpan>[];

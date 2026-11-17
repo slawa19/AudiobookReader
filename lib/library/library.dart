@@ -6,7 +6,7 @@ import 'usage.dart';
 
 export 'usage.dart';
 
-/// Позиция чтения (А§5): блок, смещение в нём, число знаков до блока.
+/// Reading position (А§5): block, offset in it, number of characters before the block.
 @immutable
 class ReadingPosition {
   const ReadingPosition(
@@ -49,7 +49,7 @@ class ReadingPosition {
   String toString() => 'ReadingPosition($block, $offset)';
 }
 
-/// Строка полки: всё, что нужно полке, без загрузки книги (А§4, `meta.json` + `state.json`).
+/// A shelf row: everything the shelf needs without loading the book (А§4, `meta.json` + `state.json`).
 class ShelfEntry {
   ShelfEntry({
     required this.id,
@@ -69,27 +69,27 @@ class ShelfEntry {
   final ImageProvider? cover;
   final DateTime addedAt;
 
-  /// Время последнего открытия; `null` — книгу ни разу не открывали («новая»): карточки «Продолжить» у неё нет.
+  /// Time of the last opening; `null` — the book was never opened ("new"): it has no "Continue" card.
   DateTime? lastOpened;
 
   bool get opened => lastOpened != null;
 
-  /// Доля прочитанного; `null` — книгу ещё не открывали. 1 — дочитана (FR-L4).
+  /// Fraction read; `null` — the book has not been opened yet. 1 — finished (FR-L4).
   double? fraction;
   String? chapterTitle;
 
-  /// Размер папки книги без озвучки, байт.
+  /// Size of the book folder without narration, in bytes.
   final int bookBytes;
 }
 
 enum AddJobStatus { adding, failed }
 
-/// Причина отказа добавления (FR-B2, FR-B6). Текст на языке интерфейса даёт экран.
-/// [unreadable] — в том числе файл, из которого не получилось ни одного блока: пустая книга до экрана чтения
-/// не доходит.
+/// The reason an add was rejected (FR-B2, FR-B6). The text in the interface language is provided by the screen.
+/// [unreadable] — including a file from which not a single block could be obtained: an empty book never
+/// reaches the reading screen.
 enum AddFailure { unsupported, unreadable, protected }
 
-/// Добавляемая книга или отказ добавления (FR-L2, FR-B2, FR-B6): строка на полке до «✕».
+/// A book being added or an add failure (FR-L2, FR-B2, FR-B6): a row on the shelf until "✕".
 class AddJob {
   AddJob({
     required this.fileName,
@@ -102,43 +102,43 @@ class AddJob {
   AddJobStatus status;
   AddFailure? failure;
 
-  /// Техническая причина как есть (сообщение разборщика), не переводится.
+  /// The technical reason as is (the parser's message), not translated.
   String? technical;
 }
 
-/// Полка и хранение книг (А§2, `library`). Единственный писатель позиции и настроек книги.
+/// The shelf and book storage (А§2, `library`). The only writer of a book's position and settings.
 abstract class Library extends ChangeNotifier {
-  /// Снимок расхода: местное начало месяца → идентификатор модели → токены.
-  /// Неизменяемый; в файловой библиотеке доступен после ready.
+  /// A usage snapshot: local month start → model identifier → tokens.
+  /// Immutable; in the file library available after ready.
   Map<DateTime, Map<String, UsageTokens>> get usage => const {};
 
-  /// Один оплаченный ответ, в том числе ошибка с usage. Уникальность ответа
-  /// обеспечивает очередь. Future завершается после атомарной записи на диск.
-  /// [at] — момент ответа, без него используются подставляемые часы библиотеки.
+  /// One paid response, including an error with usage. Uniqueness of the response
+  /// is ensured by the queue. The Future completes after the atomic write to disk.
+  /// [at] — the moment of the response; without it the library's injected clock is used.
   Future<void> recordUsage({
     required String modelId,
     required int audioTokens,
     required int inputTokens,
     DateTime? at,
   }) async =>
-      throw UnsupportedError('Запись расхода в этой библиотеке не реализована');
+      throw UnsupportedError('Recording usage is not implemented in this library');
 
-  /// Возвращает готовую или уже имеющуюся книгу; при отказе — null и строку в [addJobs].
-  /// Вызывающий сохраняет файл по [path] до завершения Future, затем удаляет свою копию.
+  /// Returns a ready or already existing book; on failure — null and a row in [addJobs].
+  /// The caller keeps the file at [path] until the Future completes, then deletes its own copy.
   Future<ShelfEntry?> addFile(String path, String fileName) async =>
       throw UnsupportedError(
-        'Добавление файла в этой библиотеке не реализовано',
+        'Adding a file is not implemented in this library',
       );
 
-  /// Ошибка файловой операции видна на полке до явного закрытия строки пользователем.
+  /// A file operation error is visible on the shelf until the user explicitly closes the row.
   void recordFileFailure(String fileName, Object error);
 
-  /// Записывает последние изменения немедленно и дожидается писателя. Перед фоном, паузой и закрытием.
+  /// Writes the latest changes immediately and waits for the writer. Before background, pause and closing.
   Future<void> flush() async {}
 
-  /// Полка (FR-L4): сначала открывавшиеся книги по убыванию времени последнего открытия, затем ни разу не
-  /// открытые — новые сверху. Экран ставит первую открывавшуюся в карточку «Продолжить», а неоткрытые — в
-  /// начало списка под ней.
+  /// The shelf (FR-L4): first the books that were opened, by descending time of last opening, then the never-
+  /// opened ones — new on top. The screen puts the first opened book into the "Continue" card, and the unopened ones at
+  /// the start of the list below it.
   List<ShelfEntry> get shelf;
 
   List<AddJob> get addJobs;
@@ -147,38 +147,39 @@ abstract class Library extends ChangeNotifier {
 
   Future<Book> loadBook(String bookId);
 
-  /// Размеры картинок книги — нужны разбивке на страницы до загрузки самих картинок.
+  /// Image sizes of the book — pagination needs them before the images themselves are loaded.
   Map<String, Size> imageSizes(String bookId);
 
   ImageProvider image(String bookId, String imageId);
 
-  /// Позиция чтения (А§5): начало первой строки на экране либо, пока озвучка активна, звучащее место.
+  /// Reading position (А§5): the start of the first line on screen or, while narration is active, the place being
+  /// voiced.
   ReadingPosition? positionOf(String bookId);
 
-  /// Записывает позицию чтения и считает подпись главы по книге. Прототип принимает долю с экрана,
-  /// включая 1 на последней странице. У дочитанной книги доля на полке — 1 при любой позиции.
+  /// Writes the reading position and computes the chapter label from the book. The prototype takes a fraction from the
+  /// screen, including 1 on the last page. For a finished book the fraction on the shelf is 1 at any position.
   void savePosition(
     String bookId,
     ReadingPosition position, {
     double? fraction,
   });
 
-  /// «Дочитана» (FR-L4, `state.json`) — отдельный факт, а не производная от позиции. Ставят показ последней
-  /// страницы (в том числе первой раскладкой одностраничной книги) и конец прослушивания; снимает только показ
-  /// страницы раньше последней.
+  /// "Finished" (FR-L4, `state.json`) is a separate fact, not derived from the position. It is set by showing the last
+  /// page (including the first layout of a single-page book) and by the end of listening; it is cleared only by showing
+  /// a page earlier than the last.
   bool isFinished(String bookId);
 
   void setFinished(String bookId, bool finished);
 
-  /// Место прослушивания (А§4, `state.json`): начало последней звучавшей единицы. Хранится отдельно от позиции
-  /// чтения и не забывается при паузе, остановке и «Закрыть» — с него продолжает «Слушать» (FR-P3).
+  /// The listening place (А§4, `state.json`): the start of the last unit that was voiced. Stored separately from the
+  /// reading position and not forgotten on pause, stop and "Close" — "Listen" continues from it (FR-P3).
   ReadingPosition? listeningPositionOf(String bookId);
 
   void saveListeningPosition(String bookId, ReadingPosition position);
 
   void markOpened(String bookId);
 
-  /// Свой голос книги; `null` — как в настройках (FR-V2).
+  /// The book's own voice; `null` — as in the settings (FR-V2).
   String? bookVoice(String bookId);
 
   void setBookVoice(String bookId, String? voice);

@@ -6,7 +6,7 @@ import 'player.dart';
 import 'synthesis_queue.dart';
 import 'voice_sample.dart';
 
-/// Кэш проб — сами файлы samples/. Реестр и повторы общие с прослушиванием.
+/// The probe cache is the samples/ files themselves. The registry and retries are shared with listening.
 class FileVoiceSampler extends VoiceSampler {
   FileVoiceSampler({required this.queue, required this.player}) {
     _subscription = player.events.listen((event) {

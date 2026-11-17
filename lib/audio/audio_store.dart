@@ -2,20 +2,20 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
-// Хранилище звука отрезков и проб (ARCHITECTURE.md, раздел 6.5). Экранам отсюда нужно только занятое место;
-// удаляет звук только `playback` (А§2, А§4).
+// Storage for the audio of segments and probes (ARCHITECTURE.md, section 6.5). Screens only need the space used from
+// here; only `playback` deletes audio (А§2, А§4).
 
 abstract class AudioStore extends ChangeNotifier {
   String get formatId;
 
-  /// Без bookId — общая проба голоса, с bookId — отрезок книги.
+  /// Without bookId — a shared voice probe, with bookId — a book segment.
   bool has(String fingerprint, {String? bookId});
 
-  /// Только готовый файл; отсутствующий звук — null.
+  /// Only a finished file; missing audio is null.
   File? file(String fingerprint, {String? bookId});
 
-  /// PCM не меняется и остаётся у очереди для повтора записи без нового синтеза.
-  /// Удаление во время записи завершает её ошибкой AudioWriteCancelled.
+  /// The PCM is not modified and stays with the queue so the write can be retried without new synthesis.
+  /// Deletion during a write ends it with an AudioWriteCancelled error.
   Future<File> put(
     String fingerprint,
     Uint8List pcm,
@@ -23,19 +23,19 @@ abstract class AudioStore extends ChangeNotifier {
     String? bookId,
   });
 
-  /// Байт озвучки одной книги.
+  /// Bytes of narration for one book.
   int bytesForBook(String bookId);
 
-  /// Байт озвучки всех книг и проб.
+  /// Bytes of narration for all books and probes.
   int get totalBytes;
 
   void removeBook(String bookId);
 
-  /// Звук всех книг и проб.
+  /// Audio of all books and probes.
   void clearAll();
 }
 
-/// Подставное хранилище прототипа: числа, а не файлы.
+/// The prototype's fake storage: numbers, not files.
 class FakeAudioStore extends AudioStore {
   FakeAudioStore(
     Map<String, int> bytesByBook, {
@@ -83,14 +83,14 @@ class FakeAudioStore extends AudioStore {
   @override
   int get totalBytes => _bytes.values.fold(0, (a, b) => a + b) + samplesBytes;
 
-  /// Подставное «записано на диск»: скачанный звук главы занимает место (настоящее хранилище считает файлы).
+  /// Fake "written to disk": downloaded chapter audio takes up space (the real storage counts files).
   void addBook(String bookId, int bytes) {
     if (bytes <= 0) return;
     _bytes[bookId] = (_bytes[bookId] ?? 0) + bytes;
     notifyListeners();
   }
 
-  /// Подставное «записано на диск» для пробы голоса.
+  /// Fake "written to disk" for a voice probe.
   void addSamples(int bytes) {
     if (bytes <= 0) return;
     samplesBytes += bytes;
@@ -113,7 +113,7 @@ class FakeAudioStore extends AudioStore {
   }
 }
 
-/// Удаление отменило публикацию. Это не ошибка синтеза и не повод его повторять.
+/// Deletion cancelled the publication. This is not a synthesis error and no reason to retry it.
 class AudioWriteCancelled implements Exception {
   const AudioWriteCancelled();
 

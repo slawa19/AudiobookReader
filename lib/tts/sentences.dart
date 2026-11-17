@@ -1,15 +1,17 @@
-// Границы предложений — то же правило, что в делении на отрезки (ARCHITECTURE.md, А§6.1, правило 2). Правило
-// общее, по форме текста, без списков слов. Чистый Dart.
+// Sentence boundaries — the same rule as in splitting into segments (ARCHITECTURE.md, А§6.1, rule 2). The rule
+// is general, by text form, without word lists. Pure Dart.
 //
-// Граница — там, где после знака конца (. ! ? …), возможно закрывающих кавычек и скобок, идёт пробельный знак, и:
-//  (i)  точка стоит не после слова из одной буквы: «г. Москве», «А. С. Пушкин», «т. е.» — не конец;
-//  (ii) следующее слово (после пробела, а если там тире с пробелом — после тире) начинается с прописной буквы, цифры
-//       или открывающей кавычки или скобки; строчная буква — предложение продолжается: «…потом заговорил»,
-//       «— Стой! — крикнул он». Для письменностей без регистра правило (ii) не применяется.
-// Остаточные ошибки — сокращения длиннее одной буквы («см. рис. 3») — принятое ограничение: старт чуть раньше или
-// чуть позже, текст не теряется.
+// A boundary is where, after an ending mark (. ! ? …), possibly closing quotes and brackets, comes a whitespace
+// character, and:
+//  (i)  the period is not after a one-letter word: «г. Москве», «А. С. Пушкин», «т. е.» — not an end;
+//  (ii) the next word (after the space, and if there is a dash with a space — after the dash) starts with a capital
+//       letter, a digit or an opening quote or bracket; a lowercase letter — the sentence continues:
+//       «…потом заговорил», «— Стой! — крикнул он». For scripts without case, rule (ii) does not apply.
+// Residual errors — abbreviations longer than one letter («см. рис. 3») — are an accepted limitation: the start a bit
+// earlier or a bit later, the text is not lost.
 //
-// Границы ищутся в тексте для речи (без знаков сносок, `speechText`, А§3) и переводятся обратно в смещения блока.
+// Boundaries are searched in the speech text (without footnote marks, `speechText`, А§3) and translated back into block
+// offsets.
 
 import '../book/model.dart';
 import '../book/speech_text.dart';
@@ -25,21 +27,21 @@ bool _isLetter(String c) => c.toUpperCase() != c.toLowerCase();
 
 bool _isDigit(String c) => c.codeUnitAt(0) >= 0x30 && c.codeUnitAt(0) <= 0x39;
 
-/// (ii): может ли с [c] начинаться новое предложение. Строчная буква — нет; прописная, цифра, открывающая кавычка
-/// или скобка — да; буква без регистра (письменности без прописных) и прочие знаки правилом (ii) не проверяются.
+/// (ii): whether a new sentence may begin with [c]. A lowercase letter — no; a capital, a digit, an opening quote
+/// or bracket — yes; a letter without case (scripts without capitals) and other marks are not checked by rule (ii).
 bool _canStart(String c) {
   if (_isDigit(c) || _openers.contains(c)) return true;
   if (_isLetter(c)) return c == c.toUpperCase();
   return true;
 }
 
-/// Смещения начал предложений в [text] (кодовые единицы UTF-16), по возрастанию. Первое — 0, если текст не пуст.
+/// Offsets of sentence starts in [text] (UTF-16 code units), ascending. The first is 0 if the text is not empty.
 List<int> sentenceStarts(String text) {
   if (text.isEmpty) return const [];
   final out = <int>[0];
   for (var i = 1; i < text.length; i++) {
     if (_isSpace(text[i]) || !_isSpace(text[i - 1])) continue;
-    // Перед пробелами — конец предыдущего предложения?
+    // Before the spaces — the end of the previous sentence?
     var j = i - 1;
     while (j >= 0 && _isSpace(text[j])) {
       j--;
@@ -48,9 +50,10 @@ List<int> sentenceStarts(String text) {
       j--;
     }
     if (j < 0 || !_enders.contains(text[j])) continue;
-    // (i) точка после слова из одной буквы — инициал или сокращение, не конец.
+    // (i) a period after a one-letter word — an initial or an abbreviation, not an end.
     if (text[j] == '.' && j >= 1 && _isLetter(text[j - 1]) && (j == 1 || !_isLetter(text[j - 2]))) continue;
-    // (ii) следующее слово — с прописной, цифры или открывающей кавычки; после тире с пробелом — слово за тире.
+    // (ii) the next word starts with a capital, a digit or an opening quote; after a dash with a space — the word after
+    // the dash.
     var k = i;
     if (_dashes.contains(text[k]) && k + 1 < text.length && _isSpace(text[k + 1])) {
       k++;
@@ -65,7 +68,7 @@ List<int> sentenceStarts(String text) {
   return out;
 }
 
-/// Начало предложения, в котором стоит смещение [offset].
+/// The start of the sentence in which the offset [offset] lies.
 int sentenceStartAt(String text, int offset) {
   var best = 0;
   for (final s in sentenceStarts(text)) {
@@ -75,13 +78,13 @@ int sentenceStartAt(String text, int offset) {
   return best;
 }
 
-/// Начала предложений блока — по тексту для речи, в смещениях `Block.text`.
+/// Sentence starts of a block — by the speech text, in `Block.text` offsets.
 List<int> blockSentenceStarts(Block block) {
   final speech = speechText(block);
   return [for (final s in sentenceStarts(speech.text)) speech.toBlock(s)];
 }
 
-/// Начало предложения блока, в котором стоит смещение блока [offset].
+/// The start of the sentence of the block in which the block offset [offset] lies.
 int blockSentenceStartAt(Block block, int offset) {
   var best = 0;
   for (final s in blockSentenceStarts(block)) {

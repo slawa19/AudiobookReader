@@ -1,4 +1,4 @@
-// Единственная точка входа разбора. Чистая синхронная функция, в том числе для Isolate.run.
+// The single parsing entry point. A pure synchronous function, including for Isolate.run.
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -82,7 +82,7 @@ bool _fb2(String text) =>
           .replaceFirst(RegExp(r'<!DOCTYPE[^>]*>'), ''),
     );
 
-/// Определяет формат по содержимому, независимо от имени файла (А§3).
+/// Determines the format by content, regardless of the file name (А§3).
 SourceFormat detectFormat(List<int> bytes) {
   try {
     if (_zip(bytes)) return _archiveFormat(_unzip(bytes));
@@ -90,7 +90,7 @@ SourceFormat detectFormat(List<int> bytes) {
     try {
       xml = decodeXml(bytes);
     } on FormatException {
-      /* Двоичные данные проверяются ниже. */
+            /* Binary data is checked below. */
     }
     if (_fb2(xml ?? latin1.decode(bytes))) return SourceFormat.fb2;
     if (bytes.length >= 4 &&
@@ -159,7 +159,7 @@ ParsedBook _txt(List<int> bytes, String id) {
     text = decodeWindows1251(content);
   }
   final lines = text.split(RegExp(r'\r\n|\r|\n')).map((s) => s.trim()).toList();
-  // Только пустая строка МЕЖДУ строками текста включает склейку абзацев.
+  // Only an empty line BETWEEN lines of text turns on paragraph joining.
   final first = lines.indexWhere((s) => s.isNotEmpty);
   final last = lines.lastIndexWhere((s) => s.isNotEmpty);
   final separated = first >= 0 && lines.sublist(first, last + 1).contains('');
@@ -214,7 +214,7 @@ ParsedBook _fb(XmlElement root, String id, SourceFormat format) {
           bin.attr('content-type') ?? 'application/octet-stream',
         );
       } on FormatException {
-        // Повреждённая картинка отсутствует; основной текст остаётся доступным.
+        // A corrupted image is absent; the main text stays available.
       }
     }
   }
@@ -254,7 +254,8 @@ ParsedBook _fb(XmlElement root, String id, SourceFormat format) {
           .whereType<XmlElement>()
           .where((e) => e.local != 'section')
           .toList();
-      // `title` раздела сноски — её знак («1»), а не текст: в сноску не идёт, пока у неё есть другой текст.
+      // The `title` of a footnote section is its mark ("1"), not text: it does not go into the note while the note has
+      // other text.
       final body = children.where((e) => e.local != 'title').toList();
       for (final child in body.isEmpty ? children : body) {
         b.render(child);
@@ -444,7 +445,7 @@ ParsedBook _epub(Map<String, Uint8List> files, String id) {
     for (final path in documents.toSet())
       if (path != navPath) path: xml(path),
   };
-  // Документ со сносками не обязан входить в порядок чтения.
+  // A document with footnotes need not be part of the reading order.
   final pending = trees.keys.toList();
   final xhtml = {
     for (final e in manifest.values)
@@ -541,7 +542,7 @@ ParsedBook _epub(Map<String, Uint8List> files, String id) {
   for (final item in toc) {
     final path = item.$1.split('#').first;
     final start = targets[item.$1] ?? targets['$path#'];
-    // Пустой документ (или якорь после его конца) не занимает чужое начало.
+    // An empty document (or an anchor after its end) does not take over someone else's start.
     if (start != null && start < documentEnds[path]!) {
       b.boundaries.add((start, item.$2, item.$3));
     }

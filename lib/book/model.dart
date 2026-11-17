@@ -1,6 +1,6 @@
-// Модель книги (ARCHITECTURE.md, раздел 3). Чистый Dart, без Flutter.
+// Book model (ARCHITECTURE.md, section 3). Pure Dart, no Flutter.
 //
-// Все смещения — кодовые единицы UTF-16, то есть индексы строки Dart, по `Block.text`.
+// All offsets are UTF-16 code units, i.e. indices into the Dart string `Block.text`.
 
 enum BlockKind { heading, paragraph, image, verse, cite, separator }
 
@@ -18,7 +18,7 @@ class TextSpanRange {
   final int end;
   final SpanStyle style;
 
-  /// Только у [SpanStyle.noteRef].
+  /// Only for [SpanStyle.noteRef].
   final String? noteId;
 
   Map<String, Object?> toJson() => {
@@ -48,7 +48,7 @@ class Block {
   final int index;
   final BlockKind kind;
 
-  /// Строка без разметки. У картинки — подпись (может быть пустой).
+  /// Plain text without markup. For an image — the caption (may be empty).
   final String text;
   final List<TextSpanRange> spans;
   final String? imageId;
@@ -61,7 +61,7 @@ class Block {
     if (imageId != null) 'imageId': imageId,
   };
 
-  /// Блоки, которые читаются вслух (А§3).
+  /// Blocks that are read aloud (А§3).
   bool get isSpoken =>
       kind == BlockKind.heading ||
       kind == BlockKind.paragraph ||
@@ -132,8 +132,8 @@ class Note {
   );
 }
 
-/// Книга без единого блока не создаётся: разбор такой файл отклоняет («Не удалось прочитать книгу», FR-B6),
-/// и до экрана чтения она не доходит.
+/// A book without a single block is not created: parsing rejects such a file ("Could not read the book", FR-B6),
+/// and it never reaches the reading screen.
 class EmptyBookException implements Exception {
   const EmptyBookException();
 
@@ -142,9 +142,9 @@ class EmptyBookException implements Exception {
 }
 
 class Book {
-  /// Раздел без собственных блоков (`blockCount == 0`) в главы не попадает: линейное разбиение А§3 — каждый
-  /// блок в одной главе — без него не нарушается, а страницы у такого раздела нет. Его заголовок, если он есть в
-  /// файле, — блок соседней главы.
+  /// A section without blocks of its own (`blockCount == 0`) does not become a chapter: the linear partition of А§3 —
+  /// each block in exactly one chapter — is not violated without it, and such a section has no page. Its heading, if it
+  /// is in the file, is a block of the neighboring chapter.
   Book({
     required this.id,
     required this.title,
@@ -162,7 +162,7 @@ class Book {
     return blocks;
   }
 
-  /// Пустые разделы отбрасываются; если глав не осталось, книга — одна глава без названия (как TXT, FR-B5).
+  /// Empty sections are dropped; if no chapters remain, the book is one chapter without a title (like TXT, FR-B5).
   static List<Chapter> _chaptersFor(List<Chapter> chapters, int blockCount) {
     final kept = chapters.where((c) => c.blockCount > 0).toList();
     if (kept.isEmpty) {
@@ -197,15 +197,15 @@ class Book {
     'notes': [for (final n in notes.values) n.toJson()],
   };
 
-  /// Число знаков до начала блока [block] (А§4, `charsBefore`).
+  /// Number of characters before the start of block [block] (А§4, `charsBefore`).
   int charsBefore(int block) => _charsBefore[block.clamp(0, blocks.length)];
 
-  /// Доля книги по знакам для места (блок, смещение).
+  /// Fraction of the book by characters for a place (block, offset).
   double fractionAt(int block, int offset) => totalChars == 0
       ? 0
       : ((charsBefore(block) + offset) / totalChars).clamp(0.0, 1.0);
 
-  /// Место по доле книги: блок и смещение в нём.
+  /// A place from a book fraction: the block and the offset in it.
   (int block, int offset) placeAt(double fraction) {
     final target = (fraction.clamp(0.0, 1.0) * totalChars).round();
     var lo = 0;
@@ -273,9 +273,9 @@ class Book {
   }
 }
 
-/// Подпись только для показа: у безымянной главы — первый непустой блок её текста.
-/// Модель книги не меняется. Берём до 12 слов для однострочной подписи, чтобы
-/// шапка не раскладывала целиком блок в сотни тысяч знаков; виджет добавляет обрезку по ширине.
+/// A label for display only: for an unnamed chapter — the first non-empty block of its text.
+/// The book model is not changed. Take up to 12 words for a one-line label so that
+/// the header does not lay out a block of hundreds of thousands of characters in full; the widget adds width clipping.
 String chapterLabel(Book book, int chapter, {bool includeParent = true}) {
   final ch = book.chapters[chapter];
   if (ch.title.trim().isEmpty) {

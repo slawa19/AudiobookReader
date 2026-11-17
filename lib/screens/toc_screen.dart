@@ -6,7 +6,8 @@ import '../tts/voices.dart';
 import 'common.dart';
 import 'services.dart';
 
-/// Оглавление (FR-R4) и «Скачать главу» для текущей главы (FR-D2, А§6.7). Возвращает выбранную главу.
+/// The table of contents (FR-R4) and "Download chapter" for the current chapter (FR-D2, А§6.7). Returns the chosen
+/// chapter.
 class TocScreen extends StatefulWidget {
   const TocScreen({super.key, required this.services, required this.book, required this.current});
 
@@ -54,12 +55,12 @@ class _TocScreenState extends State<TocScreen> {
         child: ListenableBuilder(
           listenable: Listenable.merge([downloads, widget.services.settings, widget.services.library]),
           builder: (context, _) {
-            // Готовность и оценка — для действующего профиля голоса книги (FR-D2, правило g).
+            // Readiness and the estimate are for the book's effective voice profile (FR-D2, rule g).
             final profile = downloads.profileFor(book.id);
             final task = downloads.task;
             final running = task != null && task.status == DownloadStatus.running;
-            // Блок задачи (ход или ошибка) — у той главы, которой она принадлежит, даже если читатель уже в другой;
-            // предложение скачать — у текущей главы и только когда никакая задача не идёт.
+            // The task block (progress or error) is at the chapter the task belongs to, even if the reader is already
+            // in another; the offer to download is at the current chapter and only when no task is running.
             int? blockAt(int i) {
               if (task != null && task.bookId == book.id && task.chapter == i) return i;
               if (i == widget.current && !running && !downloads.isVoiced(book.id, i, profile)) return i;
@@ -109,7 +110,8 @@ class _ChapterTile extends StatelessWidget {
     final scheme = theme.colorScheme;
     final top = chapter.level == 1;
     final excerpt = chapter.title.trim().isEmpty;
-    // На подсветке выбранной строки — основной цвет текста: второстепенный на `hl` в сепии даёт 4,2 (№17 ревью).
+    // On the selected row's highlight — the primary text color: the secondary one on `hl` in sepia gives 4.2 (review
+    // item 17).
     final markColor = current ? scheme.onSurface : scheme.onSurfaceVariant;
     return Padding(
       padding: EdgeInsets.only(left: (chapter.level - 1) * 24.0, top: top ? 6 : 0),
@@ -153,7 +155,8 @@ class _DownloadBlock extends StatelessWidget {
     final downloads = services.downloads;
     final task = downloads.task;
     final mine = task != null && task.bookId == book.id && task.chapter == chapter;
-    // Оценка — остаток для действующего профиля: после «Остановить» и после ошибки — не цена всей главы.
+    // The estimate is the remainder for the effective profile: after "Stop" and after an error — not the price of the
+    // whole chapter.
     final est = downloads.estimate(book, chapter, profile);
     final minutes = (est.seconds / 60).ceil();
     final indent = (book.chapters[chapter].level - 1) * 24.0 + 16;
@@ -168,7 +171,7 @@ class _DownloadBlock extends StatelessWidget {
           value: task.fraction,
           minHeight: 6,
           borderRadius: BorderRadius.circular(3),
-          // Внешний вид Material 3 2024 года; флаг помечен устаревшим, но другого способа включить его нет.
+          // The 2024 Material 3 look; the flag is marked deprecated, but there is no other way to turn it on.
           // ignore: deprecated_member_use
           year2023: false,
         ),
@@ -203,7 +206,7 @@ class _DownloadBlock extends StatelessWidget {
           ]),
           const SizedBox(height: 12),
         ],
-        // Оценка — отдельной строкой перед кнопкой (FR-D2).
+        // The estimate is a separate line before the button (FR-D2).
         Text(l10n.notVoicedEstimate(minutes, est.dollars),
             key: const Key('download-estimate'),
             style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),

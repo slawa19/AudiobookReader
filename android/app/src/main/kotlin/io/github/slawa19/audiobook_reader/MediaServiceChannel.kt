@@ -11,7 +11,7 @@ import com.ryanheise.audioservice.AudioService
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 
-/** Подтверждение запуска и завершение foreground-службы audio_service. */
+/** Confirms the start and the end of the audio_service foreground service. */
 class MediaServiceChannel(private val context: Context, messenger: BinaryMessenger) {
     private val channel = MethodChannel(messenger, "audiobook_reader/media_service")
     private val main = Handler(Looper.getMainLooper())
@@ -29,16 +29,16 @@ class MediaServiceChannel(private val context: Context, messenger: BinaryMesseng
 
     private fun stopForeground(result: MethodChannel.Result, started: Long) {
         try {
-            // В закреплённом audio_service 0.18.19 instance имеет package-private
-            // доступ; публичного способа получить службу и снять foreground нет.
+            // In the pinned audio_service 0.18.19 `instance` has package-private
+            // access; there is no public way to get the service and clear the foreground.
             val serviceClass = AudioService::class.java
             val field = serviceClass.getDeclaredField("instance")
             field.isAccessible = true
-            // Тип Service не требует добавлять транзитивный androidx.media в app.
+            // The Service type does not require adding the transitive androidx.media to the app.
             val service = field.get(null) as? Service
             if (service == null || serviceClass.getMethod("getProcessingState").invoke(service) == AudioProcessingState.idle) {
-                // playbackState доставляется другим каналом. Сначала native idle,
-                // затем снятие foreground и отмена уведомления, без отвязки клиента.
+                // playbackState is delivered by another channel. First native idle,
+                // then clearing the foreground and cancelling the notification, without unbinding the client.
                 service?.stopForeground(Service.STOP_FOREGROUND_REMOVE)
                 if (service != null) serviceClass.getMethod("stop").invoke(service)
                 result.success(null)
@@ -54,7 +54,7 @@ class MediaServiceChannel(private val context: Context, messenger: BinaryMesseng
 
     @Suppress("DEPRECATION")
     private fun awaitForeground(result: MethodChannel.Result, started: Long) {
-        // Начиная с Android O доступны только службы собственного приложения.
+        // Since Android O only the app's own services are available.
         val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val foreground = manager.getRunningServices(Int.MAX_VALUE).any {
             it.service.className == "com.ryanheise.audioservice.AudioService" && it.foreground

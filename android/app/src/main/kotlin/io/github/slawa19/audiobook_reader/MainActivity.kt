@@ -6,8 +6,9 @@ import com.ryanheise.audioservice.AudioServiceFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 
 class MainActivity : AudioServiceFragmentActivity() {
-    // FlutterFragmentActivity настраивает движок ПОСЛЕ onCreate (когда присоединяется фрагмент), поэтому каналов в
-    // onCreate ещё нет: intent запуска ждёт здесь. Найдено на телефоне 2026-11-15 — приложение падало при старте.
+    // FlutterFragmentActivity configures the engine AFTER onCreate (when the fragment attaches), so there are no
+    // channels in onCreate yet: the launch intent waits here. Found on the phone 2026-11-15 — the app crashed at
+    // startup.
     private var platform: ReaderPlatformPlugin? = null
     private var pendingIntent: Intent? = null
 
@@ -24,7 +25,7 @@ class MainActivity : AudioServiceFragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // При восстановлении исходный VIEW уже был обработан предыдущим экземпляром.
+        // On restoration the original VIEW was already handled by the previous instance.
         if (savedInstanceState == null) accept(intent)
     }
 

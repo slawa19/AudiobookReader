@@ -6,8 +6,8 @@ import '../tts/voices.dart';
 import 'common.dart';
 import 'services.dart';
 
-/// Выбор голоса (FR-V1, FR-V2). С [book] — свой голос книги (первая строка — «Как в настройках»),
-/// без — голос приложения. Фраза пробы — на языке книги; для голоса приложения — на языке интерфейса.
+/// Voice choice (FR-V1, FR-V2). With [book] — the book's own voice (the first row is "As in settings"),
+/// without — the app voice. The probe phrase is in the book language; for the app voice — in the interface language.
 class VoiceScreen extends StatefulWidget {
   const VoiceScreen({super.key, required this.services, this.book});
 
@@ -26,7 +26,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
   @override
   void initState() {
     super.initState();
-    // Открытие экрана голоса ставит прослушивание на паузу (FR-V1) — после первого кадра, не посреди построения.
+    // Opening the voice screen pauses listening (FR-V1) — after the first frame, not in the middle of building.
     WidgetsBinding.instance.addPostFrameCallback((_) => s.narration.pause());
   }
 
@@ -44,14 +44,14 @@ class _VoiceScreenState extends State<VoiceScreen> {
 
   String _language(BuildContext context) => widget.book?.language ?? context.l10n.localeName;
 
-  /// Голос, которым звучит книга этого экрана (или книга текущего прослушивания — для голоса приложения).
+  /// The voice that voices the book of this screen (or the book of the current listening — for the app voice).
   String _effectiveVoice() {
     final bookId = widget.book?.id ?? s.narration.bookId;
     return (bookId == null ? null : s.library.bookVoice(bookId)) ?? s.settings.voice;
   }
 
   void _select(String? v) {
-    // Касание уже выбранной строки ничего не меняет и сеанс не перезапускает (правило j).
+    // A touch on the already selected row changes nothing and does not restart the session (rule j).
     if (v == null || v == _value) return;
     final before = _effectiveVoice();
     final book = widget.book;
@@ -60,8 +60,8 @@ class _VoiceScreenState extends State<VoiceScreen> {
     } else {
       s.library.setBookVoice(book.id, v == _asSettings ? null : v);
     }
-    // Смена голоса — новый сеанс с текущего отрезка с прежним намерением (FR-V2); тот же голос под другой строкой
-    // («Как в настройках» и он же явно) звук не меняет.
+    // A voice change — a new session from the current segment with the previous intent (FR-V2); the same voice under
+    // another row ("As in settings" and the same one explicitly) does not change the audio.
     if (_effectiveVoice() != before) s.narration.restartSession();
   }
 
@@ -132,7 +132,8 @@ class _VoiceScreenState extends State<VoiceScreen> {
     );
   }
 
-  /// На узком экране с крупным шрифтом «Проба» — кнопка-значок: имя и характер голоса не рвутся посреди слова.
+  /// On a narrow screen with a large font "Probe" is an icon button: the voice name and character are not broken
+  /// mid-word.
   bool _compact(BuildContext context) =>
       MediaQuery.sizeOf(context).width / MediaQuery.textScalerOf(context).scale(1) < 340;
 
@@ -183,14 +184,14 @@ class _VoiceTile extends StatelessWidget {
   final String subtitle;
   final Widget? trailing;
 
-  /// Постоянная ошибка пробы — текст Google как есть.
+  /// A permanent probe error — Google's text as is.
   final String? error;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    // На подсветке второстепенный цвет в сепии даёт контраст 4,2 — подпись выбранной строки основным цветом.
+    // On the highlight the secondary color in sepia gives contrast 4.2 — the selected row's label in the primary color.
     final sub = TextStyle(color: selected ? scheme.onSurface : null);
     return ListTile(
       selected: selected,
@@ -237,7 +238,7 @@ class _ProbeButton extends StatelessWidget {
           ? IconButton.filled(tooltip: context.l10n.probe, onPressed: onPressed, icon: icon)
           : IconButton.filledTonal(tooltip: context.l10n.probe, onPressed: onPressed, icon: icon);
     }
-    // Цель касания не меньше 48 dp (FR-R8): стандартная плотность и минимум 48.
+    // Touch target at least 48 dp (FR-R8): standard density and a minimum of 48.
     final style = FilledButton.styleFrom(minimumSize: const Size(48, 48), visualDensity: VisualDensity.standard);
     if (state == SampleState.idle || state == SampleState.failed) {
       return FilledButton.tonalIcon(

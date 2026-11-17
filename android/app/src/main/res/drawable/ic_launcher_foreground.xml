@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Знак приложения: раскрытая книга, строки левой страницы на правой становятся звуком.
-     Исходник контуров — docs/logo.svg. Масштаб 0,9 держит книгу внутри круглой маски лаунчера. -->
+<!-- The app mark: an open book, the lines of the left page turn into sound on the right.
+     The source of the outlines is docs/logo.svg. A scale of 0.9 keeps the book inside the launcher's round mask. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
     <group android:pivotX="54" android:pivotY="54" android:scaleX="0.9" android:scaleY="0.9">

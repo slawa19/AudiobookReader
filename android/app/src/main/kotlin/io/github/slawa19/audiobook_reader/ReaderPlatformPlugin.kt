@@ -8,7 +8,7 @@ import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.MethodChannel
 
-/** Каналы принадлежат движку: кодирование и подписка файлов переживают окно. */
+/** The channels belong to the engine: encoding and file subscription outlive the window. */
 class ReaderPlatformPlugin : FlutterPlugin, ActivityAware {
     lateinit var incomingFiles: IncomingFilesChannel
         private set

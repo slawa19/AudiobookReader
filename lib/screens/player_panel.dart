@@ -7,8 +7,9 @@ import '../playback/narration.dart';
 import '../tts/voices.dart';
 import 'common.dart';
 
-/// Панель плеера внизу экрана чтения (FR-P1, FR-P5–P8, FR-D1). Состояния без звука названы словами прямо в
-/// панели (FR-P6) — без всплывающих окон. Название главы здесь не повторяется: оно в шапке чтения.
+/// The player panel at the bottom of the reading screen (FR-P1, FR-P5–P8, FR-D1). States without audio are named in
+/// words right in the panel (FR-P6) — without pop-ups. The chapter title is not repeated here: it is in the reading
+/// header.
 class PlayerPanel extends StatelessWidget {
   const PlayerPanel({
     super.key,
@@ -33,14 +34,14 @@ class PlayerPanel extends StatelessWidget {
     this.onMessageHeight,
   });
 
-  /// Постоянное тело управления без системного отступа: 8 + 52 + 4 + 76 + 10.
+  /// The constant control body without the system inset: 8 + 52 + 4 + 76 + 10.
   static const controlsHeight = 150.0;
 
   final NarrationController narration;
   final AppSettings settings;
   final String voiceName;
 
-  /// Следует ли страница за голосом; если нет — в строке панели кнопка «К месту чтения» (FR-P4).
+  /// Whether the page follows the voice; if not — the "To reading place" button is in the panel row (FR-P4).
   final bool following;
   final VoidCallback onBackToReading;
   final VoidCallback onClose;
@@ -51,22 +52,22 @@ class PlayerPanel extends StatelessWidget {
   final VoidCallback onChooseModel;
   final VoidCallback onChangeKey;
 
-  /// «Слушать» (из паузы и из панели ошибки), «назад» и «вперёд»: действия, которыми пользователь сам запускает
-  /// или меняет место звука. Это команды контроллера; следование экран включает по счётчику явных команд
-  /// контроллера (правило a, А§5) — так же, как для команд из уведомления и с гарнитуры.
+  /// "Listen" (from a pause and from the error panel), "back" and "forward": actions with which the user starts
+  /// or changes the audio place themselves. These are controller commands; the screen turns following on by the counter
+  /// of explicit controller commands (rule a, А§5) — the same as for commands from the notification and the headset.
   final VoidCallback onPlay;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
 
-  /// Ползунок по книге, когда показаны панели чтения (FR-R5: доступен и во время прослушивания).
+  /// The book slider when the reading panels are shown (FR-R5: available during listening too).
   final Widget? header;
 
-  /// Строка «Скачать главу», пока задача идёт.
+  /// The "Download chapter" row while the task runs.
   final Widget? download;
 
   final double bottomInset;
 
-  /// Только сообщение об ошибке, конец книги и строка скачивания имеют высоту по содержимому.
+  /// Only the error message, the end of the book and the download row have a height by content.
   final ValueChanged<double>? onMessageHeight;
 
   @override
@@ -79,7 +80,8 @@ class PlayerPanel extends StatelessWidget {
       final error = narration.error!;
       content = _ErrorContent(
         error: error,
-        // Недоступна модель, на которой случилась ошибка, а не та, что выбрана в настройках после (№11 проверки).
+        // The model on which the error happened is unavailable, not the one selected in settings afterwards (review
+        // item 11).
         modelLabel: TtsModel.byId(error.modelId ?? settings.modelId).label,
         onClose: onClose,
         onListen: onPlay,
@@ -88,7 +90,7 @@ class PlayerPanel extends StatelessWidget {
         onChangeKey: onChangeKey,
       );
     } else if (state == NarrationState.stopped) {
-      // «Книга закончилась» — только «Закрыть»: ни «назад/вперёд», ни «Слушать» (правило i).
+      // "Book finished" — only "Close": neither "back/forward" nor "Listen" (rule i).
       content = _MessageContent(
           title: context.l10n.endOfBook, body: context.l10n.endOfBookBody, onClose: onClose);
     } else {
@@ -186,7 +188,7 @@ class _Controls extends StatelessWidget {
         SizedBox(
           height: 52,
           child: LayoutBuilder(builder: (context, constraints) {
-            // Место обоих значков постоянно. Состояние уступает ширину голосу, но не кнопкам.
+            // The place for both icons is constant. The state yields width to the voice, but not to the buttons.
             final voiceWidth = math.min(180.0, (constraints.maxWidth - 96) * 0.55);
             return Row(children: [
               ConstrainedBox(
@@ -282,7 +284,7 @@ class _Controls extends StatelessWidget {
   }
 }
 
-/// Крупная центральная кнопка. Пока звук идёт, круг становится скруглённым квадратом (Material 3 Expressive).
+/// The large central button. While audio plays, the circle becomes a rounded square (Material 3 Expressive).
 class _PlayButton extends StatelessWidget {
   const _PlayButton({required this.playing, required this.label, required this.onPressed});
 
@@ -341,7 +343,7 @@ class _ErrorContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    // Текст Google — как есть, без перевода.
+    // Google's text — as is, without translation.
     final (title, body) = switch (error.kind) {
       NarrationErrorKind.payment => (l10n.error402Title, '${l10n.google(error.googleMessage)} ${l10n.error402Body}'),
       NarrationErrorKind.modelNotFound =>

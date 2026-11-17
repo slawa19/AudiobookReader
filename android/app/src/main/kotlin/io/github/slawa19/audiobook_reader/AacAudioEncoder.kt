@@ -8,14 +8,14 @@ import android.os.SystemClock
 import java.io.File
 import java.io.IOException
 
-/** Системный AAC-LC в контейнере M4A. */
+/** The system AAC-LC in an M4A container. */
 object AacAudioEncoder {
-    // Моно 24 кГц, речь: 48 кбит/с оставляют запас качества, занимая около 22 МБ/час.
-    // Значение входит в Dart formatId; после изменения меняются и отпечатки.
+    // Mono 24 kHz, speech: 48 kbit/s leaves a quality margin while taking about 22 MB/hour.
+    // The value is part of the Dart formatId; when it changes, the fingerprints change too.
     const val SPEECH_BIT_RATE = 48_000
     private const val FRAME_SAMPLES = 1024
     private const val WAIT_US = 10_000L
-    // Отсутствие продвижения — ошибка кодека, а не бесконечное ожидание очереди.
+    // No progress is a codec error, not an endless wait in the queue.
     private const val STALL_MS = 30_000L
 
     fun encode(pcmPath: String, outputPath: String, sampleRate: Int) {
@@ -70,7 +70,7 @@ object AacAudioEncoder {
                             }
                             buffer.put(chunk, 0, count)
                             inputEnded = count == 0
-                            // Время из числа отсчётов, без накопления ошибки округления.
+                            // Time from the number of samples, without accumulating rounding error.
                             encoder.queueInputBuffer(index, 0, count, submitted / 2 * 1_000_000 / sampleRate,
                                 if (inputEnded) MediaCodec.BUFFER_FLAG_END_OF_STREAM else 0)
                             submitted += count
@@ -94,8 +94,8 @@ object AacAudioEncoder {
                                     val buffer = checkNotNull(encoder.getOutputBuffer(index))
                                     buffer.position(info.offset)
                                     buffer.limit(info.offset + info.size)
-                                    // Один выходной буфер AAC-LC — один кадр. Входные PTS не
-                                    // определяют длительность хвоста после опустошения кодека.
+                                    // One AAC-LC output buffer is one frame. The input PTS do not
+                                    // determine the duration of the tail after the codec is drained.
                                     info.presentationTimeUs = frames * FRAME_SAMPLES * 1_000_000 / sampleRate
                                     info.flags = info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM.inv()
                                     writer.writeSampleData(track, buffer, info)

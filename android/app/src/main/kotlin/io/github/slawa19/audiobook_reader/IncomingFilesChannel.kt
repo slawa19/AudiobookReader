@@ -15,7 +15,7 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.Executors
 
-/** Каналы и копирование входящих файлов. Очередь и ответы канала — только в UI-потоке. */
+/** Channels and copying of incoming files. The queue and channel replies — only on the UI thread. */
 class IncomingFilesChannel(private val context: Context, messenger: BinaryMessenger) {
     var activity: Activity? = null
     private val methods = MethodChannel(messenger, "audiobook_reader/incoming_files")
@@ -27,7 +27,7 @@ class IncomingFilesChannel(private val context: Context, messenger: BinaryMessen
     private var picker: MethodChannel.Result? = null
 
     init {
-        // Первая задача работника чистит хвосты прошлого процесса до любого нового копирования.
+        // The worker's first task cleans up the leftovers of the previous process before any new copy.
         worker.execute {
             runCatching { prepareCache() }.exceptionOrNull()?.let { error ->
                 main.post { emit(Result.failure(error)) }
@@ -97,7 +97,7 @@ class IncomingFilesChannel(private val context: Context, messenger: BinaryMessen
     }
 
     fun accept(intent: Intent) {
-        // Возврат из «Недавних» не является новой доставкой файла.
+        // Returning from "Recents" is not a new delivery of a file.
         if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return
         val uri = when (intent.action) {
             Intent.ACTION_VIEW -> intent.data
@@ -118,7 +118,7 @@ class IncomingFilesChannel(private val context: Context, messenger: BinaryMessen
         }
 
     private fun copy(uri: Uri?, done: (Result<Map<String, String>>) -> Unit) {
-        // Даже запрос DISPLAY_NAME может обращаться к другому процессу: всё вне UI-потока.
+        // Even a DISPLAY_NAME query may go to another process: everything is off the UI thread.
         worker.execute {
             val copied = runCatching { copyFile(uri) }
             main.post { done(copied) }
@@ -135,7 +135,7 @@ class IncomingFilesChannel(private val context: Context, messenger: BinaryMessen
         prepareCache()
         val directory = File(context.cacheDir, "incoming_books")
         if (!directory.isDirectory && !directory.mkdirs()) throw IOException("Не удалось создать временную папку")
-        // Имя от провайдера — только метаданные, никогда не часть пути к нашей копии.
+        // The name from the provider is metadata only, never part of the path to our copy.
         val target = File.createTempFile("book-", ".tmp", directory)
         try {
             val input = resolver.openInputStream(uri) ?: throw IOException("Не удалось открыть файл")
@@ -154,7 +154,7 @@ class IncomingFilesChannel(private val context: Context, messenger: BinaryMessen
             if (directory.exists() && !directory.deleteRecursively()) {
                 throw IOException("Не удалось удалить временные копии входящих книг")
             }
-            // Один раз на процесс: пересоздание Activity не стирает ещё обрабатываемые копии.
+            // Once per process: recreating the Activity does not erase copies still being processed.
             cachePrepared = true
         }
     }

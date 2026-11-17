@@ -1,4 +1,4 @@
-/// Оплаченные токены одной модели за месяц. Тарифов библиотека не знает (А§2).
+/// Paid tokens of one model for a month. The library does not know the tariffs (А§2).
 class UsageTokens {
   const UsageTokens({required this.audioTokens, required this.inputTokens});
 
@@ -14,7 +14,7 @@ class UsageTokens {
     final audio = json['audioTokens'];
     final input = json['inputTokens'];
     if (audio is! int || input is! int || audio < 0 || input < 0) {
-      throw const FormatException('Неверные счётчики расхода');
+      throw const FormatException('Invalid usage counters');
     }
     return UsageTokens(audioTokens: audio, inputTokens: input);
   }

@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'engine.dart';
 import 'voices.dart';
 
-/// Ручной затвор относится к вызову, а не к движку: поздний ответ легко отпустить после смены сеанса.
+/// A manual latch belongs to the call, not the engine: a late response is easy to release after the session changes.
 class FakeTtsCall {
   FakeTtsCall(this.text, this.profile);
   final String text;
@@ -33,7 +33,7 @@ class FakeTtsEngine implements TtsEngine {
     this.secondsPerCharacter = secondsPerChar,
   }) {
     if (sampleRate <= 0 || secondsPerCharacter <= 0) {
-      throw ArgumentError('Нужны положительные частота и длительность');
+      throw ArgumentError('A positive sample rate and duration are required');
     }
   }
   final bool manual;
@@ -43,8 +43,8 @@ class FakeTtsEngine implements TtsEngine {
   final calls = <FakeTtsCall>[];
   final _responses = Queue<_Response>();
 
-  /// Ответы назначаются в порядке старта запросов. Ошибка может быть любого вида, с usage или без.
-  /// Параметр usage задаёт успешный ответ; у ошибки расход передаётся в error.usage.
+  /// Responses are assigned in the order requests start. The error may be of any kind, with usage or without.
+  /// The usage parameter sets a successful response; for an error the usage is passed in error.usage.
   void enqueue({TtsError? error, TtsUsage? usage, Duration? delay}) => _responses.add(_Response(error, usage, delay));
 
   @override

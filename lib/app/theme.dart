@@ -3,8 +3,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../library/settings.dart';
 
-/// Токены палитры прежнего макета (docs/mockup/NOTES.md, «Палитра»). Палитра и шрифты взяты из макета по
-/// решению владельца 2026-11-14; новыми сделаны только компоненты и композиция.
+/// Palette tokens of the former mock-up (docs/mockup/NOTES.md, "Palette"). The palette and fonts are taken from the
+/// mock-up by the owner's decision 2026-11-14; only the components and composition are new.
 class Palette {
   const Palette({
     required this.name,
@@ -44,7 +44,7 @@ const lightPalette = Palette(
   accent: Color(0xFFA8431F),
   onAccent: Color(0xFFFFFDF9),
   hl: Color(0xFFF3DFCF),
-  scrim: Color(0x6B221D17), // ink × 0,42
+  scrim: Color(0x6B221D17), // ink × 0.42
 );
 
 const sepiaPalette = Palette(
@@ -58,7 +58,7 @@ const sepiaPalette = Palette(
   accent: Color(0xFF9A3D1B),
   onAccent: Color(0xFFFFF8EC),
   hl: Color(0xFFE6C9AC),
-  scrim: Color(0x6B3A2D1F), // ink × 0,42
+  scrim: Color(0x6B3A2D1F), // ink × 0.42
 );
 
 const darkPalette = Palette(
@@ -72,7 +72,7 @@ const darkPalette = Palette(
   accent: Color(0xFFE08A5B),
   onAccent: Color(0xFF16130F),
   hl: Color(0xFF3D2B1F),
-  scrim: Color(0x8C000000), // #000 × 0,55
+  scrim: Color(0x8C000000), // #000 × 0.55
 );
 
 Palette paletteFor(ThemeChoice choice, Brightness platform) => switch (choice) {
@@ -82,7 +82,7 @@ Palette paletteFor(ThemeChoice choice, Brightness platform) => switch (choice) {
       ThemeChoice.system => platform == Brightness.dark ? darkPalette : lightPalette,
     };
 
-/// Раскладка токенов по ролям Material 3. Роли, которых в палитре нет, выведены из неё смешением.
+/// Mapping of tokens to Material 3 roles. Roles that the palette lacks are derived from it by blending.
 ColorScheme schemeFor(Palette p) {
   final dark = p.brightness == Brightness.dark;
   return ColorScheme(
@@ -126,8 +126,8 @@ ColorScheme schemeFor(Palette p) {
   );
 }
 
-/// При edge-to-edge фон рисует Flutter. Android не должен добавлять свою серую
-/// подложку к трём кнопкам; яркость значков следует выбранной теме приложения.
+/// With edge-to-edge, Flutter draws the background. Android must not add its own gray
+/// scrim behind the three-button bar; icon brightness follows the selected app theme.
 SystemUiOverlayStyle systemBarsFor(Brightness brightness) => SystemUiOverlayStyle(
   statusBarColor: Colors.transparent,
   systemNavigationBarColor: Colors.transparent,
@@ -146,7 +146,7 @@ ThemeData buildTheme(Palette p) {
     colorScheme: scheme,
     brightness: p.brightness,
     fontFamily: 'Roboto',
-    // Прототип смотрят в браузере на компьютере: поведение и плотность — как на телефоне Android.
+    // The prototype is viewed in a desktop browser: behavior and density are those of an Android phone.
     platform: TargetPlatform.android,
     visualDensity: VisualDensity.standard,
     materialTapTargetSize: MaterialTapTargetSize.padded,

@@ -6,7 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import '../library/library.dart';
 import 'theme.dart';
 
-/// Те же цвета, первая буква и гарнитура, что у BookCover на полке.
+/// The same colors, first letter and typeface as BookCover on the shelf.
 Future<Uri> notificationArtwork(Directory root, ShelfEntry entry, Palette palette) async {
   if (entry.cover != null) {
     return File('${root.path}/books/${entry.id}/cover.jpg').uri;

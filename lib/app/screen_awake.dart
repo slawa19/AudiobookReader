@@ -3,7 +3,7 @@ import 'dart:async';
 import '../platform/screen_awake.dart';
 import '../playback/screen_awake.dart';
 
-/// Адаптация платформенной функции к порту playback без обратного импорта.
+/// Adapts the platform feature to the playback port without a reverse import.
 class NativeScreenAwake implements ScreenAwakePort {
   NativeScreenAwake(this.failed);
   final void Function(Object) failed;

@@ -1,8 +1,8 @@
-// Голоса и модели Gemini TTS. Набор голосов и тарифы — docs/GEMINI_TTS.md. Чистый Dart.
+// Gemini TTS voices and models. The voice set and tariffs — docs/GEMINI_TTS.md. Pure Dart.
 
-/// Характер голоса. Подпись на языке интерфейса даёт экран (строки — в ARB); здесь только ключ.
-/// Ключи следуют русским описаниям из GEMINI_TTS.md: где Google называет два голоса одним словом, а русское
-/// описание различается («спокойный» и «непринуждённый»), ключей два.
+/// The voice character. The label in the interface language is provided by the screen (strings are in the ARB); only
+/// the key is here. The keys follow the Russian descriptions from GEMINI_TTS.md: where Google names two voices with one
+/// word but the Russian description differs ("спокойный" and "непринуждённый"), there are two keys.
 enum VoiceCharacter {
   soft,
   breezy,
@@ -94,11 +94,11 @@ enum TtsModel {
   double dollarsForTokensAt({required int audioTokens, int inputTokens = 0, required DateTime date}) =>
       (audioTokens * audioDollarsPerMillionAt(date) + inputTokens * inputDollarsPerMillionAt(date)) / 1000000;
 
-  /// Тариф на дату (FR-M1): смена 01.01.2027.
+  /// The tariff for a date (FR-M1): changes on 2027-01-01.
   double dollarsPerHourAt(DateTime date) => dollarsPerHourNow * _tariffMultiplier(date);
 }
 
-/// Полный профиль звука.
+/// The full audio profile.
 class VoiceProfile {
   const VoiceProfile({required this.voiceId, required this.model, this.style = ''});
 
@@ -119,12 +119,12 @@ class VoiceProfile {
   String toString() => 'VoiceProfile($voiceId, $model, $style)';
 }
 
-/// Даты тарифов из GEMINI_TTS.md; календарная дата в часовом поясе переданного значения.
+/// Tariff dates from GEMINI_TTS.md; a calendar date in the time zone of the passed value.
 const tariffVerifiedOn = '2026-11-11';
 const tariffChangeYear = 2027;
 const tariffChangesOn = '$tariffChangeYear-01-01';
 double _tariffMultiplier(DateTime date) => date.year < tariffChangeYear ? 1 : 2;
 const audioTokensPerSecond = 25;
 
-/// Секунд звука на знак текста — верх замера (GEMINI_TTS.md, «Цена»).
+/// Seconds of audio per text character — the top of the measurement (GEMINI_TTS.md, "Price").
 const secondsPerChar = 0.069;

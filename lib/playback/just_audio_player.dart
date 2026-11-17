@@ -6,12 +6,12 @@ import 'package:just_audio/just_audio.dart' as audio;
 import 'player.dart';
 import 'queued_player.dart';
 
-/// Платформенный слой не считает поколения и очередь: это делает QueuedPlayer.
+/// The platform layer does not count generations or the queue: QueuedPlayer does that.
 class JustAudioPlayer extends QueuedPlayer {
   JustAudioPlayer({required super.beforePlay}) : super(createEngine: _JustAudioEngine.new, readDuration: _duration);
 
   static Future<Duration> _duration(File file) async {
-    // Измерение не меняет играющий список и не запрашивает аудиофокус.
+    // Measuring does not change the playing list and does not request audio focus.
     final probe = audio.AudioPlayer(handleInterruptions: false, handleAudioSessionActivation: false);
     try {
       final duration = await probe.setFilePath(file.path);
@@ -82,7 +82,7 @@ class _JustAudioEngine implements PlaylistEngine {
   Future<void> setSpeed(double speed) => _player.setSpeed(speed);
   @override
   void play() {
-    // Future just_audio.play завершается в конце файла, очередь команд его не ждёт.
+    // The just_audio.play Future completes at the end of the file; the command queue does not wait for it.
     unawaited(_player.play().catchError((Object e, StackTrace s) => _events.addError(EngineFailure(snapshot.item))));
   }
 

@@ -21,10 +21,11 @@ import 'prototype/demo_states.dart';
 import 'prototype/phone_chrome.dart';
 import 'theme.dart';
 
-/// Языки интерфейса (решение владельца 2026-11-14). Первый — запасной для языка телефона не из списка.
+/// Interface languages (owner's decision 2026-11-14). The first one is the fallback for a phone language not in the
+/// list.
 const supportedLocales = [Locale('en'), Locale('ru'), Locale('pl'), Locale('de'), Locale('uk')];
 
-/// Язык телефона, если он из пяти, иначе английский.
+/// The phone language if it is one of the five, otherwise English.
 Locale resolveLocale(List<Locale>? preferred, Iterable<Locale> supported) {
   for (final p in preferred ?? const <Locale>[]) {
     for (final s in supported) {
@@ -34,7 +35,7 @@ Locale resolveLocale(List<Locale>? preferred, Iterable<Locale> supported) {
   return const Locale('en');
 }
 
-/// Прототип целиком: все реализации подставные (А§2 — за интерфейсами модулей), сети нет.
+/// The whole prototype: all implementations are fakes (А§2 — behind the module interfaces), no network.
 class Prototype extends AppAssembly {
   Prototype._({
     required this.library,
@@ -57,7 +58,7 @@ class Prototype extends AppAssembly {
   @override
   late final AppServices services;
 
-  /// [clock] — часы приложения: тарифы на сегодня и таймер сна. По умолчанию — настенные.
+  /// [clock] — the app clock: today's tariffs and the sleep timer. Wall clock by default.
   static Future<Prototype> create({DateTime Function()? clock, double demoAcceleration = 4}) async {
     final now = clock ?? DateTime.now;
     final library = FakeLibrary();
@@ -71,7 +72,7 @@ class Prototype extends AppAssembly {
     });
     final downloads =
         FakeChapterDownloads(settings: settings, tariffs: tariffs, bookVoice: library.bookVoice, audio: audio);
-    // Свой голос книги сменился — задача «Скачать главу» прежнего профиля останавливается (FR-D2).
+    // The book's own voice changed — the "Download chapter" task of the previous profile is stopped (FR-D2).
     library.addListener(downloads.profileChanged);
     final sampler = FakeVoiceSampler(audio: audio);
     final p = Prototype._(
@@ -114,7 +115,7 @@ class Prototype extends AppAssembly {
             line: paletteFor(c, Brightness.light).line,
           ),
       },
-      // Только прототип. В настоящем приложении этого входа нет.
+      // Prototype only. The real app has no such entry point.
       openDemoStates: (context) => showDemoStates(context, p),
     );
     return p;
@@ -127,7 +128,7 @@ class AudiobookApp extends StatefulWidget {
 
   final AppAssembly assembly;
 
-  /// Рисовать строку состояния и полоску жестов (браузер и снимки экранов; на телефоне их рисует Android).
+  /// Draw the status bar and the gesture pill (browser and screenshots; on a phone Android draws them).
   final bool phoneChrome;
 
   @override
@@ -141,7 +142,7 @@ class _AudiobookAppState extends State<AudiobookApp> with WidgetsBindingObserver
   @override
   void initState() {
     super.initState();
-    // Первая версия — только портретная ориентация (решение F проверки жестов, А§7); то же в манифесте.
+    // First version is portrait only (gesture review decision F, А§7); the manifest says the same.
     lockPortrait();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -191,7 +192,7 @@ class _AudiobookAppState extends State<AudiobookApp> with WidgetsBindingObserver
           theme: light,
           darkTheme: dark,
           themeMode: mode,
-          // Свои строки — из ARB; системные подписи Material и форматы дат — делегаты material_ui.
+          // Own strings come from the ARB; Material system labels and date formats come from the material_ui delegates.
           localizationsDelegates: [AppLocalizations.delegate, ...GlobalMaterialLocalizations.delegates],
           supportedLocales: supportedLocales,
           locale: language == null ? null : Locale(language),

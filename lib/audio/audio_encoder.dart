@@ -1,7 +1,7 @@
-/// PCM — знаковый little-endian, 16 бит, один канал.
-/// Пути принадлежат вызывающему: вход остаётся нетронутым, выход при ошибке удаляется.
+/// PCM is signed little-endian, 16-bit, one channel.
+/// The paths belong to the caller: the input is left untouched, the output is deleted on error.
 abstract interface class AudioEncoder {
-  /// Входит в отпечаток вместе с текстом и профилем голоса.
+  /// Part of the fingerprint together with the text and the voice profile.
   String get formatId;
   String get extension;
 

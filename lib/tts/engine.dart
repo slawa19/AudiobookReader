@@ -22,7 +22,7 @@ class TtsUsage {
 class TtsResult {
   const TtsResult({required this.pcm, required this.sampleRate, required this.usage});
 
-  /// PCM 16 бит, little endian, моно, без контейнера.
+  /// PCM 16-bit, little endian, mono, without a container.
   final Uint8List pcm;
   final int sampleRate;
   final TtsUsage usage;
