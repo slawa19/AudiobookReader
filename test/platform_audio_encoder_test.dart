@@ -15,7 +15,7 @@ void main() {
   });
 
   test(
-    'канал AAC передаёт пути и частоту, дожидается успешного результата',
+    'the AAC channel passes paths and sample rate and waits for a successful result',
     () async {
       final input = File('${root.path}/input.pcm')
         ..writeAsBytesSync([0, 0, 1, 0]);
@@ -47,7 +47,7 @@ void main() {
   );
 
   test(
-    'ошибка кодека доходит до очереди, частичный выход удалён, PCM остаётся',
+    'a codec error reaches the queue, partial output is removed, the PCM stays',
     () async {
       final input = File('${root.path}/input.pcm')..writeAsBytesSync([1, 0]);
       final output = File('${root.path}/out.m4a');

@@ -28,8 +28,8 @@ Future<AppHarness> openContents(WidgetTester tester) async {
 }
 
 void expectPanelsPainted(WidgetTester tester, bool visible) {
-  // Проверяем сами рисуемые панели, а не panelsVisible/IgnorePointer: логическое
-  // скрытие ещё не означает, что анимация уже увела их за экран.
+  // We check the painted panels themselves, not panelsVisible/IgnorePointer: logical
+  // hiding does not yet mean the animation has already moved them off screen.
   final panels = find.descendant(
     of: find.byType(ReaderScreen, skipOffstage: false),
     matching: find.byType(AnimatedOpacity, skipOffstage: false),
@@ -42,7 +42,7 @@ void expectPanelsPainted(WidgetTester tester, bool visible) {
     final render = tester.renderObject<RenderAnimatedOpacity>(panel);
     final bounds = tester.getRect(panel);
     expect(render.opacity.value > 0 && bounds.overlaps(viewport), visible,
-        reason: '${i == 0 ? 'шапка' : 'нижняя панель'}: opacity=${render.opacity.value}, bounds=$bounds');
+        reason: '${i == 0 ? 'header' : 'bottom panel'}: opacity=${render.opacity.value}, bounds=$bounds');
   }
 }
 
@@ -50,11 +50,11 @@ Future<void> checkReturnFrames(WidgetTester tester, ModalRoute<dynamic> route, {
   var returned = false;
   route.completed.then((_) => returned = true);
   final deadline = tester.binding.clock.now().add(const Duration(seconds: 5));
-  // Нулевой шаг проверяет первый кадр после нажатия, до продвижения анимации.
+  // The zero step checks the first frame after the tap, before the animation advances.
   await tester.pump();
   expectPanelsPainted(tester, visible);
   while (!returned || tester.binding.hasScheduledFrame) {
-    expect(tester.binding.clock.now().isBefore(deadline), isTrue, reason: 'возврат из оглавления не завершился');
+    expect(tester.binding.clock.now().isBefore(deadline), isTrue, reason: 'the return from the TOC did not finish');
     await tester.pump(const Duration(milliseconds: 16));
     expectPanelsPainted(tester, visible);
   }
@@ -62,7 +62,7 @@ Future<void> checkReturnFrames(WidgetTester tester, ModalRoute<dynamic> route, {
 }
 
 void main() {
-  testWidgets('выбор главы: панели не рисуются ни в одном кадре возврата', (tester) async {
+  testWidgets('chapter choice: the panels are not painted in any frame of the return', (tester) async {
     await openContents(tester);
     final route = ModalRoute.of(tester.element(find.byType(TocScreen)))!;
     await tester.tap(find.text('Вторая глава'));
@@ -72,11 +72,11 @@ void main() {
     expect(st.panelsVisible, isFalse);
   });
 
-  for (final close in ['крестик', 'системная Назад']) {
-    testWidgets('$close без выбора: панели видны в каждом кадре возврата', (tester) async {
+  for (final close in ['close button', 'system Back']) {
+    testWidgets('$close without a choice: the panels are visible in every frame of the return', (tester) async {
       await openContents(tester);
       final route = ModalRoute.of(tester.element(find.byType(TocScreen)))!;
-      if (close == 'крестик') {
+      if (close == 'close button') {
         await tester.tap(find.byTooltip('Закрыть'));
       } else {
         await tester.binding.handlePopRoute();

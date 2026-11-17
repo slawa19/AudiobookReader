@@ -52,8 +52,8 @@ class TestEngine implements PlaylistEngine {
     if (gate != null) await gate.future;
     if (appendFailure != null) throw appendFailure!;
     items.add(item);
-    // Android just_audio.onTimelineChanged переводит STATE_ENDED на следующий
-    // файл, если playWhenReady ещё true. Принимаем и такой порядок событий.
+    // Android just_audio.onTimelineChanged moves STATE_ENDED to the next
+    // file if playWhenReady is still true. This event order is accepted too.
     if (advanceWhenAppendedToCompleted && snapshot.completed && snapshot.playing) {
       nativeAutoStarts.add(item);
       emit(EnginePlayback(item: item, playing: true, ready: true));
@@ -128,7 +128,7 @@ class Harness {
 }
 
 void main() {
-  test('FR-2: ошибка освобождения не останавливает команды нового списка', () async {
+  test('FR-2: a release error does not stop the commands of the new list', () async {
     final h = Harness();
     h.player.append(item(0));
     h.player.play();
@@ -146,13 +146,13 @@ void main() {
     expect(h.started.last, same(next));
   });
 
-  test('current задаётся синхронно исходным экземпляром; clear и drained обнуляют его', () async {
+  test('current is set synchronously from the source instance; clear and drained reset it', () async {
     final h = Harness();
     final a = item(0), b = item(1);
     expect(h.player.current, isNull);
     h.player.append(a);
     expect(h.player.current, same(a));
-    expect(h.engines, isEmpty, reason: 'платформенная очередь ещё не исполнялась');
+    expect(h.engines, isEmpty, reason: 'the platform queue has not run yet');
     h.player.clear(3);
     expect(h.player.current, isNull);
     h.player.append(b);
@@ -167,7 +167,7 @@ void main() {
     expect(h.player.playing, isFalse);
   });
 
-  test('play идемпотентен; started ждёт фактического старта, progress следует текущему файлу', () async {
+  test('play is idempotent; started waits for the actual start, progress follows the current file', () async {
     final h = Harness();
     final a = item(0), b = item(1);
     h.player.append(a);
@@ -209,7 +209,7 @@ void main() {
   });
 
   test(
-    'position неподвижна сразу после pause, в том числе до применения команды; resume восстанавливает место',
+    'position is still right after pause, including before the command is applied; resume restores the place',
     () async {
       final h = Harness();
       final a = item(0);
@@ -246,11 +246,11 @@ void main() {
       await h.player.settled;
       expect(h.engine.snapshot.position, paused);
       expect(h.player.position, paused);
-      expect(h.started, [a], reason: 'продолжение того же файла не создаёт второй started');
+      expect(h.started, [a], reason: 'continuing the same file does not create a second started');
     },
   );
 
-  test('retainThrough сохраняет звучащий current даже при границе перед ним', () async {
+  test('retainThrough keeps the sounding current even with a boundary before it', () async {
     final h = Harness();
     final a = item(0), b = item(1), c = item(2);
     for (final next in [a, b, c]) {
@@ -273,7 +273,7 @@ void main() {
   });
 
   for (final operation in ['load', 'append', 'play', 'stream']) {
-    test('failed при $operation: исходный item, поколение, звук остановлен и хвост не играет', () async {
+    test('failed during $operation: source item, generation, audio stopped and the tail does not play', () async {
       final unsafe = StateError('secret /private/owner/book.wav');
       final engine = TestEngine();
       if (operation == 'load') engine.loadFailure = unsafe;
@@ -327,7 +327,7 @@ void main() {
     });
   }
 
-  test('исчерпание внутри вставки: очередь не пропускает принятый append', () async {
+  test('exhaustion inside an insert: the queue does not drop an accepted append', () async {
     final h = Harness();
     final a = item(0), b = item(1), c = item(2);
     h.player.append(a);
@@ -358,7 +358,7 @@ void main() {
     expect(h.drained.single.item, isNull);
   });
 
-  test('добавление до конца не делает seek и не сообщает drained между файлами', () async {
+  test('appending before the end does not seek and does not report drained between files', () async {
     final h = Harness();
     final a = item(0), b = item(1);
     h.player.append(a);
@@ -375,7 +375,7 @@ void main() {
   });
 
   for (final paused in [false, true]) {
-    test('append после drained: ${paused ? 'пауза до явного play' : 'сохранено намерение играть'}', () async {
+    test('append after drained: ${paused ? 'paused until an explicit play' : 'the intent to play is kept'}', () async {
       final h = Harness();
       final a = item(0), b = item(1);
       h.player.append(a);
@@ -400,7 +400,7 @@ void main() {
     });
   }
 
-  test('pause и speed ждут вставку; после выполнения очереди движок на паузе', () async {
+  test('pause and speed wait for the insert; after the queue runs the engine is paused', () async {
     final h = Harness();
     final a = item(0), b = item(1);
     h.player.setSpeed(2);
@@ -430,7 +430,7 @@ void main() {
     expect(h.started, [a, b]);
   });
 
-  test('clear отделяет старые события и ждёт вставку перед освобождением', () async {
+  test('clear separates old events and waits for the insert before releasing', () async {
     final h = Harness();
     final a = item(0), b = item(1), fresh = item(2);
     h.player.append(a);
@@ -459,7 +459,7 @@ void main() {
     expect(h.events.last.item, same(fresh));
   });
 
-  test('retainThrough отсекает уже загруженный хвост; новый append после конца разрешён', () async {
+  test('retainThrough cuts off the already loaded tail; a new append after the end is allowed', () async {
     final h = Harness();
     final a = item(0), b = item(1), c = item(2);
     h.player.append(a);

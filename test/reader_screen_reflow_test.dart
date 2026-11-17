@@ -7,7 +7,7 @@ import 'reader_screen_position_test.dart' show openAt;
 import 'support/harness.dart';
 
 void main() {
-  testWidgets('панель уводит удерживаемое место с первой страницы: показывается следующая от прежнего начала', (tester) async {
+  testWidgets('the panel moves the held place off the first page: the next one is shown from the previous start', (tester) async {
     final p = await pumpPrototype(tester);
     final book = Book(id: 'shorter-page', title: '', author: '', language: 'ru',
         chapters: const [Chapter(title: '', level: 1, firstBlock: 0, blockCount: 2)],
@@ -15,7 +15,7 @@ void main() {
           const Block(index: 1, kind: BlockKind.paragraph, text: 'Звучащий абзац.')], notes: const {});
     final st = await openAt(tester, p, book, const ReadingPosition(0, 0));
     final before = st.layout.pages[st.page];
-    expect(before.contains(1, 0), isTrue, reason: 'до панели место голоса на видимой странице');
+    expect(before.contains(1, 0), isTrue, reason: 'before the panel the voice place is on the visible page');
     final start = (before.firstBlock, before.firstOffset);
     p.narration.demoShow('paused', book: book, fromBlock: 1);
     await tester.pump();
@@ -23,11 +23,11 @@ void main() {
     final at = st.soundingPosition!;
     expect((st.layout.pages.first.firstBlock, st.layout.pages.first.firstOffset), start);
     expect(st.layout.pages.first.contains(at.block, at.offset), isFalse,
-        reason: 'с панелью первая страница действительно стала слишком короткой');
+        reason: 'with the panel the first page really became too short');
     expect(st.page, 1);
     expect(st.layout.pages[st.page].contains(at.block, at.offset), isTrue);
     expect(st.layout.pages[st.page].firstBlock, 0,
-        reason: 'на странице остался хвост предыдущего блока, она не начинается с голоса');
+        reason: 'the page kept the tail of the previous block, it does not start with the voice');
     final shown = st.layout.pages[st.page];
     await tester.pump(const Duration(milliseconds: 30));
     expect(st.layout.pages[st.page], same(shown));

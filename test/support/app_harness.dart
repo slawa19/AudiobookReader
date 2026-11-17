@@ -21,7 +21,7 @@ import 'book_samples.dart';
 import 'library_time.dart';
 import 'secret_store.dart';
 
-/// Одиночный поток хранит события до подписки, как Android при холодном запуске.
+/// A single-subscription stream buffers events until someone listens, like Android on a cold start.
 class TestIncomingFiles implements IncomingFiles {
   final events = StreamController<IncomingFile>();
   IncomingFile? picked;
@@ -47,7 +47,7 @@ class TestIncomingFiles implements IncomingFiles {
 
 List<int> shortBook() => utf8.encode(fixture('fb2_metadata.xml'));
 
-/// Тот же образец с длинным телом: несколько настоящих страниц для проверки позиции.
+/// The same sample with a long body: several real pages for checking the position.
 List<int> longBook() => utf8.encode(
   fixture('fb2_metadata.xml').replaceFirst(
     '<p>Один.</p>',
@@ -175,7 +175,7 @@ class AppHarness {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
       await tester.pump(const Duration(milliseconds: 20));
     }
-    expect(condition(), isTrue, reason: 'не дождались результата дисковой операции');
+    expect(condition(), isTrue, reason: 'the disk operation did not finish');
   }
 
   Future<void> deleted(IncomingFile file) async {

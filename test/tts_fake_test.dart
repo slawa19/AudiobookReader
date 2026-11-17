@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 const p = VoiceProfile(model: 'm', voiceId: 'v', style: 's');
 
 void main() {
-  test('FR-T5: тон PCM16, длина пропорциональна речи, расход; память вызовов', () async {
+  test('FR-T5: PCM16 tone, length proportional to speech, usage; call memory', () async {
     final engine = FakeTtsEngine();
     final short = await engine.synthesize('Да.', p);
     final long = await engine.synthesize('Да.Да.', p);
@@ -18,7 +18,7 @@ void main() {
     expect(engine.calls.first.profile, p);
   });
 
-  test('ручные ответы можно отпустить в обратном порядке, повторный release безвреден', () async {
+  test('manual responses can be released in reverse order, a repeated release is harmless', () async {
     final engine = FakeTtsEngine(manual: true);
     var firstReady = false;
     var secondReady = false;
@@ -43,7 +43,7 @@ void main() {
     expect(firstReady, isTrue);
   });
 
-  test('задержка, индивидуальная задержка и расход под управлением теста', () async {
+  test('delay, per-call delay and usage are controlled by the test', () async {
     final engine = FakeTtsEngine(delay: const Duration(milliseconds: 10));
     engine.enqueue(usage: const TtsUsage(audioTokens: 12, inputTokens: 3), delay: const Duration(milliseconds: 20));
     var ready = false;
@@ -57,7 +57,7 @@ void main() {
     expect(ready, isTrue);
   });
 
-  test('все постоянные причины и временные ошибки, с usage и без; после них успешный ответ', () async {
+  test('all permanent reasons and temporary errors, with and without usage; then a success', () async {
     final engine = FakeTtsEngine(manual: true);
     for (final usage in [null, const TtsUsage(audioTokens: 34, inputTokens: 3)]) {
       for (final reason in TtsErrorReason.values) {

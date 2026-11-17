@@ -9,8 +9,8 @@ import 'support/flows.dart';
 import 'support/harness.dart';
 
 void main() {
-  group('листание (FR-R2)', () {
-    testWidgets('касание правой трети — вперёд, левой — назад', (tester) async {
+  group('page turning (FR-R2)', () {
+    testWidgets('a tap on the right third goes forward, on the left third back', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p, at: const ReadingPosition(0, 0));
       expect(reader(tester).page, 0);
@@ -25,7 +25,7 @@ void main() {
       expect(reader(tester).page, 1);
     });
 
-    testWidgets('смахивание влево — вперёд, вправо — назад', (tester) async {
+    testWidgets('a swipe left goes forward, right goes back', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p, at: const ReadingPosition(0, 0));
       await tester.fling(find.byKey(const Key('page-area')), const Offset(-250, 0), 1200);
@@ -36,7 +36,7 @@ void main() {
       expect(reader(tester).page, 0);
     });
 
-    testWidgets('переход через границу главы тем же жестом', (tester) async {
+    testWidgets('crossing a chapter boundary with the same gesture', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p, at: const ReadingPosition(0, 0));
       final st = reader(tester);
@@ -52,7 +52,7 @@ void main() {
       expect(st.layout.pages[st.page].chapter, 0);
     });
 
-    testWidgets('касание центра показывает и прячет панели; страница при этом не листается', (tester) async {
+    testWidgets('a tap on the center shows and hides the panels; the page does not turn', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       final page = reader(tester).page;
@@ -68,14 +68,14 @@ void main() {
       expect(reader(tester).page, page);
     });
 
-    testWidgets('ползунок открывает страницу с выбранным местом (FR-R5)', (tester) async {
+    testWidgets('the slider opens the page with the chosen place (FR-R5)', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p, at: const ReadingPosition(0, 0));
       await tapCenter(tester);
       await tester.pumpAndSettle();
       final slider = find.byKey(const Key('book-slider'));
       final box = tester.getRect(slider);
-      // Ползунок в теме Material 3 имеет поля по краям; точка на 3/4 дорожки — около 75 %.
+      // The slider in the Material 3 theme has margins at its edges; a point at 3/4 of the track is about 75 %.
       await tester.tapAt(Offset(box.left + 24 + (box.width - 48) * 0.75, box.center.dy));
       await tester.pumpAndSettle();
       final st = reader(tester);
@@ -87,7 +87,7 @@ void main() {
       expect(end, greaterThanOrEqualTo(0.73));
     });
 
-    testWidgets('оглавление открывает начало выбранной главы (FR-R4)', (tester) async {
+    testWidgets('the table of contents opens the start of the chosen chapter (FR-R4)', (tester) async {
       final p = await pumpPrototype(tester);
       await openDama(tester, p);
       await tapCenter(tester);
@@ -101,13 +101,13 @@ void main() {
     });
   });
 
-  group('вид текста (FR-R6)', () {
-    testWidgets('крупнее шрифт — меньше текста на странице, место чтения сохраняется', (tester) async {
+  group('text appearance (FR-R6)', () {
+    testWidgets('a larger font means less text on the page, the reading place is kept', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p, at: const ReadingPosition(60, 300));
       final before = reader(tester).layout.pages.length;
       final anchor = reader(tester).layout.pages[reader(tester).page];
-      expect(anchor.firstOffset, greaterThan(0), reason: 'страница начинается внутри абзаца — проверка по смещению');
+      expect(anchor.firstOffset, greaterThan(0), reason: 'page starts inside a paragraph, checked by offset');
       await tapCenter(tester);
       await tester.tap(find.byTooltip('Вид текста'));
       await tester.pumpAndSettle();
@@ -118,12 +118,12 @@ void main() {
       final st = reader(tester);
       expect(st.layout.pages.length, greaterThan(before));
       final page = st.layout.pages[st.page];
-      // Место чтения — сохранённая позиция (60, 300): страница после смены размера содержит её — блок и
-      // смещение, а не только блок.
-      expect(page.contains(60, 300), isTrue, reason: 'после смены размера на экране то же место книги');
+      // The reading place is the saved position (60, 300): after the size change the page contains it, both
+      // block and offset, not just the block.
+      expect(page.contains(60, 300), isTrue, reason: 'after the size change the same place of the book is on screen');
     });
 
-    testWidgets('тема применяется сразу', (tester) async {
+    testWidgets('the theme is applied immediately', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       await tapCenter(tester);
@@ -140,8 +140,8 @@ void main() {
     });
   });
 
-  group('сноска и «Читать отсюда»', () {
-    testWidgets('знак сноски открывает её поверх страницы (FR-R3)', (tester) async {
+  group('footnote and "Read from here"', () {
+    testWidgets('a footnote mark opens it over the page (FR-R3)', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p, at: const ReadingPosition(0, 0));
       final page = reader(tester).page;
@@ -152,7 +152,7 @@ void main() {
       expect(reader(tester).page, page);
     });
 
-    testWidgets('долгое нажатие на абзац → «Читать отсюда» начинает с него (FR-P3)', (tester) async {
+    testWidgets('a long press on a paragraph → "Read from here" starts from it (FR-P3)', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       final block = wholeParagraphOnPage(tester);
@@ -167,8 +167,8 @@ void main() {
     });
   });
 
-  group('озвучка на экране чтения', () {
-    testWidgets('«Слушать» → панель плеера, подсветка звучащего абзаца, страница идёт за голосом (FR-P4)',
+  group('narration on the reading screen', () {
+    testWidgets('"Listen" → player panel, highlight of the sounding paragraph, the page follows the voice (FR-P4)',
         (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 40);
       await openKapitanskaya(tester, p, at: const ReadingPosition(3, 0));
@@ -180,7 +180,7 @@ void main() {
       final block = p.narration.block!;
       expect(find.byKey(ValueKey('hl-$block-0')), findsOneWidget);
       final startPage = reader(tester).page;
-      // Голос уходит вперёд — страница сама переворачивается следом.
+      // The voice moves ahead and the page turns by itself to follow it.
       var guard = 0;
       while (reader(tester).page == startPage && guard++ < 300) {
         await tester.pump(const Duration(milliseconds: 100));
@@ -189,10 +189,10 @@ void main() {
       final st = reader(tester);
       final at = st.soundingPosition!;
       expect(st.layout.pages[st.page].contains(at.block, at.offset), isTrue,
-          reason: 'на экране звучащее место (блок и смещение), а не просто тот же блок');
+          reason: 'the sounding place (block and offset) is on screen, not just the same block');
     });
 
-    testWidgets('листаю сам → следование отключено, «К месту чтения» возвращает', (tester) async {
+    testWidgets('turning pages myself → following is off, "To current spot" brings it back', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await tapCenter(tester);
@@ -203,7 +203,7 @@ void main() {
       await advance(tester, const Duration(milliseconds: 800));
       expect(reader(tester).following, isFalse);
       expect(reader(tester).page, listening + 1);
-      expect(p.narration.state, NarrationState.playing, reason: 'голос не прерывается');
+      expect(p.narration.state, NarrationState.playing, reason: 'the voice is not interrupted');
       await tester.tap(find.byKey(const Key('to-reading-place')));
       await advance(tester, const Duration(milliseconds: 800));
       expect(reader(tester).following, isTrue);
@@ -211,7 +211,7 @@ void main() {
       expect(find.byKey(const Key('to-reading-place')), findsNothing);
     });
 
-    testWidgets('пауза, вперёд/назад, скорость, таймер сна, «Закрыть»', (tester) async {
+    testWidgets('pause, forward/back, speed, sleep timer, "Close"', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await tapCenter(tester);
@@ -224,7 +224,7 @@ void main() {
       await tester.tap(find.byKey(const Key('next')));
       await tester.pump();
       expect(p.narration.block, greaterThan(first));
-      expect(p.narration.state, NarrationState.paused, reason: '«вперёд» из паузы оставляет паузу (А§6.6)');
+      expect(p.narration.state, NarrationState.paused, reason: '"forward" from pause leaves it paused (А§6.6)');
       await tester.tap(find.byKey(const Key('previous')));
       await tester.pump();
       expect(p.narration.block, first);
@@ -254,8 +254,8 @@ void main() {
       expect(p.narration.state, NarrationState.idle);
       expect(find.byKey(const Key('player-panel')), findsNothing);
       expect(p.library.positionOf('kapitanskaya'), onScreen,
-          reason: '«Закрыть» при следовании: позиция — звучавшее место на экране (FR-P8, FR-P3)');
-      // Панель ушла, страница стала длиннее и пересчитана от того же места: оно на экране.
+          reason: '"Close" while following: the position is the sounding place on screen (FR-P8, FR-P3)');
+      // The panel is gone, the page got longer and was recomputed from the same place: it is on screen.
       final st = reader(tester);
       final page = st.layout.pages[st.page];
       expect(page.firstBlock < onScreen.block || (page.firstBlock == onScreen.block && page.firstOffset <= onScreen.offset),
@@ -271,7 +271,7 @@ void main() {
       ('error404', 'Модель 3.8 Flash больше недоступна'),
       ('errorOther', 'Google отказал в озвучке'),
     ]) {
-      testWidgets('состояние плеера «$state» названо словами в самой панели (FR-P6)', (tester) async {
+      testWidgets('player state "$state" is named in words in the panel itself (FR-P6)', (tester) async {
         final p = await pumpPrototype(tester);
         await openKapitanskaya(tester, p);
         p.narration.demoShow(state, book: currentBook(tester), fromBlock: 39);
@@ -284,11 +284,11 @@ void main() {
       });
     }
 
-    testWidgets('после ошибки «Слушать» начинает новый сеанс с того же места', (tester) async {
+    testWidgets('after an error "Listen" starts a new session from the same place', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       p.narration.demoShow('error402', book: currentBook(tester), fromBlock: 39);
-      // Панель ошибки — новый слой: первые 350 мс касания не принимаются (защита от касания вдогонку).
+      // The error panel is a new layer: taps in the first 350 ms are ignored (protection against a follow-up tap).
       await advance(tester, const Duration(milliseconds: 600));
       await tester.tap(find.byKey(const Key('error-listen')));
       await tester.pump();
@@ -296,7 +296,7 @@ void main() {
       expect(p.narration.block, 39);
     });
 
-    testWidgets('без ключа «Слушать» ведёт в настройки на поле ключа (FR-P7)', (tester) async {
+    testWidgets('without a key "Listen" leads to settings, to the key field (FR-P7)', (tester) async {
       final p = await pumpPrototype(tester);
       p.settings.apiKey = null;
       await openKapitanskaya(tester, p);
@@ -307,7 +307,7 @@ void main() {
       expect(p.narration.state, NarrationState.idle);
     });
 
-    testWidgets('экран голоса ставит паузу; проба играет; выбор голоса книги (FR-V1, FR-V2)', (tester) async {
+    testWidgets('the voice screen pauses; the probe plays; choosing the book voice (FR-V1, FR-V2)', (tester) async {
       final p = await pumpPrototype(tester, demoAcceleration: 1);
       await openKapitanskaya(tester, p);
       await tapCenter(tester);
@@ -320,19 +320,19 @@ void main() {
       await tester.pump();
       expect(p.sampler.voice, 'Callirrhoe');
       await advance(tester, const Duration(seconds: 6));
-      expect(p.sampler.voice, isNull, reason: 'проба доиграла');
+      expect(p.sampler.voice, isNull, reason: 'the probe finished playing');
       await tester.tap(find.byKey(const Key('voice-Kore')));
       await tester.pump();
       expect(p.library.bookVoice('kapitanskaya'), 'Kore');
-      expect(p.settings.voice, 'Aoede', reason: 'голос приложения не меняется');
+      expect(p.settings.voice, 'Aoede', reason: 'the app voice does not change');
     });
 
-    testWidgets('строка «Скачать главу» на экране чтения и «Стоп» (FR-D2)', (tester) async {
+    testWidgets('the "Download chapter" row on the reading screen and "Stop" (FR-D2)', (tester) async {
       final p = await pumpPrototype(tester);
       await openKapitanskaya(tester, p);
       final book = currentBook(tester);
       p.downloads.demoShow(book, 1, failed: false);
-      // Строка скачивания — новый слой: первые 350 мс касания не принимаются (защита от касания вдогонку).
+      // The download row is a new layer: taps in the first 350 ms are ignored (protection against a follow-up tap).
       await advance(tester, const Duration(milliseconds: 600));
       expect(find.byKey(const Key('download-strip')), findsOneWidget);
       await tester.tap(find.text('Стоп'));
@@ -342,8 +342,8 @@ void main() {
     });
   });
 
-  group('полка и настройки', () {
-    testWidgets('удаление книги: меню → подтверждение с объёмом → книги нет (FR-L5)', (tester) async {
+  group('shelf and settings', () {
+    testWidgets('deleting a book: menu → confirmation with the size → the book is gone (FR-L5)', (tester) async {
       final p = await pumpPrototype(tester);
       await tester.longPress(find.text('Война и мир'));
       await tester.pumpAndSettle();
@@ -356,7 +356,7 @@ void main() {
       expect(p.library.shelf.any((e) => e.id == 'voyna'), isFalse);
     });
 
-    testWidgets('«Очистить озвучку» с подтверждением обнуляет место (FR-M3)', (tester) async {
+    testWidgets('"Clear narration" with confirmation resets the space (FR-M3)', (tester) async {
       final p = await pumpPrototype(tester);
       await tester.tap(find.byTooltip('Настройки'));
       await tester.pumpAndSettle();
@@ -368,14 +368,14 @@ void main() {
       expect(find.text('0 МБ'), findsOneWidget);
     });
 
-    testWidgets('полка: дочитанная — «100 %», неоткрытая — «новая» (FR-L4)', (tester) async {
+    testWidgets('shelf: a finished book shows "100 %", an unopened one shows "new" (FR-L4)', (tester) async {
       await pumpPrototype(tester);
       expect(find.text('100 %'), findsOneWidget);
       expect(find.text('новая'), findsOneWidget);
       expect(find.text('прочитана'), findsNothing);
     });
 
-    testWidgets('добавление: строка «Добавляется…», затем книга на полке; отказ висит до «✕»', (tester) async {
+    testWidgets('adding: the "Adding…" row, then the book on the shelf; a rejection stays until "✕"', (tester) async {
       final p = await pumpPrototype(tester);
       p.library.addDemoFile('pushkin_povesti_belkina.fb2.zip', 'ok');
       await tester.pump();
@@ -391,7 +391,7 @@ void main() {
       expect(find.text('Этот формат не поддерживается'), findsNothing);
     });
 
-    testWidgets('«Состояния для показа» открываются долгим нажатием на заголовок полки', (tester) async {
+    testWidgets('"Demo states" open with a long press on the shelf title', (tester) async {
       await pumpPrototype(tester);
       await tester.longPress(find.byKey(const Key('shelf-title')));
       await tester.pumpAndSettle();

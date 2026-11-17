@@ -12,7 +12,7 @@ Future<AppHarness> panelApp(WidgetTester tester, {bool wrapped = true, bool narr
   final h = AppHarness(tester);
   await h.start(fakeTts: true, textScale: narrow ? 1.3 : 1);
   if (wrapped) {
-    // Физический экран Samsung; 4 пикселя на dp. Длинное имя не вытесняет значки из верхней строки.
+    // Physical Samsung screen; 4 pixels per dp. A long name does not push the icons out of the top row.
     tester.view.devicePixelRatio = 4;
     tester.view.physicalSize = const Size(1440, 3120);
     tester.view.padding = const FakeViewPadding(top: 128, bottom: 192);
@@ -56,7 +56,7 @@ Future<void> swipePage(WidgetTester tester, int direction) async {
 
 void main() {
   for (final language in ['de', 'uk']) {
-    testWidgets('320 dp ×1,3 $language: значки, preparing и системный отступ не меняют геометрию', (tester) async {
+    testWidgets('320 dp ×1.3 $language: icons, preparing and system inset keep the geometry', (tester) async {
       final h = await panelApp(tester, narrow: true, narrowLanguage: language);
       final st = reader(tester);
       final height = st.columnSize.height;
@@ -95,7 +95,7 @@ void main() {
       final wait = Stopwatch()..start();
       do {
         if (wait.elapsed >= const Duration(seconds: 10)) {
-          fail('За 10 с озвучка не перешла в playing: ${h.app.services.narration.state}');
+          fail('Within 10 s the narration did not switch to playing: ${h.app.services.narration.state}');
         }
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
         await tester.pump(const Duration(milliseconds: 16));
@@ -109,17 +109,17 @@ void main() {
     });
   }
 
-  testWidgets('постоянная геометрия с коротким именем голоса', (tester) async {
+  testWidgets('constant geometry with a short voice name', (tester) async {
     final h = await panelApp(tester, wrapped: false);
     final height = reader(tester).columnSize.height;
     await swipePage(tester, 1);
     expect(find.byKey(const Key('to-reading-place')), findsOneWidget);
-    expect(reader(tester).columnSize.height, height, reason: 'старый тест не проходил через смену высоты');
+    expect(reader(tester).columnSize.height, height, reason: 'the old test did not go through the height change');
     expect(h.app.settings.voice, 'Aoede');
   });
 
   for (final action in ['resume', 'back', 'next', 'previous', 'backward', 'auto']) {
-    testWidgets('постоянная панель: $action сохраняет прежнюю раскладку', (tester) async {
+    testWidgets('constant panel: $action keeps the previous layout', (tester) async {
       final h = await panelApp(tester);
       final st = reader(tester);
       if (action == 'previous') {
@@ -132,7 +132,7 @@ void main() {
       final height = st.columnSize.height;
       final panelHeight = tester.getSize(find.byKey(const Key('player-panel'))).height;
       final at = st.soundingPosition!;
-      expect(original.firstBlock, lessThan(at.block), reason: 'над звучащим абзацем есть предыдущий текст');
+      expect(original.firstBlock, lessThan(at.block), reason: 'there is previous text above the narrated paragraph');
       expect(original.fragments.firstWhere((f) => f.block == at.block).top, greaterThan(st.pageStyle.lineHeight));
       if (action == 'auto' || action == 'next' || action == 'previous') h.app.services.narration.resume();
       final revision = h.app.services.narration.commandRevision;
@@ -140,7 +140,7 @@ void main() {
       await swipePage(tester, direction);
       expect(st.following, isFalse);
       expect(find.byKey(const Key('to-reading-place')), findsOneWidget);
-      expect(st.columnSize.height, height, reason: 'значок не меняет область страницы');
+      expect(st.columnSize.height, height, reason: 'the icon does not change the page area');
       final detachedHeight = st.columnSize.height;
       expect(tester.getSize(find.byKey(const Key('player-panel'))).height, panelHeight);
       await swipePage(tester, direction);
@@ -148,7 +148,7 @@ void main() {
       if (action == 'back') {
         await tester.tap(find.byKey(const Key('to-reading-place')));
         await tester.pump();
-        expect(find.byKey(const Key('to-reading-place')), findsNothing, reason: 'кнопка исчезает сразу');
+        expect(find.byKey(const Key('to-reading-place')), findsNothing, reason: 'the button disappears immediately');
       } else if (action == 'next' || action == 'previous') {
         final block = at.block + (action == 'next' ? 1 : -1);
         expected = originalLayout.pages[originalLayout.findPage(block, 0)!];
@@ -160,7 +160,7 @@ void main() {
         await tester.pump();
         await tester.pump();
         if (action == 'next') {
-          expect(st.columnSize.height, detachedHeight, reason: 'preparing не меняет область страницы');
+          expect(st.columnSize.height, detachedHeight, reason: 'preparing does not change the page area');
         }
         await h.until(() => h.app.services.narration.state == NarrationState.playing);
       } else if (action == 'auto') {
@@ -172,19 +172,19 @@ void main() {
           if (st.layout.pages[st.page].contains(voice.block, voice.offset)) break;
         }
         final voice = st.soundingPosition!;
-        expect(st.layout.pages[st.page].contains(voice.block, voice.offset), isTrue, reason: 'голос дошёл до показанной страницы');
-        expect(h.app.services.narration.commandRevision, revision, reason: 'новых команд звука не было');
+        expect(st.layout.pages[st.page].contains(voice.block, voice.offset), isTrue, reason: 'the voice reached the shown page');
+        expect(h.app.services.narration.commandRevision, revision, reason: 'there were no new audio commands');
         expected = originalLayout.pages[originalLayout.findPage(voice.block, voice.offset)!];
       } else {
         await tester.tap(find.byKey(const Key('play-pause')));
         await h.until(() => h.player.playing);
       }
       await tester.pumpAndSettle();
-      expect(st.columnSize.height, height, reason: 'после исчезновения кнопки размер вернулся');
+      expect(st.columnSize.height, height, reason: 'the size returned after the button disappeared');
       final page = st.layout.pages[st.page];
       expect((page.firstBlock, page.firstOffset, page.lastBlock, page.lastEnd),
           (expected.firstBlock, expected.firstOffset, expected.lastBlock, expected.lastEnd),
-          reason: 'сохраняются начало, конец и текст над абзацем');
+          reason: 'the start, the end and the text above the paragraph are kept');
       expect(page, same(expected));
       expect(st.layout, same(originalLayout));
       expectFollowingPage(tester);
@@ -192,7 +192,7 @@ void main() {
   }
 
   for (final change in ['font', 'window', 'theme']) {
-    testWidgets('возврат после изменения $change учитывает типографику и настоящее окно', (tester) async {
+    testWidgets('returning after a change of $change accounts for typography and the real window', (tester) async {
       final h = await panelApp(tester);
       final st = reader(tester);
       final original = st.layout;
@@ -212,17 +212,17 @@ void main() {
       await tester.tap(find.byKey(const Key('to-reading-place')));
       await tester.pumpAndSettle();
       if (change == 'theme') {
-        expect(st.layout, same(original), reason: 'цвета не меняют раскладку');
+        expect(st.layout, same(original), reason: 'colors do not change the layout');
         expect(st.layout.pages[st.page], same(page));
       } else {
-        expect(st.layout, isNot(same(original)), reason: 'старые метрики после смены окна или шрифта недействительны');
+        expect(st.layout, isNot(same(original)), reason: 'old metrics are invalid after a window or font change');
         if (change == 'font') {
           expect(st.pageStyle.fontSize, greaterThan(font));
         } else {
           expect(st.columnSize.height, size.height - 40);
           tester.view.physicalSize = const Size(1440, 3120);
           await tester.pumpAndSettle();
-          expect(st.layout, isNot(same(original)), reason: 'прошлый размер окна не хранится как высота панели');
+          expect(st.layout, isNot(same(original)), reason: 'the previous window size is not kept as the panel height');
         }
       }
       expectFollowingPage(tester);

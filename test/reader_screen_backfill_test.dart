@@ -33,12 +33,12 @@ Future<void> turn(WidgetTester tester, {bool forward = false}) async {
   final after = st.layout.pages[st.page];
   expect((after.firstBlock, after.firstOffset, after.lastBlock, after.lastEnd),
       isNot((before.firstBlock, before.firstOffset, before.lastBlock, before.lastEnd)),
-      reason: 'касание действительно перелистнуло текст страницы');
+      reason: 'the tap really turned the page text');
   expectFullProsePage(st);
 }
 
 void main() {
-  testWidgets('настоящий контроллер: вперёд дважды и касания назад не показывают короткий префикс', (tester) async {
+  testWidgets('real controller: forward twice and taps back do not show a short prefix', (tester) async {
     final h = await openBackfillBook(tester);
     final st = reader(tester);
     final chapter = st.widget.book.chapters[1];
@@ -71,24 +71,24 @@ void main() {
     expect(visited[visited.length - 2].firstOffset, 0);
     for (final expected in visited.reversed.skip(1)) {
       await turn(tester, forward: true);
-      expect(st.layout.pages[st.page], same(expected), reason: 'возврат вперёд сохраняет все границы');
+      expect(st.layout.pages[st.page], same(expected), reason: 'returning forward keeps all boundaries');
     }
     await turn(tester);
     final page = st.layout.pages[st.page];
     h.app.settings.fontStep++;
     await tester.pumpAndSettle();
     expect((st.layout.pages[st.page].firstBlock, st.layout.pages[st.page].firstOffset),
-        (page.firstBlock, page.firstOffset), reason: 'шрифт держит начало текущей страницы после досчёта назад');
+        (page.firstBlock, page.firstOffset), reason: 'font change keeps the page start after backward catch-up');
   });
 
   for (final entry in ['saved', 'toc', 'read']) {
-    testWidgets('настоящий контроллер: полные страницы назад после $entry', (tester) async {
+    testWidgets('real controller: full pages backwards after $entry', (tester) async {
       final h = await openBackfillBook(tester);
       var st = reader(tester);
       final book = st.widget.book;
       final block = book.chapters[1].firstBlock + 4;
       if (entry == 'saved') {
-        // Сохраняется начало реально показанной строки, затем книга открывается заново.
+        // The start of the line actually shown is saved, then the book is reopened.
         st.goToPosition(ReadingPosition(block, 0));
         await tester.pumpAndSettle();
         await turn(tester, forward: true);
@@ -132,7 +132,7 @@ void main() {
     });
   }
 
-  testWidgets('голос в перекрытии не уводит с первой страницы главы; подсветка остаётся', (tester) async {
+  testWidgets('the voice in the overlap does not leave the chapter first page; the highlight stays', (tester) async {
     final h = await openBackfillBook(tester);
     final st = reader(tester);
     final block = st.widget.book.chapters[1].firstBlock + 1;

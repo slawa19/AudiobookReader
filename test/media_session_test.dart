@@ -82,14 +82,14 @@ void main() {
       );
     });
   }
-  test('stopped по ошибке сохраняет ответ без замены на конец книги', () {
+  test('stopped on error keeps the response instead of replacing it with end of book', () {
     final state = mediaStateFor(NarrationState.stopped, strings, reason: StopReason.error, error: 'Google error');
     expect(state.message, 'Google error');
     expect(state.foreground, isFalse);
     expect(state.processing, AudioProcessingState.idle);
   });
 
-  test('карточка без абзаца и шкалы времени; команды вызывают контроллер', () async {
+  test('card has no paragraph or time scale; commands call the controller', () async {
     final controller = RecordingNarration();
     final lifecycle = RecordingLifecycle();
     final handler = NarrationMediaHandler(
@@ -133,12 +133,12 @@ void main() {
   });
 
   for (final row in [
-    (NarrationState.playing, NarrationState.stopped, StopReason.endOfBook, 'конец книги'),
-    (NarrationState.playing, NarrationState.idle, null, 'крестик'),
-    (NarrationState.playing, NarrationState.idle, null, 'открытие другой книги'),
-    (NarrationState.paused, NarrationState.idle, null, 'закрытие на паузе'),
+    (NarrationState.playing, NarrationState.stopped, StopReason.endOfBook, 'end of book'),
+    (NarrationState.playing, NarrationState.idle, null, 'close button'),
+    (NarrationState.playing, NarrationState.idle, null, 'opening another book'),
+    (NarrationState.paused, NarrationState.idle, null, 'closing while paused'),
   ]) {
-    test('${row.$4}: idle, снятие foreground, новое Слушать', () async {
+    test('${row.$4}: idle, foreground released, new Listen', () async {
       final controller = RecordingNarration();
       final lifecycle = RecordingLifecycle();
       var card = const MediaCard(id: 'book', title: 'Title', chapter: 'Chapter');
@@ -155,10 +155,10 @@ void main() {
       final items = handler.mediaItem.listen(events.add);
       final states = handler.playbackState.listen((state) {
         events.add((state.processingState, state.playing));
-        // audio_service 0.18.19: enterPlayingState при false -> true.
+        // audio_service 0.18.19: enterPlayingState on false -> true.
         if (!wasPlaying && state.playing) foreground = notification = true;
         wasPlaying = state.playing;
-        // idle вызывает stopSelf, но привязанная служба остаётся foreground.
+        // idle calls stopSelf, but the bound service stays foreground.
       });
       addTearDown(() async {
         handler.dispose();
@@ -187,7 +187,7 @@ void main() {
       expect(events, [null, (AudioProcessingState.idle, false)]);
       expect(handler.playbackState.value.controls, isEmpty);
       expect(lifecycle.stops, 1);
-      // Позднее обновление карточки/повтор publish не должно вернуть уведомление.
+      // A late card update or a repeated publish must not bring the notification back.
       card = const MediaCard(id: 'other', title: 'Other', chapter: 'Other chapter');
       handler.publish();
       bridgeReply.complete();
@@ -215,7 +215,7 @@ void main() {
     });
   }
 
-  test('обычная пауза оставляет foreground и карточку, мост остановки не вызывается', () async {
+  test('a plain pause keeps foreground and the card, the stop bridge is not called', () async {
     final controller = RecordingNarration();
     final lifecycle = RecordingLifecycle();
     final handler = NarrationMediaHandler(
@@ -242,7 +242,7 @@ void main() {
     expect(lifecycle.stops, 0);
   });
 
-  test('новое Слушать ждёт ответа моста о снятии прежнего foreground', () async {
+  test('a new Listen waits for the bridge to confirm the previous foreground is released', () async {
     final controller = RecordingNarration();
     final lifecycle = RecordingLifecycle();
     final bridgeReply = Completer<void>();

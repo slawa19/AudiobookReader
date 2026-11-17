@@ -29,7 +29,7 @@ void main() {
     messenger.setMockMethodCallHandler(_events, null);
   });
 
-  test('выбор возвращает путь копии и исходное имя', () async {
+  test('picking returns the copy path and the original name', () async {
     messenger.setMockMethodCallHandler(_methods, (call) async {
       expect(call.method, 'pickFile');
       expect(call.arguments, isNull);
@@ -41,12 +41,12 @@ void main() {
     expect(file?.name, _file['name']);
   });
 
-  test('отмена выбора возвращает null', () async {
+  test('cancelling the pick returns null', () async {
     messenger.setMockMethodCallHandler(_methods, (_) async => null);
     expect(await AndroidIncomingFiles().pickFile(), isNull);
   });
 
-  test('ошибка копирования при выборе доходит до вызывающего', () async {
+  test('a copy error while picking reaches the caller', () async {
     messenger.setMockMethodCallHandler(_methods, (_) async {
       throw PlatformException(code: 'copy_failed', message: 'Недостаточно места');
     });
@@ -58,7 +58,7 @@ void main() {
     );
   });
 
-  test('файл другого приложения поступает через EventChannel', () async {
+  test('a file from another app arrives through the EventChannel', () async {
     final listening = Completer<void>();
     messenger.setMockMethodCallHandler(_events, (call) async {
       if (call.method == 'listen') listening.complete();
@@ -72,9 +72,9 @@ void main() {
     expect(file.name, _file['name']);
   });
 
-  test('поздняя подписка получает файл холодного запуска ровно один раз', () async {
-    // Подставной Android уже скопировал файл до создания Dart-объекта и держит
-    // событие до listen; Dart не должен открывать канал раньше подписчика.
+  test('a late subscription receives the cold-start file exactly once', () async {
+    // The fake Android has already copied the file before the Dart object is created and holds
+    // the event until listen; Dart must not open the channel before a subscriber exists.
     final pending = [_file];
     var listens = 0;
     messenger.setMockMethodCallHandler(_events, (call) async {
@@ -107,7 +107,7 @@ void main() {
     await subscription.cancel();
   });
 
-  test('ошибка входящего копирования не теряется и не закрывает поток', () async {
+  test('an incoming copy error is not lost and does not close the stream', () async {
     final listening = Completer<void>();
     messenger.setMockMethodCallHandler(_events, (call) async {
       if (call.method == 'listen') listening.complete();

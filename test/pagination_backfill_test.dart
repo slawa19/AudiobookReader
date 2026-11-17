@@ -25,7 +25,7 @@ void full(BookPageLayout page, PageStyle style, Size col) {
 
 void main() {
   for (final narrow in [false, true]) {
-    test('обратные страницы полны, перекрытие только у начала главы; узкий экран $narrow', () async {
+    test('backward pages are full, overlap only at the chapter start; narrow screen $narrow', () async {
       final book = chaptersBook();
       final style = styleFor(narrow ? 5 : 2, narrow ? 1.3 : 1);
       final col = column(narrow ? const Size(320, 640) : const Size(360, 800));
@@ -46,7 +46,8 @@ void main() {
         if (i > 1) expect(layout.pages[i - 1].lastEnd, layout.pages[i].firstOffset);
       }
       final second = layout.pages[1];
-      expect(first.lastEnd, greaterThan(second.firstOffset), reason: 'недостаток строк у начала заменён перекрытием');
+      expect(first.lastEnd, greaterThan(second.firstOffset),
+          reason: 'the shortage of lines at the start is replaced by overlap');
       final overlap = second.firstOffset;
       expect(layout.findPage(1, overlap), 1);
       expect(layout.findPage(1, overlap, preferredPage: 0), 0);
@@ -55,13 +56,14 @@ void main() {
       final previous = reference.pages.where((p) => p.chapter == 0).toList();
       expect(previousCount, previous.length);
       for (var i = 0; i < previousCount; i++) {
-        expect(pieces(layout.pages[i]), pieces(previous[i]), reason: 'предыдущая глава имеет обычный конец');
+        expect(pieces(layout.pages[i]), pieces(previous[i]), reason: 'the previous chapter has an ordinary end');
       }
       expect(layout.hasPrevious, isFalse);
       expect(layout.pages.skip(previousCount + count), orderedEquals(suffix));
     });
 
-    testWidgets('назад через заголовок, картинку, подпись, стихи и длинный абзац; узкий экран $narrow', (tester) async {
+    testWidgets('backward across heading, image, caption, verse and long paragraph; narrow screen $narrow',
+        (tester) async {
       final book = awkwardBook();
       final style = styleFor(narrow ? 5 : 2, narrow ? 1.3 : 1);
       final col = column(narrow ? const Size(320, 640) : const Size(360, 800));
@@ -93,7 +95,7 @@ void main() {
     });
   }
 
-  testWidgets('небольшой заголовок переносится целиком и с теми же отступами', (tester) async {
+  testWidgets('a small heading moves whole and with the same insets', (tester) async {
     final source = awkwardBook();
     final book = Book(id: 'short-heading-back', title: '', author: '', language: 'ru', chapters: source.chapters,
         blocks: [const Block(index: 0, kind: BlockKind.heading, text: 'Глава\nПодзаголовок'),
@@ -106,14 +108,14 @@ void main() {
     addTearDown(layout.dispose);
     await tester.runAsync(layout.loadPrevious);
     final headings = layout.pages.expand((p) => p.fragments).where((f) => f.block == 0).toList();
-    // Повторение допустимо у первой границы; каждый показ заголовка содержит весь заголовок.
+    // Repetition is allowed at the first boundary; every appearance of the heading contains the whole heading.
     expect(headings, isNotEmpty);
     expect(headings.every((f) => f.start == 0 && f.end == book.blocks[0].text.length), isTrue);
     expect(await checkRenderedHeights(tester, book, layout, style, col, [0, 1]), greaterThan(1));
   });
 
   for (final text in ['ОченьДлинноеСловоБезПробелов', '😀абв😀гдеж😀зик😀лмн']) {
-    testWidgets('обратные строки совпадают с отрисовкой внутри длинного слова $text', (tester) async {
+    testWidgets('backward lines match the rendering inside a long word $text', (tester) async {
       final book = Book(id: 'word-back', title: '', author: '', language: 'ru',
           chapters: const [Chapter(title: '', level: 1, firstBlock: 0, blockCount: 1)],
           blocks: [Block(index: 0, kind: BlockKind.paragraph, text: text * 200)], notes: const {});
@@ -131,7 +133,7 @@ void main() {
     });
   }
 
-  testWidgets('длинный префикс измеряется окнами между кадрами и отменяется без вставки', (tester) async {
+  testWidgets('a long prefix is measured in windows between frames and cancelled without insertion', (tester) async {
     final book = Book(id: 'back-budget', title: '', author: '', language: 'ru',
         chapters: const [Chapter(title: '', level: 1, firstBlock: 0, blockCount: 1)],
         blocks: [Block(index: 0, kind: BlockKind.paragraph, text: 'Текст тут. ' * 30000)], notes: const {});
@@ -145,7 +147,7 @@ void main() {
     final original = layout.pages.single;
     measurements.clear();
     final previous = layout.loadPrevious();
-    expect(measurements, isEmpty, reason: 'команда не измеряет весь префикс синхронно');
+    expect(measurements, isEmpty, reason: 'the command does not measure the whole prefix synchronously');
     var heartbeat = false;
     Timer.run(() => heartbeat = true);
     await tester.pump(const Duration(milliseconds: 1));

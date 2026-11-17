@@ -7,7 +7,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'harness.dart';
 
-/// Открывает «Капитанскую дочку» на месте [at] (по умолчанию — сохранённом).
+/// Opens "Капитанская дочка" at [at] (by default, the saved position).
 Future<void> openKapitanskaya(WidgetTester tester, Prototype p, {ReadingPosition? at}) async {
   if (at != null) p.library.savePosition('kapitanskaya', at);
   await openBook(tester, 'Капитанская дочка');
@@ -20,7 +20,7 @@ Future<void> openDama(WidgetTester tester, Prototype p, {ReadingPosition? at}) a
 
 Book currentBook(WidgetTester tester) => reader(tester).widget.book;
 
-/// Середина экрана — касание центра.
+/// Middle of the screen: a tap on the center.
 Future<void> tapCenter(WidgetTester tester) async {
   final size = tester.getSize(find.byKey(const Key('page-area')));
   await tester.tapAt(Offset(size.width / 2, size.height / 2));
@@ -42,7 +42,7 @@ Future<void> tapLeftThird(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 400));
 }
 
-/// Центр знака сноски [noteId] на текущей странице в координатах экрана.
+/// Center of the footnote mark [noteId] on the current page, in screen coordinates.
 Offset noteRefCenter(WidgetTester tester, String noteId) {
   final st = reader(tester);
   final book = st.widget.book;
@@ -60,10 +60,10 @@ Offset noteRefCenter(WidgetTester tester, String noteId) {
       return Offset(st.pagePadding.left + inset, st.pagePadding.top + f.top) + box.toRect().center;
     }
   }
-  throw StateError('Сноски $noteId на странице нет');
+  throw StateError('Footnote $noteId is not on the page');
 }
 
-/// Центр первого куска блока [block] на текущей странице в координатах экрана.
+/// Center of the first piece of [block] on the current page, in screen coordinates.
 Offset blockCenter(WidgetTester tester, int block) {
   final st = reader(tester);
   final f = st.layout.pages[st.page].fragments.firstWhere((f) => f.block == block);
@@ -71,7 +71,7 @@ Offset blockCenter(WidgetTester tester, int block) {
   return Offset(size.width / 2, st.pagePadding.top + f.top + f.height / 2);
 }
 
-/// Первый абзац текущей страницы, целиком стоящий на ней.
+/// The first paragraph of the current page that sits on it entirely.
 int wholeParagraphOnPage(WidgetTester tester) {
   final st = reader(tester);
   final book = st.widget.book;
@@ -81,7 +81,7 @@ int wholeParagraphOnPage(WidgetTester tester) {
       .block;
 }
 
-/// Ход подставной озвучки: время идёт кусками, чтобы таймеры и анимации отработали.
+/// Advances the fake narration: time moves in chunks so that timers and animations get to run.
 Future<void> advance(WidgetTester tester, Duration d) async {
   const step = Duration(milliseconds: 100);
   var left = d;

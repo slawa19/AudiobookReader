@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:audiobook_reader/library/file_library.dart';
 import 'package:audiobook_reader/library/library.dart';
 
-/// Только тестовые образцы создаются из байтов; рабочий интерфейс получает путь.
+/// Only test samples are created from bytes; the production interface gets a path.
 extension TestFileLibrary on FileLibrary {
   Future<ShelfEntry?> addTestBytes(List<int> bytes, String name) async {
     final temp = await Directory.systemTemp.createTemp('test-source-');
@@ -17,7 +17,7 @@ extension TestFileLibrary on FileLibrary {
   }
 }
 
-/// Часы и одноразовые таймеры писателя без ожидания реальной секунды.
+/// Clock and one-shot timers of the writer without waiting for a real second.
 class LibraryTime {
   DateTime now = DateTime.utc(2026, 11, 15);
   final List<_Alarm> _alarms = [];

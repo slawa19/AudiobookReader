@@ -31,11 +31,11 @@ Future<TtsError> errorOf(Future<TtsResult> future) async {
   } on TtsError catch (e) {
     return e;
   }
-  throw StateError('Ожидалась ошибка');
+  throw StateError('An error was expected');
 }
 
 void main() {
-  test('транспорт: чужой текст исключения никогда не попадает в TtsError', () async {
+  test('transport: foreign exception text never reaches TtsError', () async {
     for (final failure in [
       FormatException('Invalid HTTP header field value: "$key\\n"'),
       http.ClientException('чужой текст ${Uri.encodeComponent(key)}'),
@@ -52,7 +52,7 @@ void main() {
     expect((await engine((_) => jsonResponse(audioResponse())).synthesize('Да.', profile)).pcm, isNotEmpty);
   });
 
-  test('FR-3: ошибка программы проходит через клиент без превращения во временную', () async {
+  test('FR-3: a programming error passes through the client without becoming a temporary one', () async {
     final failure = StateError('чужой текст $key ${Uri.encodeComponent(key)}');
     await expectLater(engine((_) => throw failure).synthesize('Да.', profile), throwsA(same(failure)));
   });
@@ -62,7 +62,7 @@ void main() {
     http.ClientException('чужой текст $key ${Uri.encodeComponent(key)}'),
     StateError('чужой текст $key ${Uri.encodeComponent(key)}'),
   ]) {
-    test('FR-3: очередь, ${failure.runtimeType}: повтор Exception, остановка Error, ключ скрыт', () async {
+    test('FR-3: queue, ${failure.runtimeType}: Exception is retried, Error stops, key hidden', () async {
       final h = await PlaybackHarness.create(playbackBook([['Да.']]));
       h.settings.apiKey = key;
       var calls = 0;
@@ -102,7 +102,7 @@ void main() {
     });
   }
 
-  test('ключ вне печатного ASCII отклоняется до транспорта; печатный ASCII отправляется', () async {
+  test('a key outside printable ASCII is rejected before transport; printable ASCII is sent', () async {
     for (final value in ['fake\nkey', 'fake\u200bkey', 'fakeékey', 'fake\u007fkey']) {
       var sent = false;
       final tts = GeminiTtsEngine(apiKey: value, transport: MockClient((_) async {
@@ -131,7 +131,7 @@ void main() {
       const TlsException('fake tls secret'),
       const HttpException('fake http secret'),
     ]) {
-      test('сеть: ${failure.runtimeType}, чтение тела=$readingBody — временная ошибка', () async {
+      test('network: ${failure.runtimeType}, reading body=$readingBody is a temporary error', () async {
         var calls = 0;
         final tts = GeminiTtsEngine(apiKey: key, transport: MockClient.streaming((_, _) async {
           calls++;
@@ -147,7 +147,7 @@ void main() {
     }
   }
 
-  test('оплата: постоянный адрес независимо от ссылок и пунктуации Google', () async {
+  test('billing: a fixed URL regardless of Google links and punctuation', () async {
     for (final message in ['payment_required', 'See https://aistudio.google.com/billing).',
       'Docs https://example.test/help, then https://aistudio.google.com/billing']) {
       final e = await errorOf(engine((_) => jsonResponse({'error': {'message': message}}, status: 402))
@@ -160,7 +160,7 @@ void main() {
     expect(e.billingUrl, isNull);
   });
 
-  test('отказ по ключу: 401 всегда; 400/403 только message/status, ссылки и details молчат', () async {
+  test('key rejection: 401 always; 400/403 only by message/status, links and details are ignored', () async {
     for (final status in [400, 401, 403, 418]) {
       for (final (error, denied) in <(Map<String, Object>, bool)>[
         ({'message': 'Denied'}, false),
@@ -178,7 +178,7 @@ void main() {
   });
 
   for (final size in [0, 0xffffffff]) {
-    test('WAV: потоковый data=$size читается до конца', () async {
+    test('WAV: streaming data=$size is read to the end', () async {
       final bytes = wav();
       ByteData.sublistView(bytes).setUint32(50, size, Endian.little);
       final result = await engine((_) => jsonResponse(audioResponse(bytes: bytes, mime: 'audio/wav')))
@@ -188,7 +188,7 @@ void main() {
     });
   }
 
-  test('WAV: обычный размер ограничивает data, обрезанный чанк отклоняется', () async {
+  test('WAV: a regular size limits data, a truncated chunk is rejected', () async {
     final bounded = wav();
     ByteData.sublistView(bounded).setUint32(50, 2, Endian.little);
     expect((await engine((_) => jsonResponse(audioResponse(bytes: bounded, mime: 'audio/wav')))
@@ -199,7 +199,7 @@ void main() {
         .synthesize('Да.', profile))).reason, TtsErrorReason.invalidResponse);
   });
 
-  test('FR-T1/T2: точное тело запроса, стиль только в metadata, ключ только в заголовке', () async {
+  test('FR-T1/T2: exact request body, style only in metadata, key only in the header', () async {
     final tts = engine((r) {
       expect(r.method, 'POST');
       expect(r.url.toString(), 'https://generativelanguage.googleapis.com/v1beta/interactions');
@@ -242,7 +242,7 @@ void main() {
     expect(result.usage.inputTokens, 3);
   });
 
-  test('PCM rate=, запасная частота; WAV берёт частоту из fmt и снимает контейнер', () async {
+  test('PCM rate=, fallback rate; WAV takes the rate from fmt and strips the container', () async {
     for (final (mime, bytes, rate, expected) in [
       ('audio/l16; rate=22050', [1, 0], 22050, [1, 0]),
       ('audio/l16', [2, 0], 24000, [2, 0]),
@@ -255,7 +255,7 @@ void main() {
     }
   });
 
-  test('usage: audio имеет приоритет, иначе total_output, иначе длительность; без сложения счётчиков', () async {
+  test('usage: audio has priority, else total_output, else duration; counters are not summed', () async {
     for (final (usage, expected) in <(Map<String, Object>?, int)>[
       (
         {
@@ -287,7 +287,7 @@ void main() {
     }
   });
 
-  test('status отсутствует — допустим; status != completed — постоянная ошибка с usage', () async {
+  test('a missing status is acceptable; status != completed is a permanent error with usage', () async {
     await engine((_) => jsonResponse(audioResponse(status: null))).synthesize('Да.', profile);
     for (final status in ['in_progress', 'failed', 'cancelled']) {
       final e = await errorOf(engine((_) => jsonResponse(audioResponse(status: status))).synthesize('Да.', profile));
@@ -302,7 +302,7 @@ void main() {
     expect(e.usage!.audioTokens, 34);
   });
 
-  test('HTTP: все временные классы, без повторов, usage в ошибке', () async {
+  test('HTTP: all temporary classes, no retries, usage in the error', () async {
     for (final status in [408, 429, 500, 502, 503, 599]) {
       var calls = 0;
       final e = await errorOf(
@@ -322,7 +322,7 @@ void main() {
     }
   });
 
-  test('таймаут и ClientException — временные, ключ очищается и повторов нет', () async {
+  test('timeout and ClientException are temporary, the key is scrubbed and there are no retries', () async {
     for (final failure in [TimeoutException('timeout $key'), http.ClientException('network $key')]) {
       final e = await errorOf(engine((_) => throw failure).synthesize('Да.', profile));
       expect(e, isA<TemporaryTtsError>());
@@ -338,7 +338,7 @@ void main() {
     gate.complete(jsonResponse(audioResponse()));
   });
 
-  test('402: постоянная ссылка; 404 несёт модель запроса', () async {
+  test('402: a fixed link; 404 carries the requested model', () async {
     for (final link in ['', ' https://aistudio.google.com/custom-billing']) {
       final e = await errorOf(
         engine(
@@ -363,7 +363,7 @@ void main() {
     expect(e.model, profile.model);
   });
 
-  test('400/403: только отказ по ключу распознан; прочее — текст Google как есть', () async {
+  test('400/403: only a key rejection is recognized; anything else is Google text as is', () async {
     for (final status in [400, 403]) {
       for (final denied in [true, false]) {
         final message = denied ? 'API key not valid. $key' : 'Speech annotations are not supported';
@@ -392,7 +392,7 @@ void main() {
     expect(e.reason, TtsErrorReason.invalidKey);
   });
 
-  test('ключ очищен из JSON, не-JSON, status, сетевой ошибки и ссылки 402', () async {
+  test('the key is scrubbed from JSON, non-JSON, status, network error and the 402 link', () async {
     final responses = [
       http.Response('Google echoed $key ${Uri.encodeComponent(key)}', 401),
       jsonResponse({
@@ -412,7 +412,7 @@ void main() {
     }
   });
 
-  test('повреждённые успешные ответы — постоянная ошибка с usage, без утечки тела', () async {
+  test('corrupted successful responses are a permanent error with usage, without leaking the body', () async {
     for (final body in [
       {'usage': measuredUsage, 'steps': []},
       {'usage': measuredUsage, 'steps': 'wrong'},
@@ -432,7 +432,7 @@ void main() {
     expect(e.toString(), isNot(contains(key)));
   });
 
-  test('4000: короткий запрос один, длинный разбит без потерь; PCM и usage склеены', () async {
+  test('4000: a short request is one, a long one is split without loss; PCM and usage are joined', () async {
     for (final n in [4000, 10000]) {
       final sent = <String>[];
       final text = 'я' * n;
@@ -450,7 +450,7 @@ void main() {
     }
   });
 
-  test('ошибка следующей части сохраняет расход предыдущих и своего ответа', () async {
+  test('an error in the next part keeps the usage of the previous parts and of its own response', () async {
     for (final withUsage in [false, true]) {
       var calls = 0;
       final e = await errorOf(
@@ -469,8 +469,8 @@ void main() {
     }
   });
 
-  test('пустые входы не отправляются', () async {
-    final tts = engine((_) => throw StateError('HTTP не нужен'));
+  test('empty inputs are not sent', () async {
+    final tts = engine((_) => throw StateError('HTTP is not needed'));
     expect((await errorOf(tts.synthesize('\u0301', profile))).reason, TtsErrorReason.invalidRequest);
   });
 }

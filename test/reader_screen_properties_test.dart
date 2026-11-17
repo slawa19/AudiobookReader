@@ -53,14 +53,14 @@ Future<AppHarness> propertyApp(WidgetTester tester, {bool narrow = false}) async
   await tester.pump();
   st.listen();
   await h.until(() => h.player.playing);
-  // Только кадры: не досчитываем всю книгу через pumpAndSettle.
+  // Frames only: we do not calculate the whole book through pumpAndSettle.
   for (var i = 0; i < 24; i++) {
     await tester.pump(const Duration(milliseconds: 16));
   }
   return h;
 }
 
-/// Оракул наблюдает координаты текста каждого кадра, а не идентичность объектов раскладки.
+/// The oracle observes the text coordinates of every frame, not the identity of layout objects.
 class ScreenOracle {
   ScreenOracle(this.tester, this.h, this.seed);
   final WidgetTester tester;
@@ -78,8 +78,8 @@ class ScreenOracle {
   Future<void> frame({bool mayMove = false}) async {
     await tester.pump(const Duration(milliseconds: 16));
     final st = reader(tester);
-    // Во время прокрутки читаем построенную страницу с наибольшей видимой частью.
-    // Состояние экрана в postFrame уже может назначить страницу следующего кадра.
+    // While scrolling we read the built page with the largest visible part.
+    // The screen state in postFrame may already assign the next frame page.
     final center = tester.getRect(find.byKey(const Key('page-area'))).center.dx;
     final pages = tester.widgetList<BookPage>(find.byType(BookPage)).toList()
       ..sort((a, b) => (tester.getRect(find.byWidget(a)).center.dx - center).abs()
@@ -93,7 +93,7 @@ class ScreenOracle {
     stable = bounds;
     expect(find.byKey(const Key('to-reading-place')).evaluate().isNotEmpty,
         !st.following, reason: 'I4 $why');
-    expectFullProsePage(st, shown: page); // I5 — в том числе во время подготовки и анимации.
+    expectFullProsePage(st, shown: page); // I5 — including during preparation and animation.
     final at = st.soundingPosition;
     final checkingFollow = st.following && !st.gestureInProgress &&
         (h.player.playing || h.app.services.narration.state == NarrationState.paused);
@@ -104,12 +104,12 @@ class ScreenOracle {
       final fragment = page.fragments.firstWhere((f) => f.block == at.block);
       expect(find.descendant(of: find.byWidget(shown),
           matching: find.byKey(ValueKey('hl-${fragment.block}-${fragment.start}'))), findsWidgets,
-          reason: 'I6 отрисованная подсветка $why');
+          reason: 'I6 rendered highlight $why');
       followingLate = 0;
       pausedFollowLimit = 28;
     } else if (checkingFollow) {
-      // D8 оставлен: на паузе обратный досчёт пока проходит префикс главы целиком.
-      // Для идущего звука остаётся прежний предел 28 кадров.
+      // D8 is kept: on pause the backward catch-up still goes through the whole chapter prefix.
+      // For playing audio the previous limit of 28 frames remains.
       if (h.app.services.narration.state == NarrationState.paused && st.layout.isLoadingPrevious) {
         pausedFollowLimit = 400;
       }
@@ -132,7 +132,7 @@ class ScreenOracle {
 
   Future<void> tapPages(bool right, int count) async {
     final st = reader(tester);
-    // При открытых панелях первое касание текста скрывает их (FR-R1), а не листает.
+    // With the panels open, the first tap on the text hides them (FR-R1) instead of turning the page.
     if (st.panelsVisible) {
       await tester.tapAt(Offset(tester.getSize(find.byKey(const Key('page-area'))).width / 2,
           pageThird(tester, true).dy));
@@ -163,12 +163,12 @@ class ScreenOracle {
       await sample();
       await sample();
     }
-    // Досчёт назад пока может занять начало длинной главы (D8).
+    // The backward catch-up may still take the start of a long chapter (D8).
     for (var i = 0; i < 400; i++) {
       await sample();
       if (changes == count) break;
     }
-    expect(changes, count, reason: 'I2 потерянное касание seed=$seed '
+    expect(changes, count, reason: 'I2 lost tap seed=$seed '
         'page=${st.page} prepend=${st.layout.prependedCount} loading=${st.layout.isLoadingPrevious} '
         'following=${st.following} bounds=${textBounds(st)} before=$previous action=$action '
         'frame=${frames.length} actions=$actions');
@@ -179,7 +179,7 @@ class ScreenOracle {
 void main() {
   for (var index = 0; index < propertySeeds.length; index++) {
     final seed = propertySeeds[index];
-    testWidgets('свойства экрана seed=$seed', (tester) async {
+    testWidgets('screen properties seed=$seed', (tester) async {
       final h = await propertyApp(tester, narrow: index.isOdd);
       final o = ScreenOracle(tester, h, seed);
       final random = Random(seed);
@@ -244,8 +244,8 @@ void main() {
         }
         await o.wait(4);
       }
-      expect(o.followingChecks, greaterThan(0), reason: 'I3 не должен проходить вакуумно seed=$seed');
-      expect(o.highlightChecks, greaterThan(0), reason: 'I6 не должен проходить вакуумно seed=$seed');
+      expect(o.followingChecks, greaterThan(0), reason: 'I3 must not pass vacuously seed=$seed');
+      expect(o.highlightChecks, greaterThan(0), reason: 'I6 must not pass vacuously seed=$seed');
     });
   }
 }

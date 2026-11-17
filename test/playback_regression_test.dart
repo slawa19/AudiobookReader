@@ -48,7 +48,7 @@ class UnstartedPlayer extends FakePlayer {
   }
 }
 
-// currentIndex платформенного движка может остаться на последнем элементе.
+// currentIndex of the platform engine may stay on the last item.
 class StickyPlayer extends FakePlayer {
   StickyPlayer({required super.clock}) {
     events.listen((e) {
@@ -210,7 +210,7 @@ List<String> longChapter([int count = 14]) => [
   for (var i = 0; i < count; i++) '$i ${'word ' * 110}',
 ];
 
-// Файловый ввод-вывод идёт по настенным часам, таймеры и ответы — подставные.
+// File I/O runs on the wall clock; timers and responses are fake.
 Future<void> untilWithProgress(
   bool Function() condition,
   void Function() progress,
@@ -219,7 +219,7 @@ Future<void> untilWithProgress(
   final wait = Stopwatch()..start();
   while (!condition()) {
     if (wait.elapsed >= const Duration(seconds: 10)) {
-      fail('За 10 с не завершилась $reason');
+      fail('Did not finish within 10 s: $reason');
     }
     progress();
     await Future<void>.delayed(const Duration(milliseconds: 2));
@@ -228,7 +228,7 @@ Future<void> untilWithProgress(
 
 void main() {
   test(
-    'R9c ошибка до started оставляет preparing и восстанавливает файл',
+    'R9c an error before started leaves preparing and restores the file',
     () async {
       late UnstartedPlayer player;
       final h = await PlaybackHarness.create(
@@ -239,7 +239,7 @@ void main() {
       );
       await h.cache('Книга.');
       h.controller.readFrom(h.book, 0);
-      await until(() => player.current != null, 'подготовка файла до started');
+      await until(() => player.current != null, 'file preparation before started');
       expect(h.controller.state, NarrationState.preparing);
       player.failCurrent();
       await h.calls(1);
@@ -252,7 +252,7 @@ void main() {
   );
 
   test(
-    'R9c поздний drained старого списка не завершает восстановленный звук',
+    'R9c a late drained of the old list does not finish the restored audio',
     () async {
       late ReplayPlayer player;
       final h = await PlaybackHarness.create(
@@ -268,7 +268,7 @@ void main() {
       h.controller.readFrom(h.book, 0);
       await until(
         () => events.isNotEmpty && player.items.length == 2,
-        'событие плеера и оба файла в списке',
+        'player event and both files in the list',
       );
       final old = events.first;
       player.failCurrent();
@@ -281,7 +281,7 @@ void main() {
     },
   );
 
-  test('R9c проба сообщает ошибку нового события порта', () async {
+  test('R9c the sample reports an error of a new port event', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Книга.'],
@@ -297,7 +297,7 @@ void main() {
   });
 
   test(
-    'R9a контракт current, pause, retainThrough и повторного play',
+    'R9a contract of current, pause, retainThrough and a repeated play',
     () async {
       final clock = ManualPlaybackClock();
       final player = FakePlayer(clock: clock);
@@ -350,7 +350,7 @@ void main() {
   );
 
   test(
-    'R10b неизвестное исключение содержит только тип и техническое описание',
+    'R10b an unknown exception contains only the type and a technical description',
     () async {
       final h = await PlaybackHarness.create(
         playbackBook([
@@ -359,7 +359,7 @@ void main() {
         engineFactory: UnknownFailureEngine.new,
       );
       h.controller.readFrom(h.book, 0);
-      await until(() => h.controller.error != null, 'ошибка синтеза');
+      await until(() => h.controller.error != null, 'synthesis error');
       expect(
         h.controller.error!.googleMessage,
         'StateError: synthesis request failed',
@@ -369,7 +369,7 @@ void main() {
 
   for (final badAgain in [false, true]) {
     test(
-      'R9c ошибка плеера ${badAgain ? 'останавливается на повторе' : 'заменяет файл и продолжает'}',
+      'R9c player error ${badAgain ? 'stops on the repeat' : 'replaces the file and continues'}',
       () async {
         final h = await PlaybackHarness.create(
           playbackBook([
@@ -379,7 +379,7 @@ void main() {
         await h.cache('Первый.');
         await h.cache('Второй.');
         h.controller.readFrom(h.book, 0);
-        await until(() => h.player.items.length == 2, 'оба файла в плеере');
+        await until(() => h.player.items.length == 2, 'both files in the player');
         h.player.failCurrent();
         await h.calls(1);
         expect(h.audio.has(h.key('Первый.'), bookId: h.book.id), isFalse);
@@ -390,7 +390,7 @@ void main() {
           h.player.failCurrent();
           await until(
             () => h.controller.state == NarrationState.stopped,
-            'остановка после повторной ошибки плеера',
+            'stop after a repeated player error',
           );
           expect(h.controller.state, NarrationState.stopped);
           expect(h.controller.unitStart, const ReadingPosition(0, 0));
@@ -410,7 +410,7 @@ void main() {
   for (final retry in [false, true]) {
     for (final waiting in [false, true]) {
       test(
-        'R1 ${retry ? 'повторы' : 'висящий запрос'} ${waiting ? 'waiting' : 'preparing'} не покупают за целью',
+        'R1 ${retry ? 'retries' : 'a hanging request'} ${waiting ? 'waiting' : 'preparing'} do not buy past the target',
         () async {
           final h = await PlaybackHarness.create(
             playbackBook([
@@ -444,7 +444,7 @@ void main() {
           final unique = <String>{};
           for (final call in h.engine.calls) {
             if (!unique.add(call.text)) continue;
-            // Последний отрезок может пересечь цель; следующий покупать уже нельзя.
+            // The last segment may cross the target; the next one must not be bought.
             expect(bought, lessThan(120.01));
             bought += call.text.length * secondsPerChar;
           }
@@ -458,7 +458,7 @@ void main() {
   }
 
   test(
-    'R1 здоровый ближайший набирает цель и скачивание берёт всю главу',
+    'R1 a healthy nearest one reaches the target and a download takes the whole chapter',
     () async {
       final d = await DownloadHarness.create(playbackBook([longChapter()]));
       final h = d.h;
@@ -473,7 +473,7 @@ void main() {
             call.release();
           }
         },
-        'набор 120 с готового звука',
+        'accumulating 120 s of ready audio',
       );
       expect(h.controller.state, NarrationState.playing);
       expect(
@@ -491,7 +491,7 @@ void main() {
     },
   );
 
-  test('R2 отказ удаления виден на полке и книга снова озвучивается', () async {
+  test('R2 a deletion failure is visible on the shelf and the book is narrated again', () async {
     final h = await observed(
       playbackBook([
         ['Книга.'],
@@ -504,7 +504,7 @@ void main() {
       () => h.controller.deleteBook(h.book.id),
       (e, _) => escaped.add(e),
     );
-    await until(() => library.addJobs.isNotEmpty, 'сообщение об отказе удаления');
+    await until(() => library.addJobs.isNotEmpty, 'deletion failure message');
     expect(escaped, isEmpty);
     expect(library.addJobs.single.technical, contains('delete denied'));
     expect(library.shelf, hasLength(1));
@@ -516,7 +516,7 @@ void main() {
 
   for (final rejectAgain in [false, true]) {
     test(
-      'R3 битый файл ${rejectAgain ? 'повторно не читается' : 'заменяется'} без пропуска',
+      'R3 a broken file ${rejectAgain ? 'is not read again' : 'is replaced'} without a skip',
       () async {
         late ProbePlayer player;
         final h = await PlaybackHarness.create(
@@ -533,7 +533,7 @@ void main() {
             .writeAsStringSync('broken');
         h.controller.readFrom(h.book, 0);
         await h.calls(1);
-        await until(() => h.player.playing, 'воспроизведение до битого файла');
+        await until(() => h.player.playing, 'playback up to the broken file');
         expect(h.controller.state, NarrationState.playing);
         expect(h.controller.unitStart, const ReadingPosition(0, 0));
         expect(h.engine.calls.map((c) => c.text), ['Повреждён.']);
@@ -545,7 +545,7 @@ void main() {
               h.controller.unitStart == const ReadingPosition(1, 0) &&
               h.controller.state ==
                   (rejectAgain ? NarrationState.stopped : NarrationState.playing),
-          'переход к заменённому файлу',
+          'transition to the replaced file',
         );
         expect(h.controller.unitStart, const ReadingPosition(1, 0));
         expect(
@@ -565,7 +565,7 @@ void main() {
   }
 
   test(
-    'R3 замена битого файла восстанавливает уже занятый запас за дырой',
+    'R3 replacing a broken file restores the reserve already taken beyond the gap',
     () async {
       final h = await PlaybackHarness.create(
         playbackBook([
@@ -580,20 +580,20 @@ void main() {
           .writeAsStringSync('broken');
       h.controller.readFrom(h.book, 0);
       await h.calls(1);
-      await until(() => h.player.playing, 'воспроизведение перед дырой');
+      await until(() => h.player.playing, 'playback before the gap');
       expect(h.engine.calls.map((c) => c.text), ['Битый.']);
       expect(h.controller.state, NarrationState.playing);
       await h.release(0);
       h.clock.advance(const Duration(seconds: 10));
       await until(
         () => h.controller.unitStart == const ReadingPosition(1, 0),
-        'переход к восстановленному запасу',
+        'transition to the restored reserve',
       );
       expect(h.controller.unitStart, const ReadingPosition(1, 0));
     },
   );
 
-  test('R4 сработавший таймер повторяет при переводе часов назад', () async {
+  test('R4 a fired timer repeats when the clock is set back', () async {
     late RollbackClock clock;
     final h = await PlaybackHarness.create(
       playbackBook([
@@ -613,7 +613,7 @@ void main() {
 
   for (final count in [8, 200]) {
     test(
-      'R5 скачанные $count отрезков: первый звук после одной пробы, список ограничен',
+      'R5 downloaded $count segments: first audio after one probe, the list is limited',
       () async {
         late ProbePlayer player;
         final texts = [for (var i = 0; i < count; i++) 'Отрезок $i.'];
@@ -625,19 +625,19 @@ void main() {
           await h.cache(text, seconds: 40);
         }
         h.controller.readFrom(h.book, 0);
-        await until(() => player.items.length >= 3, 'три файла в окне запаса');
+        await until(() => player.items.length >= 3, 'three files in the reserve window');
         expect(player.probesAtFirstPlay, 1);
         expect(player.probes, lessThanOrEqualTo(3));
         expect(player.items, hasLength(3));
         h.clock.advance(const Duration(seconds: 41));
-        await until(() => player.probes > 3, 'пополнение окна запаса');
+        await until(() => player.probes > 3, 'reserve window top-up');
         expect(player.probes, greaterThan(3));
         expect(h.engine.calls, isEmpty);
       },
     );
   }
 
-  test('R6 команды делят только достигнутые главы', () async {
+  test('R6 commands share only the chapters reached', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         for (var i = 0; i < 50; i++)
@@ -663,7 +663,7 @@ void main() {
     expect(blocks.reads.keys.where((i) => i >= 16), isEmpty);
   });
 
-  test('R7 минута одного блока не пишет позицию на каждом ходе', () async {
+  test('R7 a minute of a single block does not write the position on every step', () async {
     final h = await observed(
       playbackBook([
         ['abcdefghij ' * 40],
@@ -689,7 +689,7 @@ void main() {
   });
 
   for (final action in ['close', 'clear', 'remove']) {
-    test('R8 $action из stopped сохраняет позицию экрана', () async {
+    test('R8 $action from stopped keeps the screen position', () async {
       final h = await PlaybackHarness.create(
         playbackBook([
           ['Первый.', 'Второй.'],
@@ -714,7 +714,7 @@ void main() {
   }
 
   test(
-    'R9b последний current после drained не мешает waiting и концу книги',
+    'R9b the last current after drained does not interfere with waiting and the end of the book',
     () async {
       final h = await PlaybackHarness.create(
         playbackBook([
@@ -737,7 +737,7 @@ void main() {
   );
 
   for (final action in ['pause', 'stop', 'close']) {
-    test('R10a ошибка flush при $action видна и обработана', () async {
+    test('R10a a flush error during $action is visible and handled', () async {
       final h = await observed(
         playbackBook([
           ['Книга.'],
@@ -759,7 +759,7 @@ void main() {
             h.controller.close();
         }
       }, (e, _) => escaped.add(e));
-      await until(() => lib.addJobs.isNotEmpty, 'сообщение об ошибке flush');
+      await until(() => lib.addJobs.isNotEmpty, 'flush error message');
       lib.failFlush = false;
       expect(escaped, isEmpty);
       expect(lib.addJobs.single.fileName, 'state.json / settings.json');
@@ -767,7 +767,7 @@ void main() {
     });
   }
 
-  test('R10c конец главы объявляется сразу paused', () async {
+  test('R10c the end of a chapter is declared paused right away', () async {
     final h = await PlaybackHarness.create(
       playbackBook([
         ['Первая.'],
@@ -787,7 +787,7 @@ void main() {
     expect(h.controller.unitStart, const ReadingPosition(1, 0));
   });
 
-  test('R6 окно запаса не считается концом длинной главы', () async {
+  test('R6 the reserve window is not counted as the end of a long chapter', () async {
     final texts = longChapter(20);
     final h = await PlaybackHarness.create(
       playbackBook([
@@ -801,23 +801,23 @@ void main() {
     await h.cache('Следующая.');
     h.controller.readFrom(h.book, 0);
     h.controller.setSleepTimer(SleepTimer.endOfChapter(h.clock.now()));
-    await until(() => h.player.playing, 'начало длинной главы');
+    await until(() => h.player.playing, 'start of the long chapter');
     h.clock.advance(const Duration(seconds: 1));
     await ioSettled();
     expect(h.controller.sleepTimer, isNotNull);
-    await until(() => h.player.playing, 'звук после пополнения окна запаса');
+    await until(() => h.player.playing, 'audio after the reserve window top-up');
     expect(h.controller.state, NarrationState.playing);
     await untilWithProgress(
       () => h.controller.state == NarrationState.paused,
       () => h.clock.advance(const Duration(seconds: 1)),
-      'пауза на конце длинной главы',
+      'pause at the end of the long chapter',
     );
     expect(h.controller.state, NarrationState.paused);
     expect(h.controller.unitStart, const ReadingPosition(20, 0));
     expect(h.engine.calls, isEmpty);
   });
 
-  test('R10d пока PCM ждёт записи, новые покупки запрещены', () async {
+  test('R10d while PCM waits to be written, new purchases are forbidden', () async {
     final encoder = DiskFullEncoder();
     final h = await PlaybackHarness.create(
       playbackBook([
@@ -828,7 +828,7 @@ void main() {
     h.controller.readFrom(h.book, 0);
     await h.calls(2);
     await h.release(1);
-    await until(() => encoder.attempts > 0, 'первая попытка записи PCM');
+    await until(() => encoder.attempts > 0, 'first attempt to write PCM');
     expect(encoder.attempts, 1);
     h.controller.readFrom(h.book, 2);
     await ioSettled();
@@ -840,7 +840,7 @@ void main() {
         expect(h.engine.calls, hasLength(2));
         h.clock.advance(const Duration(seconds: 1));
       },
-      'повторная попытка записи PCM при заполненном диске',
+      'repeated attempt to write PCM on a full disk',
     );
     expect(encoder.attempts, greaterThan(1));
     expect(h.engine.calls, hasLength(2));
@@ -848,7 +848,7 @@ void main() {
     await untilWithProgress(
       () => h.engine.calls.length >= 3,
       () => h.clock.advance(const Duration(seconds: 30)),
-      'новая покупка после записи PCM',
+      'new purchase after the PCM write',
     );
     expect(h.audio.has(h.key('Второй.'), bookId: h.book.id), isTrue);
   });

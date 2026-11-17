@@ -26,7 +26,7 @@ List<int> epub({
   bool cover3 = true,
   List<String>? spine,
 }) {
-  // NCX — оглавление, а не XHTML-документ чтения. В EPUB3 nav в spine допустим.
+  // NCX is a table of contents, not an XHTML reading document. In EPUB3 a nav in the spine is allowed.
   spine ??= ncx ? const ['text'] : const ['text', 'nav'];
   final files = <String, String>{
     'mimetype': 'application/epub+zip',

@@ -11,7 +11,7 @@ import 'support/harness.dart' show reader, pumpPrototype;
 import 'reader_screen_position_test.dart' show openAt;
 
 void main() {
-  testWidgets('возврат из отменённого дальнего поиска продолжает досчёт прежней раскладки', (tester) async {
+  testWidgets('returning from a cancelled distant seek continues the catch-up of the previous layout', (tester) async {
     final p = await pumpPrototype(tester);
     final book = Book(id: 'return-pending', title: '', author: '', language: 'ru',
         chapters: const [Chapter(title: '', level: 1, firstBlock: 0, blockCount: 2)],
@@ -29,12 +29,12 @@ void main() {
     p.narration.resume();
     await tester.pump(const Duration(milliseconds: 10));
     expect(st.layout, same(original));
-    expect(original.pages.length, greaterThan(count), reason: 'готовые страницы сохранены, хвост продолжает считаться');
+    expect(original.pages.length, greaterThan(count), reason: 'ready pages are kept, the tail keeps being calculated');
     await tester.pumpWidget(const SizedBox());
   });
 
   for (final action in ['resume', 'back']) {
-    testWidgets('настоящий контроллер: $action возвращает прежние границы после листания на ±1 и ±3', (tester) async {
+    testWidgets('real controller: $action restores the old boundaries after turning ±1 and ±3 pages', (tester) async {
       final h = AppHarness(tester);
       await h.start(fakeTts: true);
       tester.view.physicalSize = const Size(360, 640);
@@ -57,7 +57,7 @@ void main() {
       await tapCenter(tester);
       await tester.tap(find.byKey(const Key('listen')));
       await h.until(() => h.player.playing);
-      // Голос доходит до середины страницы, оставляя по три готовых страницы с обеих сторон.
+      // The voice reaches the middle of the page, leaving three ready pages on each side.
       for (var i = 0; i < 100; i++) {
         final page = st.layout.pages[st.page];
         final at = st.soundingPosition!;
@@ -91,11 +91,11 @@ void main() {
           await tester.tap(find.byKey(const Key('to-reading-place')));
         }
         await tester.pumpAndSettle();
-        expect(st.layout, same(originalLayout), reason: 'готовая страница не требует новой раскладки');
-        expect(st.layout.pages[st.page], same(original), reason: 'границы и положение текста должны сохраниться');
+        expect(st.layout, same(originalLayout), reason: 'a ready page does not require a new layout');
+        expect(st.layout.pages[st.page], same(original), reason: 'the boundaries and text position must be kept');
         expectFollowingPage(tester);
       }
-      // Начала соседних абзацев также выбирают уже готовые страницы, включая досчитанный префикс.
+      // The starts of adjacent paragraphs also pick already ready pages, including the caught-up prefix.
       final prefix = st.layout.loadPrevious();
       await tester.pumpAndSettle();
       await prefix;

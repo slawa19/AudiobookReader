@@ -5,8 +5,8 @@ import 'package:audiobook_reader/book/parse.dart';
 
 import 'book_samples.dart';
 
-/// Образцы разбора остаются исходниками тестов reader. Вместо трёх условных байтов binary кладём настоящий
-/// PNG: разборщик сохраняет его байты, а reader действительно декодирует и рисует изображение.
+/// Parsing samples stay sources of the reader tests. Instead of three arbitrary binary bytes we put a real
+/// PNG: the parser keeps its bytes, and the reader really decodes and draws the image.
 Map<String, ParsedBook> readerSamples(Uint8List png) {
   String fb2(String name) =>
       fixture(name).replaceAll('AQID', base64.encode(png)).replaceAll('BAUG', base64.encode(png));

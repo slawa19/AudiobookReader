@@ -45,7 +45,7 @@ Future<void> finished(ChapterPagination pagination) async {
 void main() {
   const column = Size(272, 516);
 
-  testWidgets('SC-1: первая страница 300 тысяч знаков рисуется до измерения хвоста главы', (tester) async {
+  testWidgets('SC-1: the first page of 300K characters is drawn before the chapter tail is measured', (tester) async {
     final book = longChapter();
     expect(book.totalChars, 300000);
     final style = MeasuredStyle();
@@ -55,12 +55,12 @@ void main() {
     expect(pagination.pages, hasLength(1));
     expect(pagination.isCalculating, isTrue);
     expect(pagination.isComplete, isFalse);
-    // Это наблюдение именно за измерениями, а не только за порционной выдачей готового массива страниц.
+    // This observes the measurements themselves, not just the batched delivery of the ready page array.
     expect(style.measured, isNotEmpty);
     expect(
       style.measured.every((r) => r.$2 <= 4096),
       isTrue,
-      reason: 'синхронное измерение всей главы до выдачи страницы запрещено',
+      reason: 'measuring the whole chapter synchronously before the page is delivered is forbidden',
     );
     var renderedBeforeEnd = false;
     await tester.pumpWidget(
@@ -88,7 +88,7 @@ void main() {
     pagination.cancel();
   });
 
-  test('между страницами проходит событие; глава совпадает с порционным расчётом книги', () async {
+  test('an event passes between pages; the chapter matches the batched layout of the book', () async {
     final book = checked(epub(content: fixture('epub_structures.xhtml'))).book;
     final style = MeasuredStyle();
     final pagination = ChapterPagination();
@@ -118,7 +118,7 @@ void main() {
     }
   });
 
-  test('смена кегля и размера отменяет прежние измерения и держит UTF-16 позицию', () async {
+  test('changing font size and line height cancels old measurements and keeps the UTF-16 position', () async {
     final book = longChapter();
     final oldStyle = MeasuredStyle();
     final newStyle = MeasuredStyle(size: 28.6, height: 48.1);
@@ -133,9 +133,9 @@ void main() {
     pagination.start(book: book, style: newStyle, column: const Size(250, 500), block: 0, offset: offset);
     expect(pagination.pages.first.firstOffset, offset);
     final firstEnd = pagination.pages.first.lastEnd;
-    expect(firstEnd, lessThan(oldFirstEnd), reason: 'новый кегль действительно меняет разбивку');
+    expect(firstEnd, lessThan(oldFirstEnd), reason: 'the new font size really changes the pagination');
     await finished(pagination);
-    expect(oldStyle.measured, hasLength(oldCount), reason: 'отменённый расчёт не измеряет даже один старый кусок');
+    expect(oldStyle.measured, hasLength(oldCount), reason: 'a cancelled calculation measures no old fragment at all');
     expect(pagination.pages.first.firstOffset, offset);
     expect(pagination.pages.last.lastEnd, book.blocks.single.text.length);
     expect(firstEnd, lessThan(book.blocks.single.text.length));
@@ -147,7 +147,7 @@ void main() {
       }
     }
     expect(at, book.blocks.single.text.length);
-    // Отмена без перезапуска тоже прекращает уведомления и измерения.
+    // Cancelling without a restart also stops notifications and measurements.
     pagination.start(book: book, style: newStyle, column: column, block: 0, offset: 0);
     var notifications = 0;
     pagination.addListener(() => notifications++);
@@ -160,7 +160,7 @@ void main() {
     expect(pagination.isComplete, isFalse);
   });
 
-  test('расчёт начинается в выбранной главе; старт в продолжении подписи не повторяет картинку', () async {
+  test('the calculation starts in the selected chapter; a start inside a caption does not repeat the image', () async {
     final pagination = ChapterPagination();
     addTearDown(pagination.dispose);
     final style = MeasuredStyle();
@@ -179,7 +179,7 @@ void main() {
     expect((pagination.pages.first.firstBlock, pagination.pages.first.firstOffset), (image.index, 1000));
     await finished(pagination);
     expect(pagination.pages.expand((p) => p.fragments).any((f) => f.isImage), isFalse);
-    // Похожий старт с начала блока должен показать саму картинку.
+    // A similar start at the beginning of the block must show the image itself.
     pagination.start(book: book, style: style, column: column, block: image.index, offset: 0);
     expect(pagination.pages.first.fragments.first.isImage, isTrue);
     pagination.cancel();

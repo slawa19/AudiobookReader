@@ -14,7 +14,7 @@ Book targetBook() => Book(id: 'block-target', title: 'Цель', author: '', lan
     notes: const {});
 
 void main() {
-  testWidgets('новая цель отменяет незавершённый досчёт назад и сохраняет показанную страницу', (tester) async {
+  testWidgets('a new target cancels an unfinished backward catch-up and keeps the shown page', (tester) async {
     final p = await pumpPrototype(tester);
     final book = Book(id: 'cancel-prefix', title: '', author: '', language: 'ru',
         chapters: const [Chapter(title: '', level: 1, firstBlock: 0, blockCount: 1),
@@ -30,7 +30,7 @@ void main() {
     await back;
     for (var i = 0; i < 4; i++) {
       await tester.pump(const Duration(milliseconds: 1));
-      expect(st.layout.pages[st.page], same(shown), reason: 'отменённый расчёт не подменяет страницу');
+      expect(st.layout.pages[st.page], same(shown), reason: 'the cancelled calculation does not replace the page');
     }
     expect(st.layout.isLoadingPrevious, isFalse);
     await tester.pumpAndSettle();
@@ -38,7 +38,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('новая цель блока отменяет прежнее ожидание готовой страницы', (tester) async {
+  testWidgets('a new block target cancels the previous wait for a ready page', (tester) async {
     final p = await pumpPrototype(tester);
     final book = Book(id: 'replace-waiting', title: '', author: '', language: 'ru',
         chapters: const [Chapter(title: '', level: 1, firstBlock: 0, blockCount: 1)],
@@ -51,11 +51,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(st.layout.pages[st.page].contains(0, 15000), isTrue);
     await tester.pump(const Duration(milliseconds: 20));
-    expect(st.layout.pages[st.page].contains(0, 15000), isTrue, reason: 'старая очередь не возвращает экран назад');
+    expect(st.layout.pages[st.page].contains(0, 15000), isTrue, reason: 'an old queue does not move the screen back');
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('повторное использование блока после досчёта назад не сдвигает страницу второй раз', (tester) async {
+  testWidgets('reusing the block after a backward catch-up does not shift the page a second time', (tester) async {
     final p = await pumpPrototype(tester);
     final book = Book(id: 'reuse-prefix', title: '', author: '', language: 'ru',
         chapters: const [Chapter(title: '', level: 1, firstBlock: 0, blockCount: 1)],
@@ -76,7 +76,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('смена шрифта при поиске и новая цель используют новые метрики', (tester) async {
+  testWidgets('a font change during a seek and a new target use the new metrics', (tester) async {
     final p = await pumpPrototype(tester);
     final book = targetBook();
     final st = await openAt(tester, p, book, const ReadingPosition(0, 0));
@@ -94,7 +94,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('ползунок внутри слова выбирает страницу раскладки блока; начало блока открывается ровно с него', (tester) async {
+  testWidgets('a slider inside a word picks the block layout page; the block start opens exactly at it', (tester) async {
     final p = await pumpPrototype(tester);
     final book = targetBook();
     final st = await openAt(tester, p, book, const ReadingPosition(0, 0));
@@ -108,7 +108,7 @@ void main() {
         column: st.columnSize, block: 1);
     final expected = reference.pages[reference.pageOf(1, offset)];
     expect(expected.firstOffset, greaterThan(0));
-    expect(expected.firstOffset, lessThan(offset), reason: 'цель намеренно внутри слова, не на начале строки');
+    expect(expected.firstOffset, lessThan(offset), reason: 'the target is deliberately mid-word, not at a line start');
     tester.widget<Slider>(find.byKey(const Key('book-slider'))).onChangeEnd!(fraction);
     await tester.pumpAndSettle();
     final page = st.layout.pages[st.page];
@@ -122,12 +122,12 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('конец прослушивания показывает хвост последнего абзаца, а не последний знак', (tester) async {
+  testWidgets('the end of listening shows the tail of the last paragraph, not the last character', (tester) async {
     final p = await pumpPrototype(tester);
     final book = targetBook();
     final st = await openAt(tester, p, book, const ReadingPosition(0, 0));
     p.narration.demoShow('end', book: book);
-    // Первые кадры замеряют реальную высоту панели до хода таймеров расчёта блока.
+    // The first frames measure the real panel height before the block calculation timers run.
     await tester.pump();
     await tester.pump();
     await tester.pumpAndSettle();
@@ -143,7 +143,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('сохранённое начало уже показанной строки не округляется к началу блока', (tester) async {
+  testWidgets('the saved start of an already shown line is not rounded to the block start', (tester) async {
     final p = await pumpPrototype(tester);
     final book = targetBook();
     final st = await openAt(tester, p, book, const ReadingPosition(1, 0));
