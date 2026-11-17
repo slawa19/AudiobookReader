@@ -52,8 +52,9 @@ repository, so the first real release is possible only after the owner switches 
    verify the published APK as in [RELEASING.md](RELEASING.md), "For users".
 
 The owner's phone has one build installed — the real one, signed with the permanent key. The build with the fake voice
-(`build-apk.sh --fake`) is installed alongside only for the duration of a check. The web prototype: its tests pass,
-but the web build itself has not been run since the implementation.
+(`build-apk.sh --fake`) is installed alongside only for the duration of a check. The web prototype: its tests pass; on
+2026-11-17 `scripts/prototype.sh start` built it and the server answered HTTP 200, but the page was not opened in a
+browser in that check.
 
 The order of work set by the owner on 2026-11-14:
 
