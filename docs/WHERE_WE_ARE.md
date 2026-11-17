@@ -21,11 +21,16 @@ review is spec 002, merged. The full phone check of 2026-11-16 found two defects
 ended and a truncated voice name; both were fixed and re-verified on the phone. The app has its own icon
 ([logo.svg](logo.svg)).
 
-Since 2026-11-17 the repository is being prepared for open-source publication under GPL-3.0 (owner decisions of
-2026-11-17): documentation and code comments in English, Ukrainian as the fifth interface language (done and merged),
-a release workflow with signed APKs. Everything about it is in [specs/003-open-source.md](specs/003-open-source.md).
+Since 2026-11-17 the repository has been prepared for open-source publication under GPL-3.0 (owner decisions of
+2026-11-17; [specs/003-open-source.md](specs/003-open-source.md)). Merged into `main`: Ukrainian as the fifth interface
+language; documentation, code comments, test names and technical messages in English; the `LICENSE`, the in-app
+"Open-source licenses" page and the demo-text attribution; English README screenshots; the tag-triggered release
+workflow with the pinned toolchain ([RELEASING.md](RELEASING.md)). The four signing secrets and the variable
+`SIGNING_CERT_SHA256` are set in GitHub. A dry run of the release workflow was started on 2026-11-17; its result is not
+recorded here. No release has been cut and the repository is still private; build attestations work only in a public
+repository, so the first real release is possible only after the owner switches it to public.
 
-**What is next** — all with the owner, none of it can be verified from a computer:
+**What is next, on the phone** — all with the owner, none of it can be verified from a computer:
 
 1. listening with the real voice: speech by ear, "back/forward", page return;
 2. the remaining items of [DEVICE_CHECKLIST.md](DEVICE_CHECKLIST.md): screen off and lock screen, headphones, a phone
@@ -33,6 +38,18 @@ a release workflow with signed APKs. Everything about it is in [specs/003-open-s
 3. EPUB, FB2.ZIP and TXT books on the phone;
 4. the FR-E6 measurement on a mobile network — the computer is connected through the phone's hotspot;
 5. acceptance of SC-2 and SC-3, the outcome of the experiment with Codex agents.
+
+**What is next, publication** — the owner's steps, in this order:
+
+1. read the result of the release workflow's dry run (Actions → Release; [RELEASING.md](RELEASING.md), "Dry run");
+2. confirm the public name of the app: the Android label is "AudiobookReader", the web prototype is still titled
+   "Читалка — прототип" (`web/index.html`, `web/manifest.json`, `lib/app/prototype/device_frame.dart`);
+3. have the Ukrainian strings (`lib/screens/l10n/app_uk.arb`) read by a native speaker; they were written by an agent;
+4. look at Settings → "Open-source licenses" on the phone;
+5. confirm the rule of spec 003 (Changelog) that technical text, as distinct from interface strings, is in English;
+6. switch the GitHub repository to public;
+7. cut the first release: bump `version:` in `pubspec.yaml` if needed, push the tag `v0.1.0` (or the bumped version),
+   verify the published APK as in [RELEASING.md](RELEASING.md), "For users".
 
 The owner's phone has one build installed — the real one, signed with the permanent key. The build with the fake voice
 (`build-apk.sh --fake`) is installed alongside only for the duration of a check. The web prototype: its tests pass,
@@ -46,8 +63,8 @@ The order of work set by the owner on 2026-11-14:
    (`docs/mockup/`) over interface elements; the look is now set by the Flutter prototype
    (`docs/prototype/README.md`), which is started by `scripts/prototype.sh` and opens at http://127.0.0.1:8642/. The
    interface is in Russian, English, Polish and German (Ukrainian was added as the fifth language on 2026-11-17). The
-   Codex review of the prototype was done (REWORK, 21 findings), the findings were incorporated; **awaiting the owner's
-   review**; the prototype was accepted by the owner on 2026-11-15;
+   Codex review of the prototype was done (REWORK, 21 findings), the findings were incorporated; **the prototype was
+   accepted by the owner on 2026-11-15** ([specs/001-first-version.md](specs/001-first-version.md), "Decisions");
 4. implementation — begun on 2026-11-15 under spec 001; the state by stages is in the table above.
 
 **How the implementation is going (an experiment, the owner's decision of 2026-11-15).** The order differs from
@@ -68,9 +85,12 @@ Documents (the full index is [README.md](README.md)):
 - [specs/002-cleanup-after-reviews.md](specs/002-cleanup-after-reviews.md) — the rework after the architecture review
   of 2026-11-16; done and merged on 2026-11-16; verified on the phone with the fake build.
 - [specs/003-open-source.md](specs/003-open-source.md) — preparation for open-source publication (2026-11-17).
+- [RELEASING.md](RELEASING.md) — signed releases from GitHub Actions: how users verify the APK, how the maintainer cuts
+  a release.
 - [reviews/](reviews/) — review records: of documents and the prototype (Codex, 2026-11-14), of code by stages, of the
   reading screen and of the architecture (2026-11-15 and 2026-11-16), the experiment log.
 - [prototype/README.md](prototype/README.md) — the prototype: running, gestures, palette, languages, screenshots.
+- [screenshots/](screenshots/) — the English README screenshots (`test/readme_screenshots_test.dart`).
 - [GEMINI_TTS.md](GEMINI_TTS.md) — the request shape, voices and rates verified in AudiobookStudio.
 - [GOOGLE_PLAY_PLAN.md](GOOGLE_PLAY_PLAN.md) — plans for later: publication in Google Play and a paid service; not a
   decision.

@@ -131,7 +131,8 @@ void main() {
     expect(scrollPage(tester), closeTo(from.toDouble(), 0.06), reason: 'precondition: the previous page is under the '
         'finger again');
     await f.up();
-    // Prototype README, “Gestures”: “the finger wins: the turn is cancelled, following the voice is turned off”.
+    // Prototype README, “Gestures that work”: “the finger wins: the transition is cancelled, following is switched
+    // off”.
     await advance(tester, const Duration(seconds: 2));
     expect(reader(tester).page, from, reason: 'a page the reader held does not move after the voice again');
     expect(reader(tester).following, isFalse);

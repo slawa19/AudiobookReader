@@ -37,7 +37,7 @@ case "${1:-}" in
   start)
     require_flutter
     mkdir -p "${RUN_DIR}"
-    "${FLUTTER_BIN}" pub get >/dev/null
+    "${FLUTTER_BIN}" pub get --enforce-lockfile >/dev/null
     echo "Building the web version…"
     "${FLUTTER_BIN}" build web --release --no-web-resources-cdn --no-source-maps
     stop

@@ -15,7 +15,8 @@ Sources of truth, in order of seniority:
 4. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and the current spec in `docs/specs/` — how it is built and what is
    required;
 5. [docs/GEMINI_TTS.md](docs/GEMINI_TTS.md) — how to call Gemini and what it costs;
-6. the screen prototype ([docs/prototype/README.md](docs/prototype/README.md)) — the look of the interface.
+6. the screen prototype ([docs/prototype/README.md](docs/prototype/README.md)) — the look of the interface;
+7. [docs/RELEASING.md](docs/RELEASING.md) — how a public release is cut and how users verify it.
 
 The index of all documents is [docs/README.md](docs/README.md).
 
@@ -76,8 +77,11 @@ wsl.exe -d Debian --cd "D:\Work\Projects\AudiobookReader" -- bash scripts/protot
   uses the ready installation without downloading the SDK again. The scripts also work on ordinary Linux (CI), without
   WSL commands.
 - `test.sh` — the analyzer with no findings (infos included) and the tests; the selector and options go to
-  `flutter test`. To retake the screen screenshots:
-  `bash scripts/test.sh test/screens_golden_test.dart --update-goldens`.
+  `flutter test`. To retake the prototype's screen screenshots:
+  `bash scripts/test.sh test/screens_golden_test.dart --update-goldens`; to retake the README screenshots in
+  `docs/screenshots/`: `bash scripts/test.sh test/readme_screenshots_test.dart --update-goldens`.
+  The scripts run `flutter pub get --enforce-lockfile`: a dependency change starts with `flutter pub get` and a
+  committed `pubspec.lock`.
 - `prototype.sh start` builds the web version and serves it at http://127.0.0.1:8642/ (it also opens from Windows).
 - Android: Temurin JDK **21.0.13+9**, cmdline-tools **22.0** (archive **15859902**), platform **android-36**
   (revision 2), build-tools **36.0.0**, NDK **28.2.13676358**, platform-tools **37.0.3**. Versions and archive sums are
@@ -107,7 +111,14 @@ wsl.exe -d Debian --cd "D:\Work\Projects\AudiobookReader" -- bash scripts/build-
   phone disappeared from `adb devices` although Windows saw it as a storage device — "USB debugging" had turned off on
   it: it is turned off by Samsung's "Auto Blocker" (Security and privacy); the owner turned it off on 2026-11-15. The
   phone falls asleep and locks — the screenshot is then black; only the owner can unlock it.
-- CI — `.github/workflows/ci.yml`: the same scripts on a clean Ubuntu, the APK with the debug key.
+- CI — `.github/workflows/ci.yml`: the same scripts on a clean Ubuntu, the APK with the debug key. Third-party actions
+  in both workflows are pinned by commit SHA.
+
+Public release (spec 003, R6): a tag `vX.Y.Z` that matches `version:` in `pubspec.yaml` triggers
+`.github/workflows/release.yml`, which runs the tests, builds the APK with the permanent key from GitHub Secrets,
+checks its certificate, and publishes the signed APK, `SHA256SUMS` and a build-provenance attestation in GitHub
+Releases. Setup, cutting a release, the dry run and recovery are in [docs/RELEASING.md](docs/RELEASING.md). Local
+`build-apk.sh` stays for the owner's own phone and for debugging; it is not how public builds are made.
 
 The shell is determined by the first command (`uname`): Git Bash — `MINGW64_NT`, WSL — `Linux …WSL2`. Do not nest
 `wsl.exe` inside WSL. Do not use a bare `wsl`: it may be missing from the PATH of Git Bash.

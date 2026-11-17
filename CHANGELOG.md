@@ -26,6 +26,22 @@ following the review and the full phone check of 2026-11-16.
   libraries and the engine, the licenses of the Merriweather and Roboto fonts, and the project's own license
   (GPL-3.0-or-later; the repository has the `LICENSE` file).
 
+### Changed
+
+- Diagnostic texts that are not part of a designed interface state (for example, the details of an error from the
+  Gemini client) are in English, like Google's own error text that the app shows as is. The interface strings are
+  unchanged and stay in the five ARB files.
+
+### Project
+
+- The repository is prepared for open-source publication under GPL-3.0-or-later (`LICENSE`; the fonts and the demo
+  texts keep their own licenses, see `assets/*/SOURCES.txt`). Documentation, code comments, test names and commit
+  messages are in English ([spec 003](docs/specs/003-open-source.md)).
+- Signed APKs are meant to be published in GitHub Releases from a `vX.Y.Z` tag with SHA-256 checksums and a
+  build-provenance attestation (`.github/workflows/release.yml`, [docs/RELEASING.md](docs/RELEASING.md)). No release has
+  been cut yet.
+- The README has English screenshots (`docs/screenshots/`).
+
 ### Fixed
 
 - After "forward" a one-line page could appear, and following the voice was turned off.

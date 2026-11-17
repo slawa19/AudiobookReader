@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="216" height="216" role="img" aria-label="AudiobookReader">
-  <!-- Знак приложения: раскрытая книга, строки левой страницы на правой становятся звуком.
-       Те же контуры — в android/app/src/main/res/drawable/ic_launcher_foreground.xml. -->
+  <!-- The app's mark: an open book, text lines on the left page turn into sound bars on the right.
+       The same outlines are in android/app/src/main/res/drawable/ic_launcher_foreground.xml. -->
   <rect width="108" height="108" rx="24" fill="#A8431F"/>
   <path fill="#FFFDF9" d="M52,37C44,32 32,32 23,35.5L23,73.5C32,70 44,70 52,75Z"/>
   <path fill="#FFFDF9" d="M56,37C64,32 76,32 85,35.5L85,73.5C76,70 64,70 56,75Z"/>

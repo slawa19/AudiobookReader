@@ -36,6 +36,7 @@ the same commit.
 |---|---|
 | [DEVICE_CHECKLIST.md](DEVICE_CHECKLIST.md) | manual phone check: background, lock screen, headset, a call |
 | [CODEX_INDEPENDENT_REVIEW.md](CODEX_INDEPENDENT_REVIEW.md) | how to run an independent review |
+| [RELEASING.md](RELEASING.md) | public releases: how users verify a signed APK (checksum, attestation, certificate); how the maintainer cuts a release |
 
 ## Reviews and checks (`reviews/`)
 

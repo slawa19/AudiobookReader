@@ -2,8 +2,10 @@
 
 Status: after the Codex reviews of 2026-11-14, of the spec ([CODEX_REVIEW_SPEC_2026-11-14.md](../reviews/CODEX_REVIEW_SPEC_2026-11-14.md))
 and of the mock-up ([CODEX_REVIEW_MOCKUP_2026-11-14.md](../reviews/CODEX_REVIEW_MOCKUP_2026-11-14.md)); implementation
-has been under way since 2026-11-15: stage 0 is done, stage 1 is written and awaits acceptance SC-1 on the phone and on
-the owner's books.
+has been under way since 2026-11-15: stage 0 is done (except the FR-E6 measurement on a mobile network), stage 1 was
+accepted by the owner on 2026-11-15 (SC-1), stages 2 and 3 are written and verified on the phone as far as a computer
+can do it; their acceptance (SC-2, SC-3) is the owner's, by ear and by hand (see
+[WHERE_WE_ARE.md](../WHERE_WE_ARE.md)).
 
 What we are building: [CONCEPT.md](../CONCEPT.md). How it is built: [ARCHITECTURE.md](../ARCHITECTURE.md) version 3; the
 spec does not retell it but refers to its sections ("A§6.3"). Facts about Gemini: [GEMINI_TTS.md](../GEMINI_TTS.md). The
@@ -431,7 +433,7 @@ includes all the checks of its stage from the table below.
 | FR-R6, FR-R8 | screenshots at the font steps and in the `NOTES.md` combination, in all themes, with system areas; test: the touch target of every control is at least 48 dp, by hitting the corners of the 48 × 48 area, including "Stop" of the download row, and adjacent areas do not overlap; test: the app requests only portrait orientation, the manifest has `screenOrientation="portrait"` | 1 |
 | FR-R9 | a test of each transition of A§8.1: the table of contents does not stop the sound, the "Voice" screen pauses, "Back" to the shelf is `idle`, return from the settings to the same book; system "Back": clears the paragraph selection, closes a sheet and dialog, with hidden panels shows them (including during listening, the sound goes on), with shown ones closes the book; the arrow in the header closes at once; phone: the edge gesture (FR-P9) | 1; 2 |
 | FR-R7 | tests: the position after a font change, restart, re-parsing; a re-layout on pause near the bottom of the page (font, error panel, "Preparing the voice…") leaves the voice's place on the screen, and after manual turning (including after an error and the end of the book) the start of the visible page; a selected paragraph survives a change of the panel's height; a window-size change there and back gives the same place; phone: landscape orientation does not turn on | 1 |
-| FR-I1 | test: all five ARBs have the same keys and placeholders; the phone's language by default, one not among the five gives English; the choice in the settings changes the labels at once, including the system Material ones; plural forms ru/pl; screenshots of the shelf, reading, player, settings in en, pl, de, uk and narrow ones in de, pl and uk | 1 |
+| FR-I1 | test: all five ARBs have the same keys and placeholders; the phone's language by default, one not among the five gives English; the choice in the settings changes the labels at once, including the system Material ones; plural forms ru/pl/uk; screenshots of the shelf, reading, player, settings in en, pl, de, uk and narrow ones in de, pl and uk | 1 |
 | FR-T1–T3 | tests of the real client with a dummy key and a fake HTTP: the request shape, error classes, `usage` in an error, the key scrubbed, the fingerprint changes with each profile field and the format | 2 |
 | FR-T4 | tests of splitting, correspondences, readiness, parts, the group tail | 2 |
 | FR-T7 | a test of the style table and the probe phrase: five languages (ru, en, pl, de, uk), others give English, a style without gender; the fingerprint changes with the style's language | 2 |
