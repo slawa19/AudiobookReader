@@ -12,7 +12,9 @@ jobs:
   check:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       # The runner arrives almost full: our own SDK and NDK left the build without space ("No space left on device",
       # found 2026-11-15). The preinstalled Android SDK, .NET, GHC and Docker images are not needed.
       - name: Free disk space
